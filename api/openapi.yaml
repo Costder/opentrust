@@ -44,16 +44,17 @@ paths:
   /api/v1/payments/checkout:
     post:
       responses:
-        "501": { description: Payment provider not installed }
+        "200": { description: Create demo checkout }
   /api/v1/payments/verify:
     post:
       responses:
-        "501": { description: Payment provider not installed }
+        "200": { description: Verify demo checkout }
+        "404": { description: Checkout not found }
   /api/v1/subscriptions/create:
     post:
       responses:
-        "501": { description: Payment provider not installed }
+        "200": { description: Create demo subscription checkout }
   /api/v1/escrow/create:
     post:
       responses:
-        "501": { description: Payment provider not installed }
+        "501": { description: Escrow is outside the demo flow }

@@ -15,13 +15,13 @@ export default function HomePage() {
         </div>
         <div className="panel p-5">
           <p className="text-sm font-semibold uppercase text-signal">Phase 0 Registry</p>
-          <p className="mt-3 text-sm text-stone-700">Payment interfaces are public contracts. Real checkout, USDC, Circle, and escrow code lives in opentrust-private.</p>
+          <p className="mt-3 text-sm text-stone-700">Payment contracts and no-secret demo checkout flows ship in the public repo.</p>
         </div>
       </section>
       <section className="grid gap-4 md:grid-cols-3">
         <PricingCard title="Discovery" price="Free" body="Browse machine-readable Agent Tool Passports." />
-        <PricingCard title="Verification" price="Coming Soon" body="Reviewer-signed checks and monitoring arrive through payment contract stubs." />
-        <PricingCard title="Private Add-on" price="Separate Repo" body="Install opentrust-private to wire real payment providers." />
+        <PricingCard title="Trust Report" price="19 USDC" body="Create a mock paid checkout for a report demo." />
+        <PricingCard title="Verified Badge" price="49 USDC" body="Create a mock paid checkout for badge issuance." />
       </section>
       <Link className="inline-flex rounded bg-ink px-4 py-2 text-white" href="/tools">Explore tools</Link>
     </div>

@@ -9,4 +9,4 @@ Supported event types:
 - `subscription.renewed`
 - `escrow.disputed`
 
-Registry operators who implement payment processing emit these events and register a webhook endpoint. The reference registry does not process payments — this handler defines the event contract that a conforming implementation must emit.
+Registry operators who implement payment processing emit these events and register a webhook endpoint. The mock provider is available for demos; this handler defines the event contract that a conforming production implementation must emit.
