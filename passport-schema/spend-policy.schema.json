@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/spend-policy.schema.json",
+  "title": "Agent Spend Policy",
+  "description": "The buyer-side payment contract. Declares what an agent is authorized to spend and under what conditions. Operators configure this; agents enforce it at runtime. IMPORTANT: Tools that check spend policy must extract it from the verified X-OpenTrust-Agent-Identity JWT (the spend_policy field), not from the standalone X-OpenTrust-Spend-Policy header. The header is a convenience hint for tools that do a quick pre-flight check; the JWT-embedded copy is the authoritative, signed version. A standalone header not backed by the JWT must be treated as unauthenticated.",
+
+  "type": "object",
+  "properties": {
+
+    "max_cost_per_call_usdc": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Hard cap per individual tool call. Agent must reject any tool whose pricing.amount exceeds this."
+    },
+
+    "max_cost_per_session_usdc": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Hard cap across all tool calls within one agent session/task."
+    },
+
+    "max_cost_per_day_usdc": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Hard cap per calendar day across all sessions."
+    },
+
+    "min_trust_status": {
+      "type": "string",
+      "enum": [
+        "auto_generated_draft",
+        "creator_claimed",
+        "owner_confirmed",
+        "community_reviewed",
+        "reviewer_signed",
+        "security_checked",
+        "continuously_monitored"
+      ],
+      "description": "Minimum trust_status a tool must have before the agent will pay for it. Recommended: community_reviewed or higher for any tool with network or file access."
+    },
+
+    "blocked_permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["file", "terminal", "browser", "network", "memory", "wallet", "api", "camera", "microphone", "private_data"]
+      },
+      "description": "Permissions the agent is not authorized to pay for. If a tool declares any of these in its permission_manifest, the agent must refuse to pay and must not call the tool."
+    },
+
+    "allowed_networks": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["base", "ethereum", "solana", "polygon", "arbitrum"] },
+      "description": "Which chains the agent is authorized to transact on. If the tool's payment_config.network is not in this list, the agent must not pay."
+    },
+
+    "allowed_currencies": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["USDC", "USDT", "ETH", "SOL"] },
+      "default": ["USDC"],
+      "description": "Which currencies the agent is authorized to spend."
+    },
+
+    "require_escrow_above_usdc": {
+      "type": "number",
+      "minimum": 0,
+      "description": "For any single payment above this amount, the agent must use escrow. If the tool does not support escrow and the payment exceeds this threshold, the agent must refuse."
+    },
+
+    "human_approval_above_usdc": {
+      "type": "number",
+      "minimum": 0,
+      "description": "For any single payment above this amount, the agent must pause and request human approval before proceeding. Only meaningful for agent_type 'supervised' or 'human_in_the_loop'. If this field is set on an 'autonomous' agent identity token, the agent must treat it as a hard block (refuse the call entirely, do not proceed) rather than a pause — autonomous agents have no human to ask. Implementers should reject a spend policy with human_approval_above_usdc if the enclosing agent identity has agent_type: 'autonomous'."
+    },
+
+    "blocked_categories": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tool categories (from the taxonomy enum) the agent is not authorized to pay for."
+    },
+
+    "allowed_registries": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri" },
+      "description": "If set, only tools whose passports are registered at one of these registries may be paid. Empty = any trusted registry is allowed."
+    },
+
+    "max_orchestration_depth": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 3,
+      "description": "Maximum sub-agent spawning depth this policy allows. An agent at depth N may not spawn sub-agents if N >= max_orchestration_depth. Prevents runaway agent chains. 0 = this agent may not spawn any sub-agents."
+    },
+
+    "sub_agent_policy": {
+      "type": "string",
+      "enum": ["inherit", "restrict", "deny"],
+      "default": "restrict",
+      "description": "How spend policy propagates to sub-agents spawned by this agent. inherit: sub-agents get the same policy unchanged. restrict: sub-agents get this policy with max_cost_per_call and max_cost_per_session divided by depth+1, enforcing progressively tighter budgets. deny: this agent may not spawn sub-agents that incur costs."
+    },
+
+    "allow_spawning_agents": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this agent is permitted to call tools whose source_formats includes 'agent'. Set to false to prevent the agent from invoking other agents entirely."
+    },
+
+    "dynamic_budget_allocation": {
+      "type": "object",
+      "description": "EXPERIMENTAL — disabled by default. Allows per-sub-agent budget caps (absolute and percentage-based) that can be adjusted at runtime by a human operator or a trusted AI agent. Enable only if your orchestration system can reliably enforce real-time allocation updates. This feature is subject to breaking changes before stabilization. IMPORTANT — JWT size: when embedding a spend policy in an agent identity JWT, the allocations array grows the token by ~100 bytes per entry. HTTP headers are typically limited to 8KB. For policies with more than ~40 named allocations, implementations should strip dynamic_budget_allocation from the JWT and instead use a policy_url field pointing to a signed endpoint that serves the full policy. See docs/agent-key-management.md.",
+      "properties": {
+
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Must be explicitly set to true to activate dynamic allocation. When false, the rest of this object is ignored and standard sub_agent_policy rules apply."
+        },
+
+        "allocations": {
+          "type": "array",
+          "description": "Per-sub-agent budget entries. Matched by agent_id or agent_slug. If a sub-agent is not listed, it falls back to the standard restrict/inherit/deny rules.",
+          "items": {
+            "type": "object",
+            "required": ["match"],
+            "properties": {
+              "match": {
+                "type": "object",
+                "description": "Identifies which sub-agent(s) this allocation applies to. At least one of agent_id or agent_slug must be provided.",
+                "properties": {
+                  "agent_id": { "type": "string", "description": "Exact agent_id match (e.g., 'opentrust.dev/acme/research-agent')." },
+                  "agent_slug": { "type": "string", "description": "Slug-only match — applies to any agent with this slug regardless of registry or org." }
+                },
+                "additionalProperties": false
+              },
+              "max_usdc": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Absolute USDC hard cap for this sub-agent across its lifetime in this session. The sub-agent cannot spend more than this regardless of the parent's remaining budget."
+              },
+              "budget_percent": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Percentage of the parent agent's REMAINING budget at the moment this sub-agent is spawned. Evaluated at spawn time using an atomic read-then-reserve of the parent's remaining budget — the orchestrator must atomically reserve this allocation before spawning the sub-agent to prevent concurrent spawning races. Example: parent has $10 remaining, budget_percent=40 → sub-agent is allocated $4.00 and the parent's available-to-allocate balance drops to $6.00 immediately, regardless of whether other sub-agents are spawning concurrently. When both max_usdc and budget_percent are set, the lower value wins. If the parent's remaining budget is $0, the sub-agent receives $0 and must not be spawned."
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Tiebreak order when multiple allocation entries match the same sub-agent. Lower number = higher priority. Defaults to 100 if omitted."
+              }
+            },
+            "additionalProperties": false
+          },
+          "default": []
+        },
+
+        "allocation_controller": {
+          "type": "object",
+          "description": "Who or what is authorized to push real-time allocation updates via budget_adjustment_endpoint. Without a controller, allocations are static (set once at policy issue time).",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["human_operator", "ai_agent", "both"],
+              "description": "human_operator: only authenticated human operators may adjust. ai_agent: a named trusted agent may adjust. both: either may adjust."
+            },
+            "agent_id": {
+              "type": "string",
+              "description": "agent_id of the AI agent authorized to push adjustments. Required when type is 'ai_agent' or 'both'."
+            },
+            "operator_identity": {
+              "type": "string",
+              "description": "GitHub username, org slug, or domain of the human operator authorized to adjust. Required when type is 'human_operator' or 'both'."
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "budget_adjustment_endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "HTTPS endpoint the orchestrator exposes so the allocation_controller can push updated per-sub-agent caps mid-session. Accepts a PATCH body matching the allocations array schema. Authentication is REQUIRED — the endpoint must verify the controller's identity before applying changes. For allocation_controller.type 'human_operator': use OAuth 2.0 Bearer token or equivalent. For allocation_controller.type 'ai_agent': the requesting agent must include a valid X-OpenTrust-Agent-Identity JWT whose agent_id matches allocation_controller.agent_id, and the orchestrator must verify the JWT signature. For type 'both': accept either authentication method. The endpoint must respond with 200 and the updated allocations on success, or 403 if authentication fails. If absent, allocations are read-only after policy issue."
+        },
+
+        "unallocated_fallback": {
+          "type": "string",
+          "enum": ["restrict", "deny"],
+          "default": "restrict",
+          "description": "What to do for sub-agents not matched by any allocations entry. 'restrict' applies the standard depth-based division from sub_agent_policy=restrict. 'deny' blocks them from spending entirely."
+        },
+
+        "audit_log_endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional endpoint that receives a structured event every time a sub-agent's budget is consumed or an allocation adjustment is applied. Useful for human review of autonomous allocation decisions."
+        }
+
+      },
+      "additionalProperties": false
+    },
+
+    "policy_version": {
+      "type": "string",
+      "description": "Semantic version of this spend policy document. Operators bump this when policy changes."
+    },
+
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" }
+
+  },
+  "additionalProperties": false
+}

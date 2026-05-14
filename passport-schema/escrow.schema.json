@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/escrow.schema.json",
+  "title": "Escrow Config",
+  "description": "Describes whether and how a tool supports escrow-protected transactions. The spec defines the interface and dispute model. The actual escrow logic lives in smart contracts or trusted services that implement this interface. Rule from v3 doc: no proof standard defined = no escrow-protected listing.",
+  "type": "object",
+  "required": ["supported"],
+  "properties": {
+
+    "supported": {
+      "type": "boolean",
+      "description": "Whether this tool supports escrow-protected payments."
+    },
+
+    "type": {
+      "type": "string",
+      "enum": ["smart_contract", "optimistic", "trusted_third_party"],
+      "description": "smart_contract: funds held on-chain, released by contract logic. optimistic: funds auto-release after timeout unless disputed. trusted_third_party: a named third party holds and releases funds. Platform custody is not supported until legal review — see governance.md."
+    },
+
+    "contract": {
+      "type": "object",
+      "description": "For smart_contract type — on-chain contract details. The registry must verify the audit before allowing a tool to list with type: smart_contract. Self-declared audit URLs are not accepted; the registry sets audit_verified after independent review.",
+      "required": ["network", "address"],
+      "properties": {
+        "network": { "type": "string", "enum": ["base", "ethereum", "solana", "polygon", "arbitrum"] },
+        "address": { "type": "string", "description": "On-chain contract address (checksummed for EVM chains)." },
+        "abi_url": { "type": "string", "format": "uri" },
+        "audit_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to the security audit report submitted to the registry for verification. Tool authors submit this; the registry sets audit_verified after reviewing authenticity."
+        },
+        "audit_firm": {
+          "type": "string",
+          "description": "Name of the auditing firm (e.g., 'Trail of Bits', 'OpenZeppelin'). Registry verifies this against the document at audit_url."
+        },
+        "audit_verified": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set by the registry after confirming the audit_url points to a genuine audit by audit_firm for this contract address. Tool authors must not set this field — it is populated by the registry during the smart_contract escrow review. A tool with smart_contract type and audit_verified: false cannot accept live escrow-protected payments."
+        },
+        "audit_verified_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the registry verified the audit. Set by the registry alongside audit_verified."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "proof_of_delivery": {
+      "type": "object",
+      "description": "REQUIRED for any escrow-protected listing. Every paid listing must define proof of delivery before escrow is funded. No proof standard = no escrow-protected listing.",
+      "required": ["type", "standard"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["hash_match", "access_granted", "sandbox_completed", "api_responds", "output_delivered", "timeout_auto_release"],
+          "description": "hash_match: tool returns a hash that must match the declared result hash. access_granted: verifiable access (API key issued, auth token works). sandbox_completed: tool ran in sandbox with observed outputs. api_responds: API endpoint responds correctly to a test call. output_delivered: structured output matches declared schema. timeout_auto_release: optimistic — funds release after timeout unless disputed."
+        },
+        "standard": {
+          "type": "string",
+          "description": "Human-readable description of what constitutes successful delivery for this specific tool. Required — vague standards are rejected."
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "description": "Seconds after payment before funds auto-release (for timeout_auto_release or as the window for other types)."
+        },
+        "verification_endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "Endpoint to programmatically verify delivery. Must accept a POST with {escrow_id, result_hash} and return {verified: bool}."
+        },
+        "result_hash_required": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "dispute": {
+      "type": "object",
+      "description": "Three-tier dispute resolution. Designed so Tier 1 and 2 resolve automatically without human intervention. Tier 3 (human arbitration) should be rare by design.",
+      "required": ["window_seconds", "bonds"],
+      "properties": {
+        "window_seconds": {
+          "type": "integer",
+          "description": "How long after delivery the buyer can open a dispute. Buyer misses this window = auto seller win."
+        },
+        "bonds": {
+          "type": "object",
+          "description": "Dispute bond amounts scaled by transaction size. Prevents frivolous disputes. Bond is refunded if dispute is upheld, forfeited if not.",
+          "properties": {
+            "under_25_usdc": { "type": "number", "const": 2, "description": "Transactions under $25: $2 bond" },
+            "25_to_100_usdc": { "type": "number", "const": 5, "description": "Transactions $25-$100: $5 bond" },
+            "100_to_500_usdc": { "type": "number", "const": 15, "description": "Transactions $100-$500: $15 bond" },
+            "500_to_2500_usdc": { "type": "number", "const": 35, "description": "Transactions $500-$2,500: $35 bond" },
+            "over_2500_usdc": { "type": "string", "const": "custom_or_percentage", "description": "Transactions over $2,500: custom or percentage-based" }
+          },
+          "additionalProperties": false
+        },
+        "tiers": {
+          "type": "array",
+          "description": "Three tiers in order. A dispute starts at Tier 1 and escalates if not resolved.",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["tier", "outcome", "triggers", "resolution_sla_seconds"],
+            "properties": {
+              "tier": { "type": "integer", "enum": [1, 2, 3] },
+              "outcome": {
+                "type": "string",
+                "enum": ["auto_seller_win", "auto_buyer_refund", "human_arbitration"]
+              },
+              "triggers": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Conditions that cause this tier outcome to fire automatically."
+              },
+              "resolution_sla_seconds": {
+                "type": "integer",
+                "description": "Maximum time this tier takes to resolve."
+              },
+              "arbitration_endpoint": {
+                "type": "string",
+                "format": "uri",
+                "description": "For Tier 3 only: endpoint to submit the dispute case to human arbitration."
+              }
+            },
+            "additionalProperties": false
+          },
+          "default": [
+            {
+              "tier": 1,
+              "outcome": "auto_seller_win",
+              "triggers": [
+                "hash_matches_declared_result",
+                "access_granted_and_verified",
+                "sandbox_run_completed",
+                "api_responds_correctly",
+                "output_matches_schema",
+                "buyer_missed_dispute_window"
+              ],
+              "resolution_sla_seconds": 300
+            },
+            {
+              "tier": 2,
+              "outcome": "auto_buyer_refund",
+              "triggers": [
+                "deadline_missed",
+                "hash_mismatch",
+                "install_fails",
+                "permissions_differ_from_manifest",
+                "api_down",
+                "malware_found",
+                "required_deliverable_missing"
+              ],
+              "resolution_sla_seconds": 600
+            },
+            {
+              "tier": 3,
+              "outcome": "human_arbitration",
+              "triggers": [
+                "research_quality_disputed",
+                "scope_creep_claimed",
+                "workflow_usefulness_disputed",
+                "expectation_mismatch"
+              ],
+              "resolution_sla_seconds": 172800,
+              "arbitration_endpoint": "https://registry.opentrust.dev/api/v1/disputes"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "refund_policy": {
+      "type": "object",
+      "properties": {
+        "non_delivery": { "type": "boolean", "description": "Full refund if tool does not respond within timeout." },
+        "partial_delivery": { "type": "string", "enum": ["full_refund", "pro_rata", "no_refund"] },
+        "error_response": { "type": "string", "enum": ["full_refund", "no_refund"] },
+        "window_seconds": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+
+    "revenue_split": {
+      "type": "object",
+      "description": "Declared sub-tool cost pass-through. Agents read this to understand total cost ceiling before calling.",
+      "properties": {
+        "pass_through_costs": { "type": "boolean", "default": false },
+        "markup_percentage": { "type": "number", "minimum": 0, "maximum": 500 },
+        "max_sub_tool_spend_usdc": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Hard cap on sub-tool spending per call. Buyer will never be charged more than this regardless of actual sub-tool usage."
+        }
+      },
+      "additionalProperties": false
+    }
+
+  },
+  "additionalProperties": false
+}

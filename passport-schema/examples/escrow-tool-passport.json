@@ -1,0 +1,156 @@
+{
+  "_comment": "Example of a high-value tool with escrow, dispute resolution, and revenue split. Shows the full agent financial contract — an agent can read this passport and know exactly what it will cost, how funds are protected, and what recourse it has if delivery fails.",
+  "spec_version": "0.1.0",
+
+  "tool_identity": {
+    "name": "Deep Code Audit",
+    "slug": "deep-code-audit",
+    "type": "audit",
+    "category": "security",
+    "source_url": "https://github.com/example-org/deep-code-audit",
+    "license": "Commercial",
+    "maintainers": ["example-org"]
+  },
+  "creator_identity": {
+    "creator": "Example Org",
+    "github": "example-org",
+    "verification_state": "github_verified"
+  },
+  "trust_status": "continuously_monitored",
+  "version_hash": {
+    "version": "3.0.1",
+    "commit": "c7a1e99f"
+  },
+  "capabilities": [
+    "deep static analysis of entire repositories",
+    "dependency chain vulnerability mapping",
+    "license compliance checking",
+    "generates signed audit report with evidence"
+  ],
+  "permission_manifest": {
+    "file": true,
+    "terminal": false,
+    "browser": false,
+    "network": true,
+    "memory": false,
+    "wallet": false,
+    "api": true,
+    "camera": false,
+    "microphone": false,
+    "private_data": false,
+    "notes": "Reads source files in the provided repository. Calls vulnerability DBs and license APIs. Does not write files or execute code."
+  },
+  "source_formats": ["mcp", "openapi"],
+  "format_manifests": {
+    "mcp": {
+      "server_command": "npx -y @example-org/deep-code-audit-mcp",
+      "transport": "stdio",
+      "tools": [
+        {
+          "name": "audit_repository",
+          "description": "Run a deep audit of a repository. Long-running — use escrow for payment.",
+          "inputSchema": {
+            "type": "object",
+            "required": ["repo_url"],
+            "properties": {
+              "repo_url": { "type": "string", "format": "uri" },
+              "branch": { "type": "string", "default": "main" },
+              "escrow_id": { "type": "string", "description": "Escrow ID from a pre-funded escrow contract. Recommended for this tool." }
+            }
+          }
+        }
+      ]
+    },
+    "openapi": {
+      "spec_url": "https://api.example.dev/openapi.json",
+      "base_url": "https://api.example.dev",
+      "auth_type": "bearer"
+    }
+  },
+  "commercial_status": {
+    "status": "pay_per_use",
+    "pricing": {
+      "model": "flat_fee",
+      "amount": 25.00,
+      "currency": "USDC",
+      "notes": "Flat 25 USDC per full repository audit. Escrow strongly recommended — audit takes 2-10 minutes."
+    },
+    "payment_config": {
+      "type": "crypto_direct",
+      "network": "base",
+      "wallet_address": "0xAbCd1234567890abcdef1234567890ABCDEF1234",
+      "supported_tokens": ["USDC"]
+    },
+    "access_config": {
+      "type": "webhook_token",
+      "verification_endpoint": "https://api.example.dev/v1/verify-payment",
+      "token_ttl_seconds": 3600,
+      "token_scope": "single_call"
+    },
+    "escrow_config": {
+      "supported": true,
+      "type": "optimistic",
+      "proof_of_delivery": {
+        "type": "webhook_callback",
+        "timeout_seconds": 900,
+        "callback_endpoint": "https://api.example.dev/v1/escrow/callback",
+        "result_hash_required": true
+      },
+      "dispute": {
+        "window_seconds": 3600,
+        "bond_amount_usdc": 2.00,
+        "tiers": [
+          {
+            "tier": 1,
+            "type": "auto_non_delivery",
+            "description": "No response received within 15 minutes. Full refund issued automatically.",
+            "resolution_sla_seconds": 60
+          },
+          {
+            "tier": 2,
+            "type": "auto_proof_mismatch",
+            "description": "Report hash does not match declared result. Full refund issued automatically.",
+            "resolution_sla_seconds": 300
+          },
+          {
+            "tier": 3,
+            "type": "arbitration",
+            "description": "Buyer disputes quality of findings. Submitted to OpenTrust arbitration queue.",
+            "resolution_endpoint": "https://registry.opentrust.dev/api/v1/disputes",
+            "resolution_sla_seconds": 172800
+          }
+        ]
+      },
+      "refund_policy": {
+        "non_delivery": true,
+        "partial_delivery": "full_refund",
+        "error_response": "full_refund",
+        "window_seconds": 3600
+      },
+      "revenue_split": {
+        "pass_through_costs": true,
+        "markup_percentage": 15,
+        "max_sub_tool_spend_usdc": 5.00
+      }
+    }
+  },
+  "risk_summary": {
+    "human_reviewed_findings": [
+      "Tool reads repo contents but does not store source code — only stores finding summaries.",
+      "Sub-tool costs (vuln DB queries, license API) passed through with 15% markup, capped at 5 USDC."
+    ]
+  },
+  "review_history": [
+    {
+      "status": "continuously_monitored",
+      "timestamp": "2026-04-01T00:00:00Z",
+      "reviewer": "opentrust-monitor",
+      "notes": "Monitoring active. Dependencies scanned weekly."
+    }
+  ],
+  "agent_access": {
+    "api_url": "https://registry.opentrust.dev/api/v1/tools/deep-code-audit",
+    "mcp_readable": true,
+    "cli_command": "opentrust inspect deep-code-audit"
+  }
+}

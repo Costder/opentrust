@@ -2,7 +2,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.src.config import settings
 from api.src.middleware.rate_limit import RateLimitMiddleware
-from api.src.routes import auth, badges, passports, payments, search
+from api.src.routes import auth, badges, github_app, marketplace, passports, payments, search
 
 app = FastAPI(title="OpenTrust API", version="0.1.0")
 app.add_middleware(RateLimitMiddleware)
@@ -22,6 +22,15 @@ api.include_router(badges.router)
 api.include_router(payments.router)
 api.include_router(payments.subscriptions_router)
 api.include_router(payments.escrow_router)
+api.include_router(github_app.router)
+api.include_router(github_app.github_router)
+api.include_router(github_app.repos_router)
+api.include_router(marketplace.coinbase_router)
+api.include_router(marketplace.wallets_router)
+api.include_router(marketplace.router)
+api.include_router(marketplace.evidence_router)
+api.include_router(marketplace.reports_router)
+api.include_router(marketplace.badges_router)
 
 
 @api.get("/health")

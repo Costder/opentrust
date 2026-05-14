@@ -1,0 +1,212 @@
+{
+  "$comment": "Example: A paid code-execution tool with escrow and full agent identity requirements.",
+  "spec_version": "0.1.0",
+
+  "tool_identity": {
+    "name": "Code Sandbox",
+    "slug": "code-sandbox-secure",
+    "source_url": "https://github.com/example/code-sandbox-mcp",
+    "category": "code-execution",
+    "license": "Apache-2.0",
+    "maintainers": ["example-org"]
+  },
+
+  "creator_identity": {
+    "creator": "Example Org",
+    "organization": "example-org",
+    "github": "example-org",
+    "verification_state": "github_verified"
+  },
+
+  "trust_status": "reviewer_signed",
+
+  "version_hash": {
+    "version": "2.1.0",
+    "commit": "f1e2d3c4b5a6",
+    "artifact_hash": "sha256:def456"
+  },
+
+  "capabilities": [
+    "Execute Python, JavaScript, and Bash in an isolated sandbox",
+    "File I/O within the sandbox (not host filesystem)",
+    "Network access disabled by default",
+    "Returns stdout, stderr, and exit code",
+    "Sandbox destroyed after each call"
+  ],
+
+  "permission_manifest": {
+    "terminal": true,
+    "file": true,
+    "network": false,
+    "browser": false,
+    "memory": false,
+    "wallet": false,
+    "api": false,
+    "camera": false,
+    "microphone": false,
+    "private_data": false,
+    "notes": "file and terminal access are scoped to the ephemeral sandbox container only"
+  },
+
+  "data_handling": {
+    "retention_days": 0,
+    "stored_regions": [],
+    "used_for_training": false,
+    "third_party_sharing": false,
+    "gdpr_compliant": true,
+    "hipaa_eligible": false,
+    "ccpa_compliant": true,
+    "dpa_available": true
+  },
+
+  "source_formats": ["mcp", "openapi"],
+
+  "format_manifests": {
+    "mcp": {
+      "server_command": "npx @example/code-sandbox-mcp",
+      "transport": "stdio",
+      "tools": [
+        {
+          "name": "run_code",
+          "description": "Execute code in an isolated sandbox. Returns output and exit code.",
+          "inputSchema": {
+            "type": "object",
+            "required": ["language", "code"],
+            "properties": {
+              "language": { "type": "string", "enum": ["python", "javascript", "bash"] },
+              "code": { "type": "string" },
+              "timeout_seconds": { "type": "integer", "default": 30, "maximum": 120 }
+            }
+          }
+        }
+      ]
+    }
+  },
+
+  "commercial_status": {
+    "status": "pay_per_use",
+    "pricing": {
+      "model": "per_call",
+      "amount": 0.05,
+      "currency": "USDC",
+      "notes": "Per sandbox execution regardless of runtime. Timeout executions are billed."
+    },
+    "payment_config": {
+      "type": "crypto_direct",
+      "network": "base",
+      "wallet_address": "0x0000000000000000000000000000000000000001",
+      "supported_tokens": ["USDC"]
+    },
+    "escrow_config": {
+      "supported": true,
+      "type": "optimistic",
+      "proof_of_delivery": {
+        "type": "sandbox_completed",
+        "standard": "Sandbox returns exit_code field in response body within timeout_seconds. Any response containing exit_code (including non-zero) constitutes delivery. No response within timeout = non-delivery.",
+        "timeout_seconds": 150,
+        "result_hash_required": false
+      },
+      "dispute": {
+        "window_seconds": 600,
+        "bonds": {
+          "under_25_usdc": 2,
+          "25_to_100_usdc": 5,
+          "100_to_500_usdc": 15,
+          "500_to_2500_usdc": 35,
+          "over_2500_usdc": "custom_or_percentage"
+        },
+        "tiers": [
+          {
+            "tier": 1,
+            "outcome": "auto_seller_win",
+            "triggers": ["sandbox_run_completed", "buyer_missed_dispute_window"],
+            "resolution_sla_seconds": 300
+          },
+          {
+            "tier": 2,
+            "outcome": "auto_buyer_refund",
+            "triggers": ["deadline_missed", "api_down"],
+            "resolution_sla_seconds": 600
+          },
+          {
+            "tier": 3,
+            "outcome": "human_arbitration",
+            "triggers": ["scope_creep_claimed", "expectation_mismatch"],
+            "resolution_sla_seconds": 172800,
+            "arbitration_endpoint": "https://registry.opentrust.dev/api/v1/disputes"
+          }
+        ]
+      },
+      "refund_policy": {
+        "non_delivery": true,
+        "partial_delivery": "full_refund",
+        "error_response": "full_refund",
+        "window_seconds": 300
+      }
+    },
+    "access_config": {
+      "type": "transaction_proof",
+      "header_name": "X-Payment-TxHash"
+    }
+  },
+
+  "caller_requirements": {
+    "min_agent_trust_status": "github_verified",
+    "require_agent_identity": true,
+    "require_spend_policy": true,
+    "max_caller_depth": 2,
+    "deny_agent_callers": false
+  },
+
+  "security": {
+    "transport": {
+      "tls_minimum": "1.2",
+      "hsts": true,
+      "certificate_pinning": false
+    }
+  },
+
+  "review_history": [
+    {
+      "status": "owner_confirmed",
+      "timestamp": "2026-03-01T09:00:00Z",
+      "reviewer": "example-org",
+      "notes": "Permissions confirmed. Sandbox isolation verified via container escape test."
+    },
+    {
+      "status": "reviewer_signed",
+      "timestamp": "2026-04-15T14:30:00Z",
+      "reviewer": "bob-security",
+      "attestation": {
+        "key_id": "bob-security-2026-v1",
+        "algorithm": "ed25519",
+        "signature": "BASE64URL_SIGNATURE_PLACEHOLDER",
+        "payload": "code-sandbox-secure:2.1.0:reviewer_signed:2026-04-15T14:30:00Z"
+      },
+      "notes": "Verified sandbox isolation. No host filesystem access. Network disabled."
+    }
+  ],
+
+  "permission_changelog": [
+    {
+      "from_version": "1.0.0",
+      "to_version": "2.0.0",
+      "added_permissions": [],
+      "removed_permissions": ["network"],
+      "breaking": false,
+      "notes": "Network access removed in v2 — sandbox is fully isolated."
+    }
+  ],
+
+  "cache_ttl_seconds": 3600,
+
+  "agent_access": {
+    "mcp_readable": true,
+    "rate_limits": {
+      "calls_per_minute": 10,
+      "calls_per_day": 500,
+      "concurrent_sessions": 3,
+      "retry_after_seconds": 30
+    }
+  }
+}

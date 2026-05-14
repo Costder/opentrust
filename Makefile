@@ -10,7 +10,7 @@ dev:
 	docker compose up --build
 
 test:
-	pytest api/tests payment-contracts/tests cli/tests
+	python -m pytest api/tests payment-contracts/tests cli/tests
 	cd web && npm test
 
 lint:

@@ -2,22 +2,150 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://opentrust.dev/schemas/commercial-status.schema.json",
   "title": "Commercial Status",
+  "description": "Machine-readable payment contract for AI agent tool access. An agent reads this to discover cost, send payment, and prove it paid — all without a human in the loop.",
   "type": "object",
   "required": ["status"],
   "properties": {
     "status": {
       "type": "string",
-      "enum": ["free", "freemium", "paid", "subscription", "pay_per_use", "enterprise"]
+      "enum": ["free", "freemium", "paid", "subscription", "pay_per_use", "enterprise"],
+      "description": "High-level commercial tier. 'free' means no payment config is needed. All other statuses should include pricing and payment_config."
     },
-    "fee_schedule": {
+
+    "pricing": {
       "type": "object",
+      "description": "What the tool costs and how it's measured.",
+      "required": ["model"],
       "properties": {
-        "kind": { "type": "string", "enum": ["free", "flat_fee", "percentage"] },
-        "amount_usdc": { "type": "number", "minimum": 0 },
-        "percentage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "model": {
+          "type": "string",
+          "enum": ["per_call", "per_token", "per_byte", "flat_fee", "subscription_monthly", "subscription_annual", "tiered"],
+          "description": "How usage is metered. per_call is simplest for agents."
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cost per unit (call, token, byte, etc.) in the currency specified."
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USDC", "USDT", "ETH", "SOL"],
+          "default": "USDC",
+          "description": "Payment currency. USDC on Base is the default — stable, cheap, fast."
+        },
+        "free_tier": {
+          "type": "object",
+          "description": "Free allowance before payment kicks in. An agent checks this first. Tools enforce free tier limits per agent_id (from the X-OpenTrust-Agent-Identity header) — agent_id is the stable cross-session identifier. session_id resets per task and must not be used for free tier tracking. A tool that receives calls without an agent identity header may fall back to IP-based limiting, but should document this in pricing.notes.",
+          "properties": {
+            "calls_per_day": { "type": "integer", "minimum": 0 },
+            "calls_per_month": { "type": "integer", "minimum": 0 },
+            "tokens_per_day": { "type": "integer", "minimum": 0 },
+            "resets": { "type": "string", "enum": ["daily", "monthly", "never"] },
+            "identity_required": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, the tool requires a valid X-OpenTrust-Agent-Identity header to track free tier usage. Calls without identity are rejected or billed immediately. Recommended for any tool with a free_tier to prevent quota exhaustion by anonymous callers."
+            }
+          },
+          "additionalProperties": false
+        },
+        "tiers_model": {
+          "type": "string",
+          "enum": ["graduated", "flat_per_tier"],
+          "description": "Required when pricing.model is 'tiered'. graduated: each additional unit is priced at its tier rate — cost decreases as volume grows (like AWS data transfer). flat_per_tier: all units within a band pay the same rate — once you cross a threshold, every unit in that band is billed at that band's rate. Agents use this to predict costs accurately before committing.",
+          "examples": ["graduated", "flat_per_tier"]
+        },
+        "tiers": {
+          "type": "array",
+          "description": "For tiered pricing — list of volume tiers with per-unit cost. Tiers must be ordered ascending by up_to. The final tier must have up_to: null (unlimited). See tiers_model for how costs are calculated across tier boundaries.",
+          "items": {
+            "type": "object",
+            "required": ["up_to", "amount"],
+            "properties": {
+              "up_to": { "type": ["integer", "null"], "description": "Upper bound for this tier (inclusive). null means unlimited — must be the last tier." },
+              "amount": { "type": "number", "minimum": 0, "description": "Per-unit cost for this tier in the declared currency." }
+            },
+            "additionalProperties": false
+          }
+        },
         "notes": { "type": "string" }
       },
-      "required": ["kind"],
+      "additionalProperties": false
+    },
+
+    "payment_config": {
+      "type": "object",
+      "description": "Where and how to send payment. An agent reads this to construct and submit a transaction.",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["crypto_direct", "coinbase_commerce", "payment_gateway"],
+          "description": "crypto_direct: agent sends USDC directly to a wallet address. coinbase_commerce: agent calls a Coinbase Commerce checkout URL. payment_gateway: agent calls a custom endpoint that returns a payment intent."
+        },
+        "network": {
+          "type": "string",
+          "enum": ["base", "ethereum", "solana", "polygon", "arbitrum"],
+          "default": "base",
+          "description": "Which chain to send payment on. Base (Coinbase L2) is the default — sub-cent fees, fast finality."
+        },
+        "wallet_address": {
+          "type": "string",
+          "description": "For crypto_direct: the wallet address that receives payment. Agent sends amount_usdc here."
+        },
+        "checkout_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "For coinbase_commerce: the Coinbase Commerce checkout or charge creation endpoint."
+        },
+        "gateway_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "For payment_gateway: endpoint the agent POSTs to get a payment intent. Returns a payment_intent_id and destination."
+        },
+        "supported_tokens": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["USDC", "USDT", "ETH", "SOL"] },
+          "default": ["USDC"],
+          "description": "Which tokens this tool accepts. Agents should prefer USDC."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "escrow_config": {
+      "$ref": "escrow.schema.json",
+      "description": "Optional escrow support for this tool. If present, agents can use escrow-protected payments."
+    },
+
+    "access_config": {
+      "type": "object",
+      "description": "How an agent proves it paid and gets access. This is the piece that makes agent-to-agent payments work without a human in the loop.",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["transaction_proof", "webhook_token", "api_key_issued", "open_after_payment"],
+          "description": "transaction_proof: agent includes txHash in each tool call header — tool verifies on-chain. webhook_token: tool verifies payment via webhook and returns a short-lived JWT. api_key_issued: tool issues a reusable API key after payment confirmation. open_after_payment: tool is gated but unlocks for the session after any payment is confirmed."
+        },
+        "verification_endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "For webhook_token and api_key_issued: the endpoint the agent calls to exchange a transaction hash for a token or key."
+        },
+        "header_name": {
+          "type": "string",
+          "description": "For transaction_proof: the HTTP header the agent includes the txHash in (e.g. 'X-Payment-TxHash')."
+        },
+        "token_ttl_seconds": {
+          "type": "integer",
+          "description": "For webhook_token: how long the returned token is valid."
+        },
+        "token_scope": {
+          "type": "string",
+          "description": "What the token grants access to (e.g. 'single_call', 'session', 'monthly')."
+        }
+      },
       "additionalProperties": false
     }
   },

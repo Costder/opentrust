@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/registry-trust.schema.json",
+  "title": "Registry Trust",
+  "description": "Multi-registry trust model. OpenTrust is open source — anyone can run a registry. This schema defines how agents discover, trust, and verify multiple registries. Follows a delegated trust hierarchy similar to certificate authorities: root registries, delegated registries, and private registries.",
+
+  "definitions": {
+
+    "RegistryRecord": {
+      "type": "object",
+      "required": ["registry_url", "trust_level", "public_key_url"],
+      "properties": {
+        "registry_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL of the registry API."
+        },
+        "name": { "type": "string" },
+        "trust_level": {
+          "type": "string",
+          "enum": ["root", "delegated", "private", "untrusted"],
+          "description": "root: fully trusted, keys hardcoded in agents. delegated: trusted by reference from a root registry. private: trusted within an org but not by external agents by default. untrusted: known but not trusted."
+        },
+        "public_key_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL where this registry publishes its Ed25519 signing keys. Format: same as /.well-known/opentrust-keys.json"
+        },
+        "delegated_by": {
+          "type": "string",
+          "format": "uri",
+          "description": "For delegated registries: the root registry URL that vouches for this registry. Agents must verify the delegation signature before trusting."
+        },
+        "delegation_signature": {
+          "type": "string",
+          "description": "Base64url-encoded Ed25519 signature from the root registry over the canonical string '{registry_url}:{public_key_url}:{delegation_expires_at}'. Agents verify this to establish the trust chain. When the root registry rotates its signing key, all delegations must be re-signed with the new key before delegation_expires_at."
+        },
+        "delegation_expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Expiry date for this delegation. Agents must treat this registry as untrusted after this date even if the signature is valid. Required for all delegated registries. Delegations must be renewed before expiry by having the root registry re-sign. This ensures that a compromised root key cannot create permanent delegations — existing delegations expire even if the key is not immediately revoked."
+        },
+        "scope": {
+          "type": "object",
+          "description": "What this registry is authoritative for.",
+          "properties": {
+            "categories": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Tool categories this registry is authoritative for. Empty = all categories."
+            },
+            "orgs": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "GitHub orgs or domains this registry manages tools for."
+            }
+          },
+          "additionalProperties": false
+        },
+        "cross_registry_resolution": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this registry participates in cross-registry passport lookups. If true, agents can ask this registry to resolve slugs from other registries."
+        }
+      },
+      "additionalProperties": false
+    }
+
+  },
+
+  "type": "object",
+  "description": "A registry trust list. Published at /.well-known/opentrust-registries.json on root registries. Agents fetch this to discover the full set of trusted registries.",
+  "required": ["version", "registries"],
+  "properties": {
+
+    "version": { "type": "string" },
+
+    "updated_at": { "type": "string", "format": "date-time" },
+
+    "registries": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/RegistryRecord" }
+    },
+
+    "resolution_order": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri" },
+      "description": "Preferred registry lookup order for slug resolution. When a slug is ambiguous, agents try registries in this order."
+    },
+
+    "root_registry_url": {
+      "type": "string",
+      "format": "uri",
+      "const": "https://registry.opentrust.dev",
+      "description": "The canonical root registry. Hardcoded in reference implementations."
+    }
+
+  },
+  "additionalProperties": false
+}

@@ -2,23 +2,59 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://opentrust.dev/schemas/passport.schema.json",
   "title": "Agent Tool Passport",
+  "description": "Universal trust record for any AI agent tool, regardless of framework or model provider.",
   "type": "object",
-  "required": ["tool_identity", "trust_status", "version_hash", "capabilities", "permission_manifest", "commercial_status", "agent_access"],
+  "required": ["spec_version", "tool_identity", "trust_status", "version_hash", "capabilities", "permission_manifest", "source_formats"],
   "properties": {
+
+    "spec_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Version of the OpenTrust spec this passport was written against (semver). Allows agents and validators to detect schema drift. Current stable spec version: '0.1.0'. Increment to '1.0.0' when the spec reaches stability milestone.",
+      "examples": ["0.1.0", "1.0.0"]
+    },
+
     "tool_identity": {
       "type": "object",
-      "required": ["name", "slug", "type", "category", "source_url"],
+      "required": ["name", "slug", "source_url", "category"],
       "properties": {
         "name": { "type": "string", "minLength": 1 },
         "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "category": {
+          "type": "string",
+          "enum": [
+            "search",
+            "file-management",
+            "code-execution",
+            "developer-tools",
+            "browser-automation",
+            "data-analysis",
+            "database",
+            "version-control",
+            "ai-models",
+            "communication",
+            "documentation",
+            "image-processing",
+            "audio-video",
+            "productivity",
+            "finance",
+            "security",
+            "monitoring",
+            "research",
+            "infrastructure",
+            "testing",
+            "custom"
+          ],
+          "description": "Defined taxonomy — prevents free-text category drift that breaks search and filtering."
+        },
         "type": { "type": "string" },
-        "category": { "type": "string" },
         "source_url": { "type": "string", "format": "uri" },
         "license": { "type": "string" },
         "maintainers": { "type": "array", "items": { "type": "string" }, "default": [] }
       },
       "additionalProperties": false
     },
+
     "creator_identity": {
       "type": "object",
       "properties": {
@@ -26,14 +62,58 @@
         "organization": { "type": "string" },
         "github": { "type": "string" },
         "domain": { "type": "string" },
-        "verification_state": { "type": "string", "default": "unverified" }
+        "verification_state": {
+          "type": "string",
+          "enum": ["unverified", "github_verified", "domain_verified", "identity_verified"],
+          "default": "unverified"
+        }
       },
       "additionalProperties": false
     },
+
     "trust_status": {
       "type": "string",
-      "enum": ["auto_generated_draft", "creator_claimed", "seller_confirmed", "community_reviewed", "reviewer_signed", "security_checked", "continuously_monitored", "disputed"]
+      "enum": [
+        "auto_generated_draft",
+        "creator_claimed",
+        "owner_confirmed",
+        "community_reviewed",
+        "reviewer_signed",
+        "security_checked",
+        "continuously_monitored",
+        "disputed"
+      ]
     },
+
+    "revocation": {
+      "type": "object",
+      "description": "Emergency revocation. If revoked=true, agents must not use this tool regardless of trust_status. Revocation is faster than the dispute process — it is used when a tool is actively malicious or a signing key is compromised.",
+      "required": ["revoked"],
+      "properties": {
+        "revoked": { "type": "boolean", "default": false },
+        "revoked_at": { "type": "string", "format": "date-time" },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "malware_detected",
+            "signing_key_compromised",
+            "creator_fraud",
+            "data_exfiltration",
+            "supply_chain_attack",
+            "legal_takedown",
+            "other"
+          ]
+        },
+        "revocation_details": { "type": "string" },
+        "revocation_list_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Agents must periodically check the revocation list. Canonical list: https://opentrust.dev/.well-known/revoked-passports.json"
+        }
+      },
+      "additionalProperties": false
+    },
+
     "version_hash": {
       "type": "object",
       "required": ["version"],
@@ -44,12 +124,316 @@
       },
       "additionalProperties": false
     },
+
+    "permission_changelog": {
+      "type": "array",
+      "description": "Machine-readable history of permission changes between versions. Agents can check this to know if a newer version requires re-consent before upgrading.",
+      "items": {
+        "type": "object",
+        "required": ["from_version", "to_version", "breaking"],
+        "properties": {
+          "from_version": { "type": "string" },
+          "to_version": { "type": "string" },
+          "added_permissions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Permissions added in this version that were not present before."
+          },
+          "removed_permissions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "breaking": {
+            "type": "boolean",
+            "description": "true if this change requires agent/operator re-consent. Any added permission is breaking."
+          },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "default": []
+    },
+
     "capabilities": {
       "type": "array",
       "items": { "type": "string" },
       "minItems": 1
     },
+
     "permission_manifest": { "$ref": "permissions.schema.json" },
+
+    "data_handling": {
+      "type": "object",
+      "description": "Declares what the tool does with data it accesses. Required for enterprise trust reviews. Goes beyond permission_manifest (which says what is accessed) to say what happens to that data.",
+      "properties": {
+        "retention_days": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "How many days data is retained after a call. 0 = not stored. null = unknown (treated as indefinite by agents)."
+        },
+        "stored_regions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "AWS/GCP/Azure region identifiers where data may be stored. Empty = not stored.",
+          "examples": [["us-east-1"], ["eu-west-1", "eu-central-1"]]
+        },
+        "used_for_training": {
+          "type": "boolean",
+          "description": "Whether call data may be used to train models. false is required for most enterprise use cases."
+        },
+        "third_party_sharing": {
+          "type": "boolean",
+          "description": "Whether data is shared with third parties."
+        },
+        "gdpr_compliant": { "type": "boolean" },
+        "hipaa_eligible": {
+          "type": "boolean",
+          "description": "Whether the tool can be used in HIPAA-covered workflows."
+        },
+        "ccpa_compliant": { "type": "boolean" },
+        "dpa_available": {
+          "type": "boolean",
+          "description": "Whether the creator will sign a Data Processing Agreement for enterprise customers."
+        },
+        "privacy_policy_url": { "type": "string", "format": "uri" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "dependencies": {
+      "type": "array",
+      "description": "Other tools or services this tool depends on. Enables security propagation — if a dependency gets a CVE or is disputed, the dependent tool's trust status may be affected.",
+      "items": {
+        "type": "object",
+        "required": ["slug"],
+        "properties": {
+          "slug": { "type": "string", "description": "OpenTrust passport slug of the dependency." },
+          "min_version": { "type": "string" },
+          "registry_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Registry where the dependency passport lives. Defaults to https://registry.opentrust.dev if omitted."
+          },
+          "optional": { "type": "boolean", "default": false }
+        },
+        "additionalProperties": false
+      },
+      "default": []
+    },
+
+    "io_schema": {
+      "type": "object",
+      "description": "Generic input/output schema for tool composition across frameworks. Use this when you need agents to chain tools regardless of which format_manifests entries are present. JSON Schema objects.",
+      "properties": {
+        "input": {
+          "type": "object",
+          "description": "JSON Schema describing the tool's canonical input."
+        },
+        "output": {
+          "type": "object",
+          "description": "JSON Schema describing the tool's canonical output."
+        },
+        "errors": {
+          "type": "array",
+          "description": "Enumerated error codes the tool may return.",
+          "items": {
+            "type": "object",
+            "required": ["code", "description"],
+            "properties": {
+              "code": { "type": "string" },
+              "description": { "type": "string" },
+              "retryable": { "type": "boolean", "default": false }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "caller_requirements": {
+      "type": "object",
+      "description": "Minimum requirements for the agent or client calling this tool. Tools can gate access by caller trust level, preventing untrusted agents from using sensitive tools.",
+      "properties": {
+        "min_agent_trust_status": {
+          "type": "string",
+          "enum": [
+            "none",
+            "identity_declared",
+            "github_verified",
+            "org_verified",
+            "platform_verified"
+          ],
+          "default": "none",
+          "description": "Minimum trust level the calling agent must present. 'none' = open access. 'identity_declared' = caller must provide an agent identity header."
+        },
+        "require_agent_identity": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the caller must present a valid X-OpenTrust-Agent-Identity header. The tool may reject unsigned or unverified callers."
+        },
+        "allowed_orgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "If set, only agents presenting identity from these GitHub orgs or domains are accepted. Empty = open access."
+        },
+        "require_spend_policy": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the caller must present a X-OpenTrust-Spend-Policy header so the tool knows the caller has authorized spending."
+        },
+        "max_caller_depth": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum orchestration depth this tool will accept. Tools that are sensitive (wallet access, private data) may set this to 0 or 1 to prevent being called deep inside an unknown agent chain. A caller presenting depth > max_caller_depth must be rejected."
+        },
+        "deny_agent_callers": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, this tool will only accept calls from human-operated clients or root agents (depth=0). Prevents the tool from being used as a sub-step in autonomous agent chains."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "source_formats": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["mcp", "openai_function", "langchain", "openapi", "npm_package", "pypi_package", "cargo_crate", "cli", "agent", "custom"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+
+    "format_manifests": {
+      "type": "object",
+      "properties": {
+        "mcp": {
+          "type": "object",
+          "properties": {
+            "server_command": { "type": "string" },
+            "transport": { "type": "string", "enum": ["stdio", "sse", "http"], "default": "stdio" },
+            "config_schema": { "type": "object" },
+            "tools": {
+              "type": "array",
+              "description": "Individual tools exposed by this MCP server. Each tool can override the top-level commercial_status for per-tool pricing.",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "inputSchema": { "type": "object" },
+                  "commercial_status": {
+                    "$ref": "commercial-status.schema.json",
+                    "description": "Per-tool pricing override. When present, this tool's commercial terms supersede the passport-level commercial_status. Allows MCP servers that expose multiple tools with different pricing models (e.g., a search tool at $0.01/call and a code-execution tool at $0.05/call) to express accurate costs for each."
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "openai_function": {
+          "type": "object",
+          "properties": {
+            "functions": { "type": "array", "items": { "type": "object" } },
+            "parallel_tool_calls": { "type": "boolean", "default": true }
+          },
+          "additionalProperties": false
+        },
+        "langchain": {
+          "type": "object",
+          "properties": {
+            "tool_class": { "type": "string" },
+            "package": { "type": "string" },
+            "import_path": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "openapi": {
+          "type": "object",
+          "properties": {
+            "spec_url": { "type": "string", "format": "uri" },
+            "base_url": { "type": "string", "format": "uri" },
+            "auth_type": { "type": "string", "enum": ["none", "api_key", "oauth2", "bearer"] }
+          },
+          "additionalProperties": false
+        },
+        "npm_package": {
+          "type": "object",
+          "properties": {
+            "package_name": { "type": "string" },
+            "version": { "type": "string" },
+            "install_command": { "type": "string" },
+            "registry": { "type": "string", "default": "https://registry.npmjs.org" }
+          },
+          "additionalProperties": false
+        },
+        "pypi_package": {
+          "type": "object",
+          "properties": {
+            "package_name": { "type": "string" },
+            "version": { "type": "string" },
+            "install_command": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "cargo_crate": {
+          "type": "object",
+          "properties": {
+            "crate_name": { "type": "string" },
+            "version": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "cli": {
+          "type": "object",
+          "properties": {
+            "command": { "type": "string" },
+            "install_instructions": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "agent": {
+          "type": "object",
+          "description": "This tool is itself an AI agent — it accepts a task and may spawn sub-calls to other tools or agents internally. Declaring this format signals to calling agents that cost and call depth may be non-deterministic.",
+          "properties": {
+            "framework": {
+              "type": "string",
+              "description": "The agent framework this runs on (e.g. 'openai-assistants', 'langchain', 'autogen', 'custom')."
+            },
+            "max_sub_depth": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Maximum orchestration depth this agent will spawn. 0 = this agent calls tools but does not spawn other agents. Helps calling agents enforce depth limits."
+            },
+            "spawns_agents": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether this agent may spawn other agents. If true, calling agents should budget for non-deterministic downstream costs."
+            },
+            "entry_point": {
+              "type": "string",
+              "description": "API endpoint or MCP tool name that triggers this agent."
+            }
+          },
+          "additionalProperties": false
+        },
+        "custom": {
+          "type": "object",
+          "properties": {
+            "format_name": { "type": "string" },
+            "metadata": { "type": "object" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
     "risk_summary": {
       "type": "object",
       "properties": {
@@ -59,6 +443,7 @@
       },
       "additionalProperties": false
     },
+
     "review_history": {
       "type": "array",
       "items": {
@@ -68,42 +453,93 @@
           "status": { "type": "string" },
           "timestamp": { "type": "string", "format": "date-time" },
           "reviewer": { "type": "string" },
-          "signature": { "type": "string" },
+          "attestation": { "$ref": "security.schema.json#/definitions/ReviewerAttestation" },
           "notes": { "type": "string" }
         },
         "additionalProperties": false
       },
       "default": []
     },
+
     "commercial_status": { "$ref": "commercial-status.schema.json" },
-    "billing_plan": {
-      "type": ["object", "null"],
-      "properties": {
-        "tier": { "type": "string" },
-        "interval": { "type": "string", "enum": ["one_time", "monthly", "annual", "usage"] },
-        "amount_usdc": { "type": "number", "minimum": 0 }
-      },
-      "additionalProperties": false
+
+    "security": {
+      "$ref": "security.schema.json",
+      "description": "Cryptographic integrity, transport security. registry_signature is populated automatically by the registry."
     },
-    "fee_schedule": {
+
+    "sunset": {
       "type": "object",
+      "description": "Deprecation and end-of-life declaration. Allows tool authors to signal that a tool is being retired and point agents to a replacement. Agents should surface sunset warnings to operators and refuse to use tools past their end_of_life_at date.",
+      "required": ["deprecated_at"],
       "properties": {
-        "kind": { "type": "string", "enum": ["free", "flat_fee", "percentage"] },
-        "amount_usdc": { "type": "number", "minimum": 0 },
-        "percentage": { "type": "number", "minimum": 0, "maximum": 100 }
+        "deprecated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when this tool was marked deprecated. Agents should warn operators after this date."
+        },
+        "end_of_life_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp after which agents must not call this tool. Tool may be unavailable after this date."
+        },
+        "successor_slug": {
+          "type": "string",
+          "description": "OpenTrust slug of the recommended replacement tool. Agents should automatically suggest or switch to this tool."
+        },
+        "successor_registry_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Registry where the successor passport lives. Defaults to the current registry if omitted."
+        },
+        "migration_guide_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to migration instructions for operators upgrading to the successor."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable explanation of why the tool is being retired."
+        }
       },
       "additionalProperties": false
     },
+
+    "cache_ttl_seconds": {
+      "type": "integer",
+      "minimum": 60,
+      "description": "How long agents may cache this passport before re-fetching. The registry sets this based on trust_status: auto_generated_draft=3600, continuously_monitored=1800, disputed=0 (no caching). Agents must always verify the registry_signature against the revocation list if caching.",
+      "examples": [3600, 86400, 1800]
+    },
+
     "agent_access": {
       "type": "object",
-      "required": ["api_url", "mcp_readable"],
       "properties": {
         "api_url": { "type": "string" },
         "mcp_readable": { "type": "boolean" },
-        "cli_command": { "type": "string" }
+        "cli_command": { "type": "string" },
+        "rate_limits": {
+          "type": "object",
+          "description": "Declared rate limits. Agents use this when building orchestration pipelines to avoid throttling.",
+          "properties": {
+            "calls_per_minute": { "type": "integer", "minimum": 1 },
+            "calls_per_day": { "type": "integer", "minimum": 1 },
+            "concurrent_sessions": { "type": "integer", "minimum": 1 },
+            "burst_calls": {
+              "type": "integer",
+              "description": "Max calls in a 10-second window before throttling kicks in."
+            },
+            "retry_after_seconds": {
+              "type": "integer",
+              "description": "Suggested wait time after hitting a rate limit before retrying."
+            }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     }
+
   },
   "additionalProperties": false
 }

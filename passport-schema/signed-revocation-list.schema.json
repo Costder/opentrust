@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/signed-revocation-list.schema.json",
+  "title": "Signed Revocation List",
+  "description": "The canonical revocation list published at https://opentrust.dev/.well-known/revoked-passports.json and https://opentrust.dev/.well-known/revoked-operator-keys.json. The entire document is signed by the registry's Ed25519 key so agents can verify it was not tampered with in transit. Agents must verify the signature before trusting any entry. An unverified revocation list must be treated as if it listed all cached passports as revoked (fail closed).",
+
+  "type": "object",
+  "required": ["version", "updated_at", "passports", "operator_keys", "signature"],
+  "properties": {
+
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonically increasing version number. Agents must reject a list with a version lower than the last successfully verified version — this prevents rollback attacks where a stale list is served to hide a new revocation."
+    },
+
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this list was last updated. Agents must reject lists older than 10 minutes when checking pre-payment (not just the 5-minute cache TTL — the list itself has an allowed age)."
+    },
+
+    "ttl_seconds": {
+      "type": "integer",
+      "minimum": 60,
+      "default": 300,
+      "description": "How long agents may cache this list. The registry sets this to 300 (5 minutes) for normal operation. During an active incident, the registry may lower it to 60 to force faster propagation."
+    },
+
+    "passports": {
+      "type": "array",
+      "description": "Revoked passport versions. Each entry is a specific slug:version pair. If version is '*', all versions of the slug are revoked.",
+      "items": {
+        "type": "object",
+        "required": ["slug", "version", "revoked_at", "reason"],
+        "properties": {
+          "slug": { "type": "string", "description": "Tool slug." },
+          "version": { "type": "string", "description": "Specific version, or '*' for all versions." },
+          "revoked_at": { "type": "string", "format": "date-time" },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "malware_detected",
+              "signing_key_compromised",
+              "creator_fraud",
+              "data_exfiltration",
+              "supply_chain_attack",
+              "legal_takedown",
+              "other"
+            ]
+          },
+          "details": { "type": "string", "description": "Optional public-facing explanation." }
+        },
+        "additionalProperties": false
+      },
+      "default": []
+    },
+
+    "operator_keys": {
+      "type": "array",
+      "description": "Revoked operator signing keys. Agents must reject any agent identity token whose signature.key_id appears here, regardless of signature validity. This is how compromised operator keys are neutralized without waiting for token expiry.",
+      "items": {
+        "type": "object",
+        "required": ["key_id", "revoked_at", "reason"],
+        "properties": {
+          "key_id": { "type": "string", "description": "The key_id value from the agent identity token's signature block." },
+          "operator_identity": { "type": "string", "description": "The operator this key belonged to (informational only)." },
+          "revoked_at": { "type": "string", "format": "date-time" },
+          "reason": {
+            "type": "string",
+            "enum": ["key_compromised", "operator_fraud", "key_rotation", "account_terminated"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "default": []
+    },
+
+    "signature": {
+      "type": "object",
+      "description": "Ed25519 signature by the registry over the canonical document (keys sorted, whitespace stripped, signature field excluded). Agents must verify this before trusting any entry. The signing key is identified by key_id and published in /.well-known/opentrust-keys.json.",
+      "required": ["key_id", "algorithm", "value", "payload_hash"],
+      "properties": {
+        "key_id": { "type": "string" },
+        "algorithm": { "type": "string", "enum": ["ed25519"] },
+        "value": { "type": "string", "description": "Base64url-encoded Ed25519 signature over payload_hash." },
+        "payload_hash": { "type": "string", "description": "SHA-256 of the canonical document (signature excluded). Format: 'sha256:{hex}'." }
+      },
+      "additionalProperties": false
+    }
+
+  },
+  "additionalProperties": false
+}

@@ -69,3 +69,52 @@ class Resolution(BaseModel):
     case_id: str
     winner: str
     released: bool
+
+
+class OpenTrustProduct(str, Enum):
+    trust_report = "trust_report"
+    verified_badge = "verified_badge"
+    monitoring_monthly = "monitoring_monthly"
+
+
+class WalletMode(str, Enum):
+    byo = "byo"
+    embedded = "embedded"
+
+
+class RepoVerification(BaseModel):
+    repo_id: str
+    installation_id: int
+    repo_full_name: str
+    branch: str
+    commit_sha: str
+    verified: bool = True
+
+
+class WalletAccount(BaseModel):
+    wallet_id: str
+    owner: str
+    address: str
+    mode: WalletMode
+    custody: str = "customer"
+
+
+class MarketplaceListing(BaseModel):
+    listing_id: str
+    seller_wallet_id: str
+    repo_id: str
+    title: str
+    price_usdc: Decimal = Field(gt=0)
+    currency: str = "USDC"
+    custody: str = "none"
+
+
+class MarketplaceOrder(BaseModel):
+    order_id: str
+    listing_id: str
+    buyer_wallet_id: str
+    seller_wallet_id: str
+    amount_usdc: Decimal = Field(gt=0)
+    currency: str = "USDC"
+    transaction_hash: str | None = None
+    custody: str = "none"

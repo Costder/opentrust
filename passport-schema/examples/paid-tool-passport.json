@@ -1,0 +1,137 @@
+{
+  "_comment": "Example of a paid tool with a complete machine-readable payment contract. An agent reads commercial_status to discover cost, payment_config to send USDC, and access_config to prove payment and get a token — all without a human in the loop.",
+  "spec_version": "0.1.0",
+
+  "tool_identity": {
+    "name": "Code Analysis Pro",
+    "slug": "code-analysis-pro",
+    "type": "analysis",
+    "category": "developer-tools",
+    "source_url": "https://github.com/example-org/code-analysis-pro",
+    "license": "Commercial",
+    "maintainers": ["example-org"]
+  },
+  "creator_identity": {
+    "creator": "Example Org",
+    "github": "example-org",
+    "domain": "example.dev",
+    "verification_state": "github_verified"
+  },
+  "trust_status": "security_checked",
+  "version_hash": {
+    "version": "2.1.0",
+    "commit": "f9e2a14b",
+    "artifact_hash": "sha256:def456..."
+  },
+  "capabilities": [
+    "static analysis of Python, TypeScript, and Go code",
+    "dependency vulnerability scanning",
+    "complexity and coverage reporting"
+  ],
+  "permission_manifest": {
+    "file": true,
+    "terminal": false,
+    "browser": false,
+    "network": true,
+    "memory": false,
+    "wallet": false,
+    "api": true,
+    "camera": false,
+    "microphone": false,
+    "private_data": false,
+    "notes": "Reads source files passed as input. Calls external vulnerability database APIs."
+  },
+  "source_formats": ["mcp", "openai_function"],
+  "format_manifests": {
+    "mcp": {
+      "server_command": "npx -y @example-org/code-analysis-pro-mcp",
+      "transport": "stdio",
+      "tools": [
+        {
+          "name": "analyze_code",
+          "description": "Run static analysis on a code file or snippet",
+          "inputSchema": {
+            "type": "object",
+            "required": ["code", "language"],
+            "properties": {
+              "code": { "type": "string" },
+              "language": { "type": "string", "enum": ["python", "typescript", "go"] }
+            }
+          }
+        }
+      ]
+    },
+    "openai_function": {
+      "functions": [
+        {
+          "name": "analyze_code",
+          "description": "Run static analysis on a code file or snippet",
+          "parameters": {
+            "type": "object",
+            "required": ["code", "language"],
+            "properties": {
+              "code": { "type": "string" },
+              "language": { "type": "string", "enum": ["python", "typescript", "go"] }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "commercial_status": {
+    "status": "pay_per_use",
+    "pricing": {
+      "model": "per_call",
+      "amount": 0.05,
+      "currency": "USDC",
+      "free_tier": {
+        "calls_per_day": 10,
+        "resets": "daily"
+      },
+      "notes": "0.05 USDC per analysis call. First 10 calls per day are free."
+    },
+    "payment_config": {
+      "type": "crypto_direct",
+      "network": "base",
+      "wallet_address": "0xAbCd1234567890abcdef1234567890ABCDEF1234",
+      "supported_tokens": ["USDC"]
+    },
+    "access_config": {
+      "type": "transaction_proof",
+      "header_name": "X-Payment-TxHash",
+      "token_scope": "single_call"
+    }
+  },
+  "risk_summary": {
+    "ai_generated_notes": "",
+    "human_reviewed_findings": [
+      "File access is limited to input provided in the tool call. No file system traversal.",
+      "Network calls are limited to internal vulnerability DB endpoint."
+    ]
+  },
+  "review_history": [
+    {
+      "status": "creator_claimed",
+      "timestamp": "2026-02-01T10:00:00Z",
+      "reviewer": "example-org"
+    },
+    {
+      "status": "owner_confirmed",
+      "timestamp": "2026-02-01T10:15:00Z",
+      "reviewer": "example-org",
+      "notes": "Permissions confirmed accurate."
+    },
+    {
+      "status": "security_checked",
+      "timestamp": "2026-03-15T09:00:00Z",
+      "reviewer": "auditor-handle",
+      "signature": "ed25519:base64signaturehere",
+      "notes": "Passed dependency scan, permission audit, and manifest validation."
+    }
+  ],
+  "agent_access": {
+    "api_url": "https://registry.opentrust.dev/api/v1/tools/code-analysis-pro",
+    "mcp_readable": true,
+    "cli_command": "opentrust inspect code-analysis-pro"
+  }
+}

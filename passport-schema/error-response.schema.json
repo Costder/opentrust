@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/error-response.schema.json",
+  "title": "OpenTrust Error Response",
+  "description": "Standard error envelope for all OpenTrust registry API responses. Every non-2xx response from a conforming registry must use this format. Standardizing error codes lets agent implementations handle failures consistently regardless of which registry they are speaking to.",
+
+  "type": "object",
+  "required": ["error_code", "message", "request_id"],
+  "properties": {
+
+    "error_code": {
+      "type": "string",
+      "enum": [
+        "PASSPORT_NOT_FOUND",
+        "PASSPORT_REVOKED",
+        "TRUST_TOO_LOW",
+        "SIGNATURE_INVALID",
+        "SIGNATURE_MISSING",
+        "TOKEN_EXPIRED",
+        "TOKEN_REVOKED",
+        "OPERATOR_KEY_REVOKED",
+        "SPEND_POLICY_MISSING",
+        "SPEND_POLICY_INVALID",
+        "SPEND_LIMIT_EXCEEDED",
+        "PERMISSION_BLOCKED",
+        "NETWORK_NOT_ALLOWED",
+        "REGISTRY_NOT_TRUSTED",
+        "SLUG_AMBIGUOUS",
+        "SLUG_SQUATTED",
+        "NONCE_ALREADY_USED",
+        "PAYMENT_UNVERIFIED",
+        "PAYMENT_AMOUNT_INSUFFICIENT",
+        "PAYMENT_NETWORK_MISMATCH",
+        "PAYMENT_TOKEN_INVALID",
+        "ESCROW_AUDIT_NOT_VERIFIED",
+        "DELEGATION_EXPIRED",
+        "RATE_LIMITED",
+        "BATCH_TOO_LARGE",
+        "SCHEMA_VERSION_UNSUPPORTED",
+        "VALIDATION_ERROR",
+        "INTERNAL_ERROR",
+        "SERVICE_UNAVAILABLE"
+      ],
+      "description": "Machine-readable error code. Agents use this to decide how to handle failures — e.g., RATE_LIMITED → retry with backoff, TRUST_TOO_LOW → skip this tool, PASSPORT_REVOKED → alert operator."
+    },
+
+    "message": {
+      "type": "string",
+      "description": "Human-readable description of the error. Not intended for machine parsing."
+    },
+
+    "request_id": {
+      "type": "string",
+      "description": "Unique identifier for this request. Include in bug reports and support requests."
+    },
+
+    "details": {
+      "type": "object",
+      "description": "Optional structured context. Contents vary by error_code.",
+      "properties": {
+        "slug": { "type": "string", "description": "The tool slug involved, if applicable." },
+        "version": { "type": "string", "description": "The version involved, if applicable." },
+        "field": { "type": "string", "description": "For VALIDATION_ERROR: the field that failed validation." },
+        "constraint": { "type": "string", "description": "For VALIDATION_ERROR: the constraint that was violated." },
+        "retry_after_seconds": { "type": "integer", "minimum": 0, "description": "For RATE_LIMITED: seconds to wait before retrying." },
+        "required_trust_status": { "type": "string", "description": "For TRUST_TOO_LOW: the minimum trust_status required." },
+        "actual_trust_status": { "type": "string", "description": "For TRUST_TOO_LOW: the tool's current trust_status." },
+        "alternatives": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "For SLUG_AMBIGUOUS: list of fully-qualified slugs the ambiguous slug could resolve to."
+        },
+        "successor_slug": { "type": "string", "description": "For PASSPORT_REVOKED or sunset tools: the recommended replacement slug." },
+        "schema_version_supported": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "For SCHEMA_VERSION_UNSUPPORTED: list of spec versions this registry accepts."
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the error occurred."
+    }
+
+  },
+  "additionalProperties": false,
+
+  "$comment": "HTTP status code mapping: PASSPORT_NOT_FOUND=404, PASSPORT_REVOKED=410, TRUST_TOO_LOW=403, SIGNATURE_INVALID=401, SIGNATURE_MISSING=401, TOKEN_EXPIRED=401, TOKEN_REVOKED=401, OPERATOR_KEY_REVOKED=401, SPEND_POLICY_MISSING=403, SPEND_POLICY_INVALID=400, SPEND_LIMIT_EXCEEDED=402, PERMISSION_BLOCKED=403, NETWORK_NOT_ALLOWED=403, REGISTRY_NOT_TRUSTED=403, SLUG_AMBIGUOUS=409, SLUG_SQUATTED=409, NONCE_ALREADY_USED=409, PAYMENT_UNVERIFIED=402, PAYMENT_AMOUNT_INSUFFICIENT=402, PAYMENT_NETWORK_MISMATCH=400, PAYMENT_TOKEN_INVALID=400, ESCROW_AUDIT_NOT_VERIFIED=403, DELEGATION_EXPIRED=403, RATE_LIMITED=429, BATCH_TOO_LARGE=400, SCHEMA_VERSION_UNSUPPORTED=400, VALIDATION_ERROR=422, INTERNAL_ERROR=500, SERVICE_UNAVAILABLE=503"
+}

@@ -1,31 +1,84 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "OpenTrust Trust Ladder",
+  "description": "The 8 levels of trust status for Agent Tool Passports. Levels are ordered — a tool can only advance forward except for disputed, which can apply at any stage.",
   "type": "array",
   "items": {
-    "type": "string",
-    "enum": [
-      "auto_generated_draft",
-      "creator_claimed",
-      "seller_confirmed",
-      "community_reviewed",
-      "reviewer_signed",
-      "security_checked",
-      "continuously_monitored",
-      "disputed"
-    ]
+    "type": "object",
+    "required": ["level", "status", "color", "description", "requirements"],
+    "properties": {
+      "level": { "type": "integer" },
+      "status": { "type": "string" },
+      "color": { "type": "string" },
+      "description": { "type": "string" },
+      "requirements": { "type": "string" },
+      "agent_usable": { "type": "boolean" }
+    }
   },
-  "minItems": 8,
-  "maxItems": 8,
-  "uniqueItems": true,
   "default": [
-    "auto_generated_draft",
-    "creator_claimed",
-    "seller_confirmed",
-    "community_reviewed",
-    "reviewer_signed",
-    "security_checked",
-    "continuously_monitored",
-    "disputed"
+    {
+      "level": 1,
+      "status": "auto_generated_draft",
+      "color": "#9ca3af",
+      "description": "Passport was auto-generated from source metadata. No human has reviewed or claimed it.",
+      "requirements": "None — any tool gets this on import.",
+      "agent_usable": false
+    },
+    {
+      "level": 2,
+      "status": "creator_claimed",
+      "color": "#3b82f6",
+      "description": "The creator has claimed ownership via GitHub OAuth or domain verification.",
+      "requirements": "Verified ownership of the source repository or domain.",
+      "agent_usable": false
+    },
+    {
+      "level": 3,
+      "status": "owner_confirmed",
+      "color": "#14b8a6",
+      "description": "The owner has actively reviewed and confirmed the passport metadata is accurate.",
+      "requirements": "Creator claimed + manual confirmation of permissions and capabilities.",
+      "agent_usable": true
+    },
+    {
+      "level": 4,
+      "status": "community_reviewed",
+      "color": "#22c55e",
+      "description": "The community has reviewed and provided feedback on the passport.",
+      "requirements": "owner_confirmed + at least 3 community reviews with no unresolved concerns.",
+      "agent_usable": true
+    },
+    {
+      "level": 5,
+      "status": "reviewer_signed",
+      "color": "#a855f7",
+      "description": "A qualified technical reviewer has signed an attestation for this passport version.",
+      "requirements": "community_reviewed + signed attestation from a registered reviewer.",
+      "agent_usable": true
+    },
+    {
+      "level": 6,
+      "status": "security_checked",
+      "color": "#f97316",
+      "description": "The tool has passed defined automated security checks for this version.",
+      "requirements": "reviewer_signed + passing dependency scan, manifest validation, and permission audit.",
+      "agent_usable": true
+    },
+    {
+      "level": 7,
+      "status": "continuously_monitored",
+      "color": "#6366f1",
+      "description": "The tool is under active version and dependency monitoring. Status updates automatically when evidence changes.",
+      "requirements": "security_checked + active monitoring subscription.",
+      "agent_usable": true
+    },
+    {
+      "level": 8,
+      "status": "disputed",
+      "color": "#ef4444",
+      "description": "One or more claims in this passport are under active challenge. Do not rely on this tool until dispute is resolved.",
+      "requirements": "Can apply at any level. Clears when dispute is resolved.",
+      "agent_usable": false
+    }
   ]
 }

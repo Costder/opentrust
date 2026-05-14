@@ -1,6 +1,9 @@
 node_modules
 __pycache__
 .env
+.env.*
+!.env.example
+!.env.*.example
 .venv
 dist
 build
@@ -9,3 +12,19 @@ build
 *.egg-info
 .pytest_cache
 .mypy_cache
+
+# Internal planning and analysis docs — not for public repo
+feasibility-analysis.md
+opentrust-segmentation-analysis.md
+codex_goal_opentrust.txt
+agent_tool_trust_protocol_v3_updated_plan.docx
+docs/marketplace-wallets-implementation-plan.md
+
+# Claude Code session/memory data
+.claude/
+
+# Local dev artifacts
+*.db
+*.db-shm
+*.db-wal
+opentrust.db

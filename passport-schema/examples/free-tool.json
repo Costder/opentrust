@@ -1,0 +1,143 @@
+{
+  "$comment": "Example: A free MCP search tool at community_reviewed trust level.",
+  "spec_version": "0.1.0",
+
+  "tool_identity": {
+    "name": "Brave Search",
+    "slug": "brave-search",
+    "source_url": "https://github.com/brave/brave-search-mcp",
+    "category": "search",
+    "license": "MIT",
+    "maintainers": ["brave"]
+  },
+
+  "creator_identity": {
+    "creator": "Brave Software",
+    "organization": "brave",
+    "github": "brave",
+    "domain": "brave.com",
+    "verification_state": "domain_verified"
+  },
+
+  "trust_status": "community_reviewed",
+
+  "version_hash": {
+    "version": "1.3.0",
+    "commit": "a1b2c3d4e5f6",
+    "artifact_hash": "sha256:abc123"
+  },
+
+  "capabilities": [
+    "Web search via Brave Search API",
+    "Returns title, URL, and snippet for each result",
+    "Supports safe search filtering",
+    "No personal data stored"
+  ],
+
+  "permission_manifest": {
+    "network": true,
+    "file": false,
+    "terminal": false,
+    "browser": false,
+    "memory": false,
+    "wallet": false,
+    "api": true,
+    "camera": false,
+    "microphone": false,
+    "private_data": false,
+    "notes": "Outbound HTTPS only to api.search.brave.com"
+  },
+
+  "data_handling": {
+    "retention_days": 0,
+    "stored_regions": [],
+    "used_for_training": false,
+    "third_party_sharing": false,
+    "gdpr_compliant": true,
+    "hipaa_eligible": false,
+    "ccpa_compliant": true,
+    "privacy_policy_url": "https://brave.com/privacy/search/"
+  },
+
+  "source_formats": ["mcp", "openai_function"],
+
+  "format_manifests": {
+    "mcp": {
+      "server_command": "npx @brave/brave-search-mcp",
+      "transport": "stdio",
+      "config_schema": {
+        "type": "object",
+        "required": ["BRAVE_API_KEY"],
+        "properties": {
+          "BRAVE_API_KEY": { "type": "string" }
+        }
+      },
+      "tools": [
+        {
+          "name": "brave_web_search",
+          "description": "Perform a web search using the Brave Search API.",
+          "inputSchema": {
+            "type": "object",
+            "required": ["query"],
+            "properties": {
+              "query": { "type": "string" },
+              "count": { "type": "integer", "default": 10 }
+            }
+          }
+        }
+      ]
+    }
+  },
+
+  "commercial_status": {
+    "status": "freemium",
+    "pricing": {
+      "model": "per_call",
+      "amount": 0.001,
+      "currency": "USDC",
+      "free_tier": {
+        "calls_per_month": 2000,
+        "resets": "monthly",
+        "identity_required": false
+      }
+    },
+    "payment_config": {
+      "type": "crypto_direct",
+      "network": "base",
+      "wallet_address": "0x0000000000000000000000000000000000000000",
+      "supported_tokens": ["USDC"]
+    },
+    "access_config": {
+      "type": "api_key_issued",
+      "verification_endpoint": "https://api.bravesearch.example.com/opentrust/verify"
+    }
+  },
+
+  "caller_requirements": {
+    "min_agent_trust_status": "none",
+    "require_agent_identity": false,
+    "require_spend_policy": false
+  },
+
+  "security": {},
+
+  "review_history": [
+    {
+      "status": "community_reviewed",
+      "timestamp": "2026-04-01T10:00:00Z",
+      "reviewer": "alice-dev",
+      "notes": "Permissions match source code audit. Network calls go to api.search.brave.com only."
+    }
+  ],
+
+  "cache_ttl_seconds": 86400,
+
+  "agent_access": {
+    "mcp_readable": true,
+    "rate_limits": {
+      "calls_per_minute": 60,
+      "calls_per_day": 5000,
+      "retry_after_seconds": 10
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "description": "Registry Ed25519 signature over canonical passport JSON (security field excluded)",
+  "inputs": {
+    "canonical_string": "{\"capabilities\":[\"search GitHub repositories and files\"],\"permission_manifest\":{\"file\":false,\"network\":true},\"source_formats\":[\"mcp\"],\"spec_version\":\"0.1.0\",\"tool_identity\":{\"category\":\"search\",\"name\":\"GitHub File Search\",\"slug\":\"github-file-search\",\"source_url\":\"https://github.com/test/github-file-search\"},\"trust_status\":\"community_reviewed\",\"version_hash\":{\"version\":\"1.2.0\"}}",
+    "note": "Passport JSON with keys sorted, no whitespace, security.registry_signature excluded"
+  },
+  "expected": {
+    "payload_hash_hex": "088e5c5944a3afe942bccfab465f7326da80089510cc3fdf43b835100d902988",
+    "payload_hash_prefixed": "sha256:088e5c5944a3afe942bccfab465f7326da80089510cc3fdf43b835100d902988",
+    "signature_b64url": "NxqMK387iY_LoTG9O_EmVWZWXupBxI9zas_-_advCGIbNTHY7T5H6mRWxrf6t8EowEKnX7tzK-U2JVFCJoXlCA"
+  },
+  "test_key": {
+    "key_id": "test-registry-2026-v1",
+    "public_key_der_b64": "MCowBQYDK2VwAyEAMOvmTkuOLPcnvpfQeL8+7fqV8bQub97epCECaXrPyRc=",
+    "private_key_der_b64": "MC4CAQAwBQYDK2VwBCIEIGzRhHmGDUe0MZWFCykybtuO2cLpXmeTZROBthYkkrrg",
+    "warning": "TEST KEY ONLY - never use in production"
+  }
+}

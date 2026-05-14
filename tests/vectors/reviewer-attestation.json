@@ -1,0 +1,21 @@
+{
+  "description": "Reviewer attestation Ed25519 signature over slug:version:trust_status:signed_at",
+  "inputs": {
+    "slug": "github-file-search",
+    "version": "1.2.0",
+    "trust_status": "reviewer_signed",
+    "signed_at": "2026-05-14T10:00:00Z",
+    "canonical_string": "github-file-search:1.2.0:reviewer_signed:2026-05-14T10:00:00Z",
+    "note": "Concatenate with colons, no spaces. Hash with SHA-256. Sign the hash bytes."
+  },
+  "expected": {
+    "payload_hash_hex": "ae7cbfa12f0474898ac1f80a8714cd2ac7cb6fb885784c7320f9e7a028d74591",
+    "signature_b64url": "eK35xML6Mf2yApiw4D_bRRJEbJQHIuzCLLHKF3DlBL1KsMkjpYfGltxSsiJxdJbWqQ0Q_ih0ZujELrZ818VIDg"
+  },
+  "test_key": {
+    "key_id": "test-reviewer-alice-2026-v1",
+    "public_key_der_b64": "MCowBQYDK2VwAyEAm5ONR7MgNxEe+H5XLMAgrKG3WvMQ5PguDw6geheLbnA=",
+    "private_key_der_b64": "MC4CAQAwBQYDK2VwBCIEIF5OMmqAq66+bK0lTEYgBe8EcijSzVAAW/hivXqUs8WC",
+    "warning": "TEST KEY ONLY - never use in production"
+  }
+}

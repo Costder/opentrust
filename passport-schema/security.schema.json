@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/security.schema.json",
+  "title": "Passport Security",
+  "description": "Cryptographic integrity fields for Agent Tool Passports. Covers registry signatures (tamper-proof passports), reviewer attestation format (verifiable review claims), and webhook signatures (payment callback authenticity). All communications must use TLS 1.2+.",
+
+  "definitions": {
+
+    "RegistrySignature": {
+      "type": "object",
+      "description": "Signature produced by the OpenTrust registry over the canonical passport content. Allows any agent to verify a passport offline without trusting the serving endpoint. Registry public keys are published at https://opentrust.dev/.well-known/opentrust-keys.json",
+      "required": ["key_id", "algorithm", "signature", "signed_at", "payload_hash"],
+      "properties": {
+        "key_id": {
+          "type": "string",
+          "description": "Identifier for the signing key. Format: 'opentrust-registry-{year}-{n}'. Clients look this up in the well-known key set."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["ed25519"],
+          "description": "Ed25519 is the required signing algorithm. Fast, small signatures, widely supported."
+        },
+        "signature": {
+          "type": "string",
+          "description": "Base64url-encoded Ed25519 signature over payload_hash."
+        },
+        "signed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the registry signed this passport version."
+        },
+        "payload_hash": {
+          "type": "string",
+          "description": "SHA-256 hash of the canonical passport JSON (keys sorted, whitespace normalized, security.registry_signature field excluded before hashing). Format: 'sha256:{hex}'."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "ReviewerAttestation": {
+      "type": "object",
+      "description": "Cryptographic attestation format for reviewer signatures in review_history. A reviewer signs a specific trust claim about a specific passport version. Verifiable offline against the reviewer's registered public key.",
+      "required": ["key_id", "algorithm", "signature", "payload"],
+      "properties": {
+        "key_id": {
+          "type": "string",
+          "description": "The reviewer's registered key ID. Reviewers register their Ed25519 public key with the registry before they can sign attestations."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["ed25519"]
+        },
+        "signature": {
+          "type": "string",
+          "description": "Base64url-encoded Ed25519 signature over the SHA-256 hash of payload."
+        },
+        "payload": {
+          "type": "string",
+          "description": "The exact string that was signed. Format: '{slug}:{version_hash.version}:{trust_status}:{signed_at_iso8601}'. Example: 'github-file-search:1.2.0:reviewer_signed:2026-05-14T10:00:00Z'. Clients can reconstruct and verify this independently."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "WebhookSignatureConfig": {
+      "type": "object",
+      "description": "Configuration for verifying signed webhook callbacks (payment confirmations, escrow events, delivery proofs). Tools must verify these before acting on payment events.",
+      "required": ["algorithm", "header"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["hmac-sha256"],
+          "description": "HMAC-SHA256 over the raw request body. The shared secret is established during tool registration."
+        },
+        "header": {
+          "type": "string",
+          "const": "X-OpenTrust-Signature",
+          "description": "HTTP header containing the signature. Format: 'hmac-sha256={base64_signature}'."
+        },
+        "timestamp_header": {
+          "type": "string",
+          "const": "X-OpenTrust-Timestamp",
+          "description": "Unix timestamp of when the webhook was sent. Tools must reject webhooks older than 300 seconds to prevent replay attacks."
+        },
+        "replay_window_seconds": {
+          "type": "integer",
+          "const": 300,
+          "description": "Webhooks older than 300 seconds must be rejected regardless of signature validity."
+        },
+        "secret_rotation": {
+          "type": "string",
+          "enum": ["manual", "30_days", "90_days"],
+          "description": "How often the HMAC secret should be rotated. 90_days is the minimum recommended."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "TransportRequirements": {
+      "type": "object",
+      "description": "Minimum transport security requirements for all OpenTrust protocol communications.",
+      "properties": {
+        "tls_minimum": {
+          "type": "string",
+          "const": "1.2",
+          "description": "TLS 1.2 is the minimum. TLS 1.3 is recommended."
+        },
+        "certificate_pinning": {
+          "type": "boolean",
+          "description": "Whether this tool's server uses certificate pinning. Recommended for tools with wallet or private_data access."
+        },
+        "hsts": {
+          "type": "boolean",
+          "description": "Whether the server enforces HTTP Strict Transport Security."
+        }
+      },
+      "additionalProperties": false
+    }
+
+  },
+
+  "type": "object",
+  "description": "Security configuration embedded in a passport. All fields are optional but registry_signature is added automatically when the passport is registered.",
+  "properties": {
+    "registry_signature": { "$ref": "#/definitions/RegistrySignature" },
+    "transport": { "$ref": "#/definitions/TransportRequirements" },
+    "webhook_config": { "$ref": "#/definitions/WebhookSignatureConfig" }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/agent-identity.schema.json",
+  "title": "Agent Identity",
+  "description": "Identity token for an AI agent making calls to OpenTrust-registered tools. Agents present this as a signed JWT in the X-OpenTrust-Agent-Identity header. Tools with caller_requirements.require_agent_identity=true will reject calls that lack a valid token.",
+
+  "type": "object",
+  "required": ["agent_id", "issued_at", "operator"],
+  "properties": {
+
+    "agent_id": {
+      "type": "string",
+      "description": "Globally unique identifier for this agent instance. Format: '{registry_domain}/{org_slug}/{agent_slug}'. Example: 'opentrust.dev/acme-corp/billing-agent'."
+    },
+
+    "agent_type": {
+      "type": "string",
+      "enum": ["autonomous", "supervised", "human_in_the_loop"],
+      "description": "autonomous: agent acts without per-action human approval. supervised: a human reviews outputs but not each action. human_in_the_loop: a human approves each significant action. Tools may require stricter types for sensitive operations."
+    },
+
+    "operator": {
+      "type": "object",
+      "description": "The person or organization operating this agent.",
+      "required": ["identity_type", "identity_value"],
+      "properties": {
+        "identity_type": {
+          "type": "string",
+          "enum": ["github_user", "github_org", "domain", "platform_account"]
+        },
+        "identity_value": {
+          "type": "string",
+          "description": "The verified identity — GitHub username, org name, domain, or platform account ID."
+        },
+        "verification_state": {
+          "type": "string",
+          "enum": ["unverified", "github_verified", "domain_verified", "org_verified", "platform_verified"],
+          "default": "unverified"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "trust_status": {
+      "type": "string",
+      "enum": ["none", "identity_declared", "github_verified", "org_verified", "platform_verified"],
+      "description": "Trust level of this agent identity. Tools use this against caller_requirements.min_agent_trust_status."
+    },
+
+    "spend_policy": {
+      "$ref": "spend-policy.schema.json",
+      "description": "The spend policy this agent is operating under. Embedded here so tools can verify the agent has been authorized to spend before processing a payment."
+    },
+
+    "issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this identity token was issued."
+    },
+
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this token expires. Agents should refresh tokens before expiry. Tools must reject expired tokens."
+    },
+
+    "session_id": {
+      "type": "string",
+      "description": "Optional session identifier. Allows tools to correlate multiple calls within one agent task."
+    },
+
+    "spawned_by": {
+      "type": "string",
+      "description": "agent_id of the parent agent that spawned this sub-agent. Null/absent for root agents. Allows tools to know they are being called inside an orchestration chain and trace accountability back to the root operator."
+    },
+
+    "call_chain": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ordered list of agent_ids from the root agent to this agent. Example: ['root-agent-id', 'sub-agent-a-id', 'this-agent-id']. Tools use this for cycle detection (reject if their own slug appears in the chain) and depth enforcement. The root operator in call_chain[0]'s identity token is financially responsible for all costs.",
+      "maxItems": 10
+    },
+
+    "depth": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current orchestration depth. 0 = root agent. Increments by 1 for each spawning level. Tools may reject calls above their caller_requirements max depth."
+    },
+
+    "policy_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Optional URL to a signed spend policy document. Use this instead of embedding the full spend_policy object when the policy is large (e.g., dynamic_budget_allocation with many entries) and would push the JWT past typical HTTP header limits (~8KB). The URL must serve a JSON document matching spend-policy.schema.json, and the response must include an X-OpenTrust-Signature header so the receiver can verify authenticity. When policy_url is present and spend_policy is absent, tools must fetch and verify the policy before enforcing it. Caching is permitted for the duration of the token's validity window."
+    },
+
+    "signature": {
+      "type": "object",
+      "description": "Ed25519 signature over the canonical token payload. The operator's key must be registered with an OpenTrust registry. If this key_id appears in the operator key revocation list at https://opentrust.dev/.well-known/revoked-operator-keys.json, the token must be rejected immediately regardless of signature validity.",
+      "required": ["key_id", "algorithm", "value"],
+      "properties": {
+        "key_id": { "type": "string", "description": "The operator's registered key ID. Format: '{operator_identity_value}-{year}-{n}'. Agents look this up in the registry's operator key set and check it against the revocation list before verifying the signature." },
+        "algorithm": { "type": "string", "enum": ["ed25519"], "description": "Ed25519 is the only accepted algorithm. Agents must reject tokens with any other algorithm value, including 'none'." },
+        "value": { "type": "string", "description": "Base64url-encoded Ed25519 signature over SHA-256(canonical_token_json) where canonical_token_json has keys sorted, whitespace stripped, and the signature field excluded." }
+      },
+      "additionalProperties": false
+    }
+
+  },
+  "additionalProperties": false
+}
