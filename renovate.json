@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+
+  "minimumReleaseAge": "3 days",
+
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"]
+  },
+
+  "npm": {
+    "minimumReleaseAge": "3 days"
+  },
+
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["major"],
+      "minimumReleaseAge": "14 days",
+      "addLabels": ["major-upgrade"]
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "minimumReleaseAge": "1 day",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "minimumReleaseAge": "3 days",
+      "automerge": true
+    }
+  ],
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "minimumReleaseAge": "0 days"
+  },
+
+  "osvVulnerabilityAlerts": true,
+
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2
+}

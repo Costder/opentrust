@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # Python deps still managed by Dependabot
   - package-ecosystem: pip
     directory: /api
     schedule:
@@ -8,7 +9,5 @@ updates:
     directory: /cli
     schedule:
       interval: weekly
-  - package-ecosystem: npm
-    directory: /web
-    schedule:
-      interval: weekly
+  # npm is managed by Renovate (see renovate.json) — it supports minimumReleaseAge
+  # which prevents installing packages published less than N days ago (supply chain defense).
