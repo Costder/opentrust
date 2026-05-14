@@ -1,20 +1,295 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/permissions.schema.json",
-  "title": "Permission Manifest",
+  "$id": "https://opentrust.dev/schemas/v0.2/permissions.schema.json",
+  "title": "Permission Manifest v0.2",
+  "description": "Granular, machine-enforceable permission scopes for AI agent tools. Each permission can be declared as a boolean (coarse) or as a structured scope object (granular). Boolean true is shorthand for unrestricted access to that surface — agents should treat it as maximally permissive and apply extra scrutiny. Validators and runtimes that support v0.2 should prefer structured scopes.",
   "type": "object",
-  "properties": {
-    "file": { "type": "boolean", "default": false },
-    "terminal": { "type": "boolean", "default": false },
-    "browser": { "type": "boolean", "default": false },
-    "network": { "type": "boolean", "default": false },
-    "memory": { "type": "boolean", "default": false },
-    "wallet": { "type": "boolean", "default": false },
-    "api": { "type": "boolean", "default": false },
-    "camera": { "type": "boolean", "default": false },
-    "microphone": { "type": "boolean", "default": false },
-    "private_data": { "type": "boolean", "default": false },
-    "notes": { "type": "string" }
+
+  "$defs": {
+
+    "file_permission": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "description": "Granular file system access. Paths are glob patterns relative to the tool's working directory. Absolute paths are permitted but discouraged — reviewers will flag them.",
+          "properties": {
+            "read": {
+              "oneOf": [
+                { "type": "boolean" },
+                {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Glob patterns the tool may read. Example: [\"./docs/**\", \"~/.config/opentrust/**\"]",
+                  "examples": [["./docs/**"], ["./output/*.json"], ["~/.config/opentrust/**"]]
+                }
+              ]
+            },
+            "write": {
+              "oneOf": [
+                { "type": "boolean" },
+                {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Glob patterns the tool may write or create.",
+                  "examples": [["./output/**"], ["/tmp/opentrust-*"]]
+                }
+              ]
+            },
+            "delete": {
+              "oneOf": [
+                { "type": "boolean" },
+                {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Glob patterns the tool may delete. Reviewers treat any non-empty delete scope as high risk."
+                }
+              ]
+            },
+            "watch": {
+              "type": "boolean",
+              "description": "Whether the tool may watch paths for changes (inotify / FSEvents). Flagged by validators if combined with network:true without explicit justification."
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "network_permission": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "description": "Granular network access. Validators check allowed_domains against known-bad lists. Wildcards (* in domain position) are flagged as high-risk.",
+          "properties": {
+            "allowed_domains": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Exact hostnames or single-level wildcard domains the tool may contact. Example: [\"api.github.com\", \"*.openai.com\"]. No scheme — scheme is declared separately.",
+              "examples": [["api.github.com"], ["*.openai.com", "api.anthropic.com"]]
+            },
+            "blocked_domains": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Domains the tool explicitly will never contact. Useful for tools that handle sensitive data and want to declare they will never phone home to unexpected endpoints."
+            },
+            "allowed_schemes": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["https", "http", "wss", "ws", "ftp"] },
+              "default": ["https"],
+              "description": "URL schemes the tool may use. http and ws are flagged as insecure by validators unless explicitly justified in notes."
+            },
+            "outbound_only": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the tool only makes outbound requests (no listening sockets). false means the tool binds a port — flag for review."
+            },
+            "max_request_size_kb": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum payload size per request in KB. Helps agents reason about data exfiltration risk."
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "terminal_permission": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "description": "Granular shell/process execution scope. This is the highest-risk permission surface. Validators will flag any terminal permission without a human reviewer attestation.",
+          "properties": {
+            "allowed_commands": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Exact command names (no args) the tool may execute. Example: [\"git\", \"npm\", \"python3\"]. Empty with forbidden_commands set means 'any command except forbidden list'.",
+              "examples": [["git", "npm", "python3"], ["grep", "awk", "sed"]]
+            },
+            "forbidden_commands": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Commands the tool will never execute. Validators always check this list for known-dangerous patterns.",
+              "examples": [["rm -rf", "curl | sh", "wget | bash", "sudo", "su", "chmod 777", "dd if=", "> /dev/sd"]]
+            },
+            "shell_access": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether the tool may spawn an interactive shell (bash, sh, zsh, etc.). true is a critical risk flag — agents should require reviewer_signed minimum trust before calling."
+            },
+            "working_directory": {
+              "type": "string",
+              "description": "Directory the tool operates in. Absolute paths outside /tmp or the project root are flagged."
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum execution time the tool will allow for any single command."
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "memory_permission": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "description": "Agent memory and context access.",
+          "properties": {
+            "read_context": {
+              "type": "boolean",
+              "description": "May read the calling agent's conversation context or memory store."
+            },
+            "write_context": {
+              "type": "boolean",
+              "description": "May write or inject into the calling agent's memory. High-risk: flag for reviewer attestation."
+            },
+            "persistence": {
+              "type": "string",
+              "enum": ["none", "session", "persistent"],
+              "default": "none",
+              "description": "Whether data written to memory persists beyond a single call. 'persistent' means cross-session storage."
+            },
+            "scope": {
+              "type": "string",
+              "enum": ["local", "shared"],
+              "default": "local",
+              "description": "'shared' means the tool may read/write memory visible to other agents or sessions."
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "wallet_permission": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "description": "Cryptocurrency wallet and payment access. This is always a critical-risk permission requiring reviewer_signed minimum trust.",
+          "properties": {
+            "read_balance": { "type": "boolean", "description": "May read wallet balance." },
+            "sign_transactions": {
+              "type": "boolean",
+              "description": "May sign and submit transactions. Critical-risk. Requires spend_policy on caller."
+            },
+            "max_per_call_usd": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Maximum USD value the tool may transact in a single call. Agents must enforce this against their spend policy."
+            },
+            "allowed_chains": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Blockchain networks the tool may transact on.",
+              "examples": [["base"], ["ethereum", "base", "polygon"]]
+            },
+            "allowed_tokens": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Token contract addresses or well-known symbols the tool may transact.",
+              "examples": [["USDC"], ["USDC", "ETH"]]
+            },
+            "escrow_only": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether the tool only transacts through escrow contracts (no direct wallet sends). Lowers risk profile."
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "api_permission": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "description": "Third-party API access with declared credential handling.",
+          "properties": {
+            "services": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Named services the tool calls. Use well-known names where possible.",
+              "examples": [["github", "openai", "anthropic"], ["stripe", "sendgrid"]]
+            },
+            "credential_handling": {
+              "type": "string",
+              "enum": ["caller_provided", "tool_managed", "env_var", "vault"],
+              "description": "How API credentials are supplied. 'caller_provided' means the calling agent injects credentials per call."
+            },
+            "credentials_logged": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether API credentials may appear in the tool's logs. false is required for security_checked level."
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "private_data_permission": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "description": "Access to user PII, credentials, or sensitive structured data.",
+          "properties": {
+            "data_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["pii", "credentials", "health", "financial", "biometric", "location", "communications", "behavioral"]
+              },
+              "description": "Categories of sensitive data the tool may access."
+            },
+            "purpose": {
+              "type": "string",
+              "description": "Human-readable explanation of why this data is needed. Required for community_reviewed and above."
+            },
+            "data_minimization": {
+              "type": "boolean",
+              "description": "Whether the tool applies data minimization (accesses only what is strictly necessary)."
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+
   },
-  "additionalProperties": false
+
+  "properties": {
+    "file":         { "$ref": "#/$defs/file_permission" },
+    "terminal":     { "$ref": "#/$defs/terminal_permission" },
+    "browser":      { "type": "boolean" },
+    "network":      { "$ref": "#/$defs/network_permission" },
+    "memory":       { "$ref": "#/$defs/memory_permission" },
+    "wallet":       { "$ref": "#/$defs/wallet_permission" },
+    "api":          { "$ref": "#/$defs/api_permission" },
+    "camera":       { "type": "boolean" },
+    "microphone":   { "type": "boolean" },
+    "private_data": { "$ref": "#/$defs/private_data_permission" },
+    "notes":        { "type": "string", "description": "Top-level notes for the full permission set. Use per-permission notes for specifics." }
+  },
+
+  "additionalProperties": false,
+
+  "$comment": "v0.2 — Granular permission scopes. Boolean values remain valid for all permissions for backward compatibility with v0.1 passports. Validators SHOULD warn when boolean true is used for file, network, terminal, wallet, or private_data — these surfaces benefit from granular scopes. Agents MUST treat boolean true as maximally permissive for the given surface."
 }

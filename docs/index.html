@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="OpenTrust — The universal trust layer for AI agent tools. Verifiable identity, declared permissions, earned reputation.">
+<meta name="robots" content="index, follow">
+
+<!-- Agent-readable meta -->
+<meta name="opentrust:spec-version" content="0.1.0">
+<meta name="opentrust:registry" content="https://github.com/Costder/opentrust">
+<meta name="opentrust:schema" content="https://raw.githubusercontent.com/Costder/opentrust/main/passport-schema/passport.schema.json">
+<meta name="opentrust:rfc-process" content="https://github.com/Costder/opentrust/tree/main/rfcs">
+
+<title>OpenTrust — Universal Trust Layer for AI Agent Tools</title>
+<style>
+  /* === RESET === */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* === EARLY 2000s PALETTE === */
+  :root {
+    --bg: #e8e8d8;
+    --bg-panel: #f0f0e4;
+    --bg-dark: #1a1a2e;
+    --bg-header: #003366;
+    --accent: #cc0000;
+    --accent2: #006633;
+    --accent3: #cc6600;
+    --link: #000099;
+    --link-visited: #660066;
+    --text: #111111;
+    --text-muted: #444444;
+    --border: #999988;
+    --border-dark: #666655;
+    --table-head: #336699;
+    --table-stripe: #ddddc8;
+    --font-body: "Courier New", Courier, monospace;
+    --font-ui: Verdana, Geneva, Tahoma, sans-serif;
+    --font-header: "Times New Roman", Times, serif;
+  }
+
+  /* === BASE === */
+  html { font-size: 14px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  a { color: var(--link); text-decoration: underline; }
+  a:visited { color: var(--link-visited); }
+  a:hover { color: var(--accent); }
+
+  /* === LAYOUT === */
+  .page-wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 8px;
+  }
+
+  /* === TOP BANNER === */
+  .top-banner {
+    background: var(--bg-header);
+    color: #ffffff;
+    text-align: center;
+    padding: 4px 0;
+    font-size: 11px;
+    font-family: var(--font-ui);
+    border-bottom: 2px solid #cc9900;
+    letter-spacing: 0.5px;
+  }
+
+  /* === HEADER === */
+  .site-header {
+    background: #003366;
+    border-bottom: 4px solid #cc9900;
+    padding: 12px 16px;
+  }
+  .site-header .inner {
+    max-width: 780px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo-box {
+    background: #cc0000;
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 22px;
+    font-weight: bold;
+    padding: 6px 12px;
+    border: 3px outset #ff6666;
+    white-space: nowrap;
+    letter-spacing: -1px;
+  }
+  .logo-box span { color: #ffcc00; }
+  .tagline {
+    color: #aabbdd;
+    font-size: 11px;
+    font-family: var(--font-ui);
+    line-height: 1.4;
+  }
+  .tagline strong { color: #ffffff; font-size: 13px; display: block; margin-bottom: 2px; }
+
+  /* === NAV BAR === */
+  .nav-bar {
+    background: #336699;
+    border-bottom: 2px solid #1a4477;
+  }
+  .nav-bar .inner {
+    max-width: 780px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .nav-bar a {
+    color: #ffffff;
+    text-decoration: none;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: bold;
+    padding: 6px 14px;
+    display: block;
+    border-right: 1px solid #5588aa;
+  }
+  .nav-bar a:hover { background: #1a4477; color: #ffcc00; }
+
+  /* === MAIN CONTENT === */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 12px;
+    margin-top: 12px;
+    align-items: start;
+  }
+
+  /* === PANELS === */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-dark);
+    border-top: 3px solid var(--bg-header);
+    margin-bottom: 12px;
+  }
+  .panel-title {
+    background: var(--bg-header);
+    color: #ffffff;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: bold;
+    padding: 4px 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .panel-title.red { background: #990000; }
+  .panel-title.green { background: #336633; }
+  .panel-title.gold { background: #886600; }
+  .panel-body { padding: 10px 12px; }
+
+  /* === SECTION HEADINGS === */
+  h2 {
+    font-family: var(--font-header);
+    font-size: 20px;
+    color: #003366;
+    border-bottom: 2px solid #336699;
+    padding-bottom: 3px;
+    margin-bottom: 10px;
+  }
+  h3 {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: bold;
+    color: #003366;
+    margin: 10px 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  p { margin-bottom: 8px; font-size: 13px; }
+
+  /* === TRUST LADDER TABLE === */
+  .trust-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: var(--font-body);
+    margin-bottom: 8px;
+  }
+  .trust-table th {
+    background: var(--table-head);
+    color: #ffffff;
+    text-align: left;
+    padding: 5px 8px;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+  .trust-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .trust-table tr:nth-child(even) td { background: var(--table-stripe); }
+  .trust-table tr:hover td { background: #ccddcc; }
+  .level-badge {
+    display: inline-block;
+    background: #336699;
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 5px;
+    font-family: var(--font-ui);
+    font-weight: bold;
+    margin-right: 4px;
+  }
+  .level-badge.l1 { background: #888877; }
+  .level-badge.l2 { background: #445566; }
+  .level-badge.l3 { background: #336699; }
+  .level-badge.l4 { background: #336633; }
+  .level-badge.l5 { background: #663399; }
+  .level-badge.l6 { background: #994400; }
+  .level-badge.l7 { background: #006666; }
+  .level-badge.disputed { background: #990000; }
+  .status-code {
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: #333322;
+  }
+
+  /* === CODE BLOCKS === */
+  pre {
+    background: #1a1a1a;
+    color: #ccffcc;
+    font-family: var(--font-body);
+    font-size: 11px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    border: 1px solid #333;
+    border-left: 4px solid #cc9900;
+    margin: 8px 0;
+    line-height: 1.6;
+  }
+  code {
+    font-family: var(--font-body);
+    font-size: 11px;
+    background: #ddddc8;
+    padding: 1px 4px;
+    border: 1px solid #aaa;
+  }
+
+  /* === SIDEBAR === */
+  .sidebar .panel { border-top-color: #990000; }
+  .sidebar .panel-title { background: #990000; }
+
+  .quick-links { list-style: none; }
+  .quick-links li {
+    border-bottom: 1px dotted var(--border);
+    padding: 4px 0;
+  }
+  .quick-links li:last-child { border-bottom: none; }
+  .quick-links a {
+    font-size: 12px;
+    font-family: var(--font-ui);
+  }
+  .quick-links a::before { content: "» "; color: var(--accent); }
+
+  /* === NOTICE BOXES === */
+  .notice {
+    border: 1px solid;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 12px;
+    font-family: var(--font-ui);
+  }
+  .notice.warning {
+    border-color: #cc6600;
+    background: #fff8e6;
+    color: #663300;
+  }
+  .notice.info {
+    border-color: #336699;
+    background: #e6f0ff;
+    color: #002266;
+  }
+  .notice.success {
+    border-color: #336633;
+    background: #e6ffe6;
+    color: #003300;
+  }
+  .notice strong { font-family: var(--font-ui); }
+
+  /* === PERMISSION GRID === */
+  .perm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 6px;
+    margin: 8px 0;
+  }
+  .perm-card {
+    background: #ddddc8;
+    border: 1px solid var(--border-dark);
+    padding: 6px 8px;
+    font-size: 11px;
+    font-family: var(--font-body);
+  }
+  .perm-card .name {
+    font-weight: bold;
+    color: #003366;
+    font-size: 12px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .perm-card .desc { color: #444433; font-size: 10px; }
+
+  /* === DIVIDER === */
+  hr {
+    border: none;
+    border-top: 2px inset var(--border);
+    margin: 12px 0;
+  }
+
+  /* === FOOTER === */
+  .site-footer {
+    background: #003366;
+    border-top: 4px solid #cc9900;
+    color: #aabbdd;
+    font-size: 11px;
+    font-family: var(--font-ui);
+    text-align: center;
+    padding: 10px;
+    margin-top: 16px;
+  }
+  .site-footer a { color: #ffcc00; }
+
+  /* === AGENT BLOCK === */
+  .agent-block {
+    background: #0a0a1a;
+    border: 1px solid #336699;
+    border-left: 4px solid #00cc66;
+    padding: 12px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: #00ff88;
+    margin: 8px 0;
+    line-height: 1.7;
+  }
+  .agent-block .comment { color: #668866; }
+  .agent-block .key { color: #88ccff; }
+  .agent-block .val { color: #ffcc44; }
+  .agent-block .label {
+    display: inline-block;
+    background: #003300;
+    color: #00ff88;
+    font-size: 10px;
+    padding: 1px 6px;
+    margin-bottom: 6px;
+    border: 1px solid #00aa44;
+  }
+
+  /* === ROADMAP === */
+  .roadmap-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .rm-tag {
+    background: #336699;
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 10px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    height: fit-content;
+    flex-shrink: 0;
+  }
+  .rm-tag.done { background: #336633; }
+  .rm-tag.active { background: #884400; }
+
+  /* === COUNTER === */
+  .hit-counter {
+    text-align: center;
+    padding: 6px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    background: #000;
+    color: #00ff00;
+    border: 2px inset #555;
+    display: inline-block;
+    padding: 4px 12px;
+    letter-spacing: 3px;
+  }
+
+  @media (max-width: 600px) {
+    .main-layout { grid-template-columns: 1fr; }
+    .sidebar { order: -1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-banner">
+  ★ OpenTrust Protocol v0.1.0 — Public Spec, Open RFC Process, MIT License ★
+  &nbsp;|&nbsp;
+  <a href="https://github.com/Costder/opentrust" style="color:#ffcc00;">github.com/Costder/opentrust</a>
+</div>
+
+<header class="site-header">
+  <div class="inner">
+    <div class="logo-box">Open<span>Trust</span></div>
+    <div class="tagline">
+      <strong>The Universal Trust Layer for AI Agent Tools</strong>
+      One passport. One trust status. One badge. Any agent, any platform, any runtime.
+    </div>
+  </div>
+</header>
+
+<nav class="nav-bar">
+  <div class="inner">
+    <a href="#what">What Is It</a>
+    <a href="#ladder">Trust Ladder</a>
+    <a href="#passport">Passport Format</a>
+    <a href="#permissions">Permissions</a>
+    <a href="#agents">For Agents</a>
+    <a href="#contribute">Contribute</a>
+    <a href="https://github.com/Costder/opentrust/tree/main/rfcs">RFCs</a>
+    <a href="https://github.com/Costder/opentrust">GitHub ↗</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="main-layout">
+
+    <!-- ===== MAIN COLUMN ===== -->
+    <main>
+
+      <!-- WHAT IS IT -->
+      <section id="what">
+        <div class="panel">
+          <div class="panel-title">What Is OpenTrust?</div>
+          <div class="panel-body">
+            <p>AI agents call tools. Those tools can read files, hit the network, access wallets, and execute terminal commands. Right now there is <strong>no standardized way</strong> to know what permissions a tool claims to need, whether the creator is who they say, or whether anyone has reviewed it.</p>
+            <p>OpenTrust is the trust infrastructure that should exist before agents are widely deployed with tool access.</p>
+            <div class="notice info">
+              <strong>For agents reading this page:</strong> The canonical machine-readable spec lives at
+              <a href="https://github.com/Costder/opentrust/blob/main/passport-schema/passport.schema.json">passport-schema/passport.schema.json</a>.
+              The revocation list endpoint is <code>https://opentrust.dev/.well-known/revoked-passports.json</code>.
+              The CLI command to inspect any tool is <code>opentrust inspect &lt;tool-slug&gt;</code>.
+            </div>
+            <p>A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an OpenAPI endpoint gets <strong>one passport</strong>. One trust status. One badge. Readable by any agent, any platform, any runtime.</p>
+            <div class="notice warning">
+              <strong>Status:</strong> v0.1.0 — Schema is production-quality. Reference implementation (API, CLI, web) is early-stage. The running code has stubs. The spec is real. <a href="https://github.com/Costder/opentrust/issues">Track progress on GitHub.</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRUST LADDER -->
+      <section id="ladder">
+        <div class="panel">
+          <div class="panel-title">The Trust Ladder</div>
+          <div class="panel-body">
+            <p>Every tool passport carries a trust status. Trust is earned, not purchased. If a trust label could be bought, the system would be worthless. It cannot be.</p>
+            <table class="trust-table">
+              <thead>
+                <tr><th>Lvl</th><th>Status</th><th>Meaning</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="level-badge l1">1</span></td>
+                  <td><span class="status-code">auto_generated_draft</span></td>
+                  <td>AI-generated from repo metadata. No human has reviewed this.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-badge l2">2</span></td>
+                  <td><span class="status-code">creator_claimed</span></td>
+                  <td>Creator claimed ownership via GitHub OAuth.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-badge l3">3</span></td>
+                  <td><span class="status-code">owner_confirmed</span></td>
+                  <td>Creator confirmed metadata accuracy on a specific version.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-badge l4">4</span></td>
+                  <td><span class="status-code">community_reviewed</span></td>
+                  <td>Community has reviewed and no major issues raised.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-badge l5">5</span></td>
+                  <td><span class="status-code">reviewer_signed</span></td>
+                  <td>A technical reviewer has signed an attestation for this version.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-badge l6">6</span></td>
+                  <td><span class="status-code">security_checked</span></td>
+                  <td>Passed defined security checks with documented evidence.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-badge l7">7</span></td>
+                  <td><span class="status-code">continuously_monitored</span></td>
+                  <td>Version and dependency tracking active. Alerts on change.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-badge disputed">⚠</span></td>
+                  <td><span class="status-code">disputed</span></td>
+                  <td><strong>Overlay state — not a level.</strong> Can apply at any rung. Claims challenged. Agents MUST treat as untrustworthy until resolved.</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="font-size:11px; color:#444;">Trust is tied to a specific version hash — not the tool forever. A tool at <code>security_checked</code> on v1.2 reverts to <code>auto_generated_draft</code> on v1.3 until re-reviewed.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PASSPORT FORMAT -->
+      <section id="passport">
+        <div class="panel">
+          <div class="panel-title">What a Passport Declares</div>
+          <div class="panel-body">
+            <p>An <strong>Agent Tool Passport</strong> is a structured, versioned JSON document tied to a specific tool release.</p>
+            <pre>{
+  "spec_version": "0.1.0",
+  "tool_identity": {
+    "name": "GitHub File Search MCP",
+    "slug": "github-file-search-mcp",
+    "category": "search",
+    "source_url": "https://github.com/..."
+  },
+  "trust_status": "community_reviewed",
+  "version_hash": { "version": "1.3.0", "commit": "a3f8c2e..." },
+  "permission_manifest": {
+    "network": true,
+    "file": false,
+    "terminal": false
+  },
+  "source_formats": ["mcp", "openai_function"],
+  "revocation": {
+    "revoked": false,
+    "revocation_list_url": "https://opentrust.dev/.well-known/revoked-passports.json"
+  }
+}</pre>
+            <p>A single passport describes the tool across every framework it ships in: MCP, OpenAI functions, LangChain, OpenAPI, npm, PyPI, and more. See <a href="https://github.com/Costder/opentrust/tree/main/passport-schema/examples">passport-schema/examples/</a> for complete working examples.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PERMISSIONS v0.2 -->
+      <section id="permissions">
+        <div class="panel">
+          <div class="panel-title green">Permission Manifest — v0.2 Granular Scopes</div>
+          <div class="panel-body">
+            <p>v0.1 permissions are boolean flags. <code>network: true</code> tells an agent nothing useful. v0.2 adds structured scopes that are machine-enforceable.</p>
+            <div class="notice success">
+              <strong>v0.2 is in active RFC.</strong> Boolean permissions remain valid (backward compatible). Granular scopes are opt-in per field. See <a href="https://github.com/Costder/opentrust/blob/main/rfcs/RFC-002-granular-permissions.md">RFC-002</a>.
+            </div>
+            <pre><span style="color:#88ccff">"network"</span>: {
+  <span style="color:#88ccff">"allowed_domains"</span>: [<span style="color:#ffcc44">"api.github.com"</span>],
+  <span style="color:#88ccff">"allowed_schemes"</span>: [<span style="color:#ffcc44">"https"</span>],
+  <span style="color:#88ccff">"outbound_only"</span>: <span style="color:#ff8888">true</span>,
+  <span style="color:#88ccff">"max_request_size_kb"</span>: <span style="color:#ff8888">512</span>
+},
+<span style="color:#88ccff">"terminal"</span>: {
+  <span style="color:#88ccff">"allowed_commands"</span>: [<span style="color:#ffcc44">"git"</span>, <span style="color:#ffcc44">"npm"</span>],
+  <span style="color:#88ccff">"forbidden_commands"</span>: [<span style="color:#ffcc44">"rm -rf"</span>, <span style="color:#ffcc44">"curl | sh"</span>, <span style="color:#ffcc44">"sudo"</span>],
+  <span style="color:#88ccff">"shell_access"</span>: <span style="color:#ff8888">false</span>
+},
+<span style="color:#88ccff">"file"</span>: {
+  <span style="color:#88ccff">"read"</span>: [<span style="color:#ffcc44">"./docs/**"</span>],
+  <span style="color:#88ccff">"write"</span>: [<span style="color:#ffcc44">"./output/**"</span>],
+  <span style="color:#88ccff">"delete"</span>: <span style="color:#ff8888">false</span>
+}</pre>
+            <h3>Permission Surfaces</h3>
+            <div class="perm-grid">
+              <div class="perm-card"><span class="name">file</span><span class="desc">Read / write / delete / watch. Glob-scoped in v0.2.</span></div>
+              <div class="perm-card"><span class="name">network</span><span class="desc">Domain allow/block lists. Scheme + size limits.</span></div>
+              <div class="perm-card"><span class="name">terminal</span><span class="desc">Command allow/deny lists. Shell access flag.</span></div>
+              <div class="perm-card"><span class="name">memory</span><span class="desc">Context read/write. Persistence scope.</span></div>
+              <div class="perm-card"><span class="name">wallet</span><span class="desc">Chain, token, per-call USD limits. Escrow-only flag.</span></div>
+              <div class="perm-card"><span class="name">api</span><span class="desc">Named services. Credential handling declaration.</span></div>
+              <div class="perm-card"><span class="name">private_data</span><span class="desc">PII, health, financial, biometric categories.</span></div>
+              <div class="perm-card"><span class="name">browser</span><span class="desc">Browser automation access.</span></div>
+              <div class="perm-card"><span class="name">camera / mic</span><span class="desc">Hardware sensor access.</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOR AGENTS -->
+      <section id="agents">
+        <div class="panel">
+          <div class="panel-title gold">Reading This Page as an Agent</div>
+          <div class="panel-body">
+            <p>If you are an AI agent reading this page to understand the OpenTrust protocol, here is the machine-readable summary:</p>
+            <div class="agent-block">
+              <span class="label">AGENT-READABLE SUMMARY</span><br>
+              <span class="comment"># Protocol: OpenTrust v0.1.0</span><br>
+              <span class="comment"># Purpose: Trust attestation for AI agent tools</span><br>
+              <br>
+              <span class="key">spec_url</span>: <span class="val">https://github.com/Costder/opentrust/blob/main/passport-schema/passport.schema.json</span><br>
+              <span class="key">permissions_schema</span>: <span class="val">https://github.com/Costder/opentrust/blob/main/passport-schema/permissions.schema.json</span><br>
+              <span class="key">revocation_list</span>: <span class="val">https://opentrust.dev/.well-known/revoked-passports.json</span><br>
+              <span class="key">trust_levels</span>: <span class="val">1-7 (see trust_ladder above) + disputed overlay</span><br>
+              <span class="key">cli_install</span>: <span class="val">pip install opentrust-cli</span><br>
+              <span class="key">inspect_command</span>: <span class="val">opentrust inspect &lt;tool-slug&gt;</span><br>
+              <span class="key">validate_command</span>: <span class="val">opentrust validate &lt;passport.json&gt;</span><br>
+              <span class="key">rfc_process</span>: <span class="val">https://github.com/Costder/opentrust/tree/main/rfcs</span><br>
+              <span class="key">license</span>: <span class="val">MIT</span><br>
+              <span class="key">governance</span>: <span class="val">single maintainer → neutral foundation at v1.0</span><br>
+              <br>
+              <span class="comment"># Agent rules:</span><br>
+              <span class="comment"># 1. revoked: true → refuse tool call regardless of trust_status</span><br>
+              <span class="comment"># 2. disputed overlay → treat as untrustworthy until resolved</span><br>
+              <span class="comment"># 3. boolean permissions → maximally permissive for that surface</span><br>
+              <span class="comment"># 4. cache passport per cache_ttl_seconds; disputed tools: no cache</span><br>
+              <span class="comment"># 5. check revocation_list_url before calling any tool</span>
+            </div>
+            <h3>Why Crypto Payments (for agents confused by this)</h3>
+            <p>Traditional payment rails (Stripe, PayPal) require a human for KYC, OAuth flows, and dispute resolution. An autonomous agent cannot create a Stripe account. Per-call micropayments at $0.05 cost more in Stripe fees than the call itself. USDC on Base L2 costs ~$0.001 per transaction, requires only a private key, and the tx hash is proof of payment. Escrow with automatic refund on non-delivery requires a smart contract — there is no Stripe equivalent. Crypto is not the point. Machine-native payments are the point.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTRIBUTE -->
+      <section id="contribute">
+        <div class="panel">
+          <div class="panel-title">How to Contribute</div>
+          <div class="panel-body">
+            <p>OpenTrust is not controlled by any company or model provider. The spec is designed to be framework-agnostic and eventually governed by a neutral foundation.</p>
+            <ul style="margin-left:16px; font-size:13px; line-height:2;">
+              <li><strong>Schema changes</strong> → open an RFC in <a href="https://github.com/Costder/opentrust/tree/main/rfcs">rfcs/</a></li>
+              <li><strong>Bug fixes, implementation</strong> → open a PR directly</li>
+              <li><strong>Write a passport</strong> → pick any public MCP tool, write its passport, submit to <a href="https://github.com/Costder/opentrust/tree/main/passport-schema/examples">passport-schema/examples/</a></li>
+              <li><strong>Review existing passports</strong> → leave a comment on the passport PR to progress community_reviewed trust level</li>
+              <li><strong>Implement the CLI</strong> → <a href="https://github.com/Costder/opentrust/tree/main/cli">cli/</a> is barely started</li>
+            </ul>
+            <div class="notice info">
+              <strong>Current active RFC:</strong> <a href="https://github.com/Costder/opentrust/blob/main/rfcs/RFC-002-granular-permissions.md">RFC-002 — Granular Permission Scopes (v0.2)</a>. Comments welcome.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ROADMAP -->
+      <section>
+        <div class="panel">
+          <div class="panel-title">Roadmap</div>
+          <div class="panel-body">
+            <div class="roadmap-item">
+              <span class="rm-tag done">v0.1.0</span>
+              <span>Schema production-quality. Passport format, trust ladder, permission manifest, agent identity, escrow schema, security schema, RFC process.</span>
+            </div>
+            <div class="roadmap-item">
+              <span class="rm-tag active">v0.2 →</span>
+              <span>Granular permission scopes — path/domain/command level. Boolean permissions remain valid. Machine-enforceable, not just declarative. <a href="https://github.com/Costder/opentrust/blob/main/rfcs/RFC-002-granular-permissions.md">RFC-002 open.</a></span>
+            </div>
+            <div class="roadmap-item">
+              <span class="rm-tag">v0.3</span>
+              <span>Evidence requirements per trust level. <code>security_checked</code> requires structured scanner output, reviewer identity, signed attestation.</span>
+            </div>
+            <div class="roadmap-item">
+              <span class="rm-tag">v1.0</span>
+              <span>Stable spec. Governance transfers to a neutral foundation. Running registry and CLI reach production quality.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar">
+
+      <div class="panel">
+        <div class="panel-title red">Quick Links</div>
+        <div class="panel-body" style="padding:8px 10px;">
+          <ul class="quick-links">
+            <li><a href="https://github.com/Costder/opentrust">GitHub Repo</a></li>
+            <li><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/passport.schema.json">Passport Schema</a></li>
+            <li><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/permissions.schema.json">Permissions Schema</a></li>
+            <li><a href="https://github.com/Costder/opentrust/tree/main/passport-schema/examples">Example Passports</a></li>
+            <li><a href="https://github.com/Costder/opentrust/tree/main/rfcs">RFC Process</a></li>
+            <li><a href="https://github.com/Costder/opentrust/blob/main/docs/security.md">Security Model</a></li>
+            <li><a href="https://github.com/Costder/opentrust/blob/main/CONTRIBUTING.md">Contributing</a></li>
+            <li><a href="https://github.com/Costder/opentrust/issues">Issues</a></li>
+            <li><a href="https://github.com/Costder/opentrust/pulls">Pull Requests</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Quick Start</div>
+        <div class="panel-body">
+          <p style="font-size:11px; margin-bottom:6px;"><strong>Run the stack:</strong></p>
+          <pre style="font-size:10px; padding:6px;">cp .env.example .env
+make docker-up</pre>
+          <p style="font-size:11px; margin:6px 0;"><strong>CLI:</strong></p>
+          <pre style="font-size:10px; padding:6px;">pip install opentrust-cli
+
+opentrust inspect \
+  github/file-search-mcp
+
+opentrust validate \
+  my-passport.json
+
+opentrust badge my-tool</pre>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Ecosystem Support</div>
+        <div class="panel-body" style="font-size:11px; line-height:1.9;">
+          <strong>✓</strong> MCP (Claude, Cursor, Cline)<br>
+          <strong>✓</strong> OpenAI functions<br>
+          <strong>✓</strong> LangChain / LlamaIndex<br>
+          <strong>✓</strong> OpenAPI endpoints<br>
+          <strong>✓</strong> npm packages<br>
+          <strong>✓</strong> PyPI packages<br>
+          <strong>✓</strong> Cargo crates<br>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Stats</div>
+        <div class="panel-body" style="text-align:center; font-size:11px;">
+          <p style="margin-bottom:4px;">Spec Version</p>
+          <p><strong>v0.1.0</strong></p>
+          <hr>
+          <p style="margin-bottom:4px;">License</p>
+          <p><strong>MIT</strong></p>
+          <hr>
+          <p style="margin-bottom:4px;">Governance</p>
+          <p><strong>Open RFC</strong></p>
+          <hr>
+          <p style="margin-bottom:4px; margin-top:8px; font-size:10px; color:#666;">Visitors</p>
+          <div class="hit-counter">000042</div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <p>OpenTrust Protocol — MIT License — SoulForge 2026</p>
+  <p style="margin-top:4px;">
+    <a href="https://github.com/Costder/opentrust">GitHub</a> &nbsp;|&nbsp;
+    <a href="https://github.com/Costder/opentrust/tree/main/rfcs">RFCs</a> &nbsp;|&nbsp;
+    <a href="https://github.com/Costder/opentrust/blob/main/CONTRIBUTING.md">Contributing</a> &nbsp;|&nbsp;
+    <a href="https://github.com/Costder/opentrust/blob/main/docs/governance.md">Governance</a>
+  </p>
+  <p style="margin-top:6px; font-size:10px; color:#7799bb;">
+    Not controlled by any company or model provider. &nbsp;|&nbsp;
+    Best viewed in Netscape Navigator 4.0 or later.
+  </p>
+</footer>
+
+</body>
+</html>
