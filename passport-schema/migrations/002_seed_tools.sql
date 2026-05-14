@@ -1,0 +1,31 @@
+INSERT INTO passports (
+  id,
+  slug,
+  name,
+  description,
+  trust_status,
+  tool_identity,
+  version_hash,
+  capabilities,
+  permission_manifest,
+  risk_summary,
+  commercial_status,
+  billing_plan,
+  fee_schedule,
+  agent_access
+) VALUES (
+  uuid_generate_v4(),
+  'opentrust-validator',
+  'OpenTrust Validator',
+  'Validates Agent Tool Passports and flags high-risk permissions.',
+  'auto_generated_draft',
+  '{"name":"OpenTrust Validator","slug":"opentrust-validator","type":"cli","category":"security","source_url":"https://github.com/Costder/opentrust","license":"MIT","maintainers":["Costder"]}'::jsonb,
+  '{"version":"0.1.0","commit":"main"}'::jsonb,
+  '["validate passport schema","render trust badge","inspect permission manifest"]'::jsonb,
+  '{"file":true,"network":false,"api":false,"private_data":false}'::jsonb,
+  '{"ai_generated_notes":"Seeded draft passport for local development.","warning":"This passport was generated automatically and has not been verified by the creator, community reviewers, security reviewers, or the platform. It may contain errors or omissions. Do not rely on it for security, financial, legal, or production decisions. Request verification or perform your own review before installing, funding, purchasing, or granting permissions."}'::jsonb,
+  '{"status":"free","fee_schedule":{"kind":"free"}}'::jsonb,
+  NULL,
+  '{"kind":"free"}'::jsonb,
+  '{"api_url":"/api/v1/tools/opentrust-validator","mcp_readable":true,"cli_command":"opentrust inspect opentrust-validator"}'::jsonb
+) ON CONFLICT (slug) DO NOTHING;

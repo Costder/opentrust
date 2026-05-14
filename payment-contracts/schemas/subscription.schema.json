@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Subscription",
+  "type": "object",
+  "required": ["tool_id", "customer", "plan"],
+  "properties": {
+    "tool_id": { "type": "string" },
+    "customer": { "type": "string" },
+    "plan": {
+      "type": "object",
+      "required": ["tier", "interval", "amount_usdc"],
+      "properties": {
+        "tier": { "type": "string" },
+        "interval": { "type": "string" },
+        "amount_usdc": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
+  "additionalProperties": false
+}

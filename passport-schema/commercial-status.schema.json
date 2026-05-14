@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/commercial-status.schema.json",
+  "title": "Commercial Status",
+  "type": "object",
+  "required": ["status"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["free", "freemium", "paid", "subscription", "pay_per_use", "enterprise"]
+    },
+    "fee_schedule": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["free", "flat_fee", "percentage"] },
+        "amount_usdc": { "type": "number", "minimum": 0 },
+        "percentage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "notes": { "type": "string" }
+      },
+      "required": ["kind"],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

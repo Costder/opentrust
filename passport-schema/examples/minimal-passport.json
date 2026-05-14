@@ -1,0 +1,33 @@
+{
+  "tool_identity": {
+    "name": "Example Tool",
+    "slug": "example-tool",
+    "type": "mcp_server",
+    "category": "developer_tools",
+    "source_url": "https://github.com/Costder/example-tool"
+  },
+  "trust_status": "auto_generated_draft",
+  "version_hash": {
+    "version": "0.1.0"
+  },
+  "capabilities": ["search repositories"],
+  "permission_manifest": {
+    "network": true,
+    "api": true
+  },
+  "risk_summary": {
+    "ai_generated_notes": "Draft passport generated from public metadata.",
+    "warning": "This passport was generated automatically and has not been verified by the creator, community reviewers, security reviewers, or the platform. It may contain errors or omissions. Do not rely on it for security, financial, legal, or production decisions. Request verification or perform your own review before installing, funding, purchasing, or granting permissions."
+  },
+  "commercial_status": {
+    "status": "free",
+    "fee_schedule": { "kind": "free" }
+  },
+  "billing_plan": null,
+  "fee_schedule": { "kind": "free" },
+  "agent_access": {
+    "api_url": "/api/v1/tools/example-tool",
+    "mcp_readable": true,
+    "cli_command": "opentrust inspect example-tool"
+  }
+}

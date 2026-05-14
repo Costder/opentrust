@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/passport.schema.json",
+  "title": "Agent Tool Passport",
+  "type": "object",
+  "required": ["tool_identity", "trust_status", "version_hash", "capabilities", "permission_manifest", "commercial_status", "agent_access"],
+  "properties": {
+    "tool_identity": {
+      "type": "object",
+      "required": ["name", "slug", "type", "category", "source_url"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "type": { "type": "string" },
+        "category": { "type": "string" },
+        "source_url": { "type": "string", "format": "uri" },
+        "license": { "type": "string" },
+        "maintainers": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "creator_identity": {
+      "type": "object",
+      "properties": {
+        "creator": { "type": "string" },
+        "organization": { "type": "string" },
+        "github": { "type": "string" },
+        "domain": { "type": "string" },
+        "verification_state": { "type": "string", "default": "unverified" }
+      },
+      "additionalProperties": false
+    },
+    "trust_status": {
+      "type": "string",
+      "enum": ["auto_generated_draft", "creator_claimed", "seller_confirmed", "community_reviewed", "reviewer_signed", "security_checked", "continuously_monitored", "disputed"]
+    },
+    "version_hash": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": { "type": "string" },
+        "commit": { "type": "string" },
+        "artifact_hash": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "permission_manifest": { "$ref": "permissions.schema.json" },
+    "risk_summary": {
+      "type": "object",
+      "properties": {
+        "ai_generated_notes": { "type": "string" },
+        "human_reviewed_findings": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "warning": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "review_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["status", "timestamp"],
+        "properties": {
+          "status": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "reviewer": { "type": "string" },
+          "signature": { "type": "string" },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "default": []
+    },
+    "commercial_status": { "$ref": "commercial-status.schema.json" },
+    "billing_plan": {
+      "type": ["object", "null"],
+      "properties": {
+        "tier": { "type": "string" },
+        "interval": { "type": "string", "enum": ["one_time", "monthly", "annual", "usage"] },
+        "amount_usdc": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "fee_schedule": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["free", "flat_fee", "percentage"] },
+        "amount_usdc": { "type": "number", "minimum": 0 },
+        "percentage": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "additionalProperties": false
+    },
+    "agent_access": {
+      "type": "object",
+      "required": ["api_url", "mcp_readable"],
+      "properties": {
+        "api_url": { "type": "string" },
+        "mcp_readable": { "type": "boolean" },
+        "cli_command": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

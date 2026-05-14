@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #f7f5ee;
+  color: #18201b;
+}
+
+.panel {
+  border: 1px solid #d8d2c4;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+}

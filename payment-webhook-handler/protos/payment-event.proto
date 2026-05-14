@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package opentrust.payment;
+
+message PaymentEvent {
+  string id = 1;
+  string type = 2;
+  string tool_id = 3;
+  string account_id = 4;
+  string amount_usdc = 5;
+  string occurred_at = 6;
+  string payload_json = 7;
+}

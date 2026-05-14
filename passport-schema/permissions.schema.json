@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/permissions.schema.json",
+  "title": "Permission Manifest",
+  "type": "object",
+  "properties": {
+    "file": { "type": "boolean", "default": false },
+    "terminal": { "type": "boolean", "default": false },
+    "browser": { "type": "boolean", "default": false },
+    "network": { "type": "boolean", "default": false },
+    "memory": { "type": "boolean", "default": false },
+    "wallet": { "type": "boolean", "default": false },
+    "api": { "type": "boolean", "default": false },
+    "camera": { "type": "boolean", "default": false },
+    "microphone": { "type": "boolean", "default": false },
+    "private_data": { "type": "boolean", "default": false },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": false
+}

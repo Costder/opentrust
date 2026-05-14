@@ -1,0 +1,32 @@
+# Refined Phase 0 Implementation Plan
+
+This build implements the public OpenTrust foundation from the updated Agent Tool Trust Protocol strategy.
+
+## Scope
+
+Phase 0 is a trust registry first:
+
+- Agent Tool Passport schema and examples.
+- FastAPI registry with machine-readable trust status in responses.
+- Auto-generated draft warning for unverified passports.
+- CLI for inspection, search, status, validation, claim, badge, and payment stubs.
+- Next.js registry frontend with commercial status filters and pricing stubs.
+- Badge generator, manifest validator, passport generator, docs, scripts, CI, and Docker Compose.
+- Payment interfaces only. Real Circle, USDC, checkout, webhook processing, subscriptions, and escrow live in `opentrust-private`.
+
+## Deferred
+
+- Real payment provider integrations.
+- Custodial escrow.
+- Wallet connect.
+- Production billing tables.
+- Real marketplace transaction flows.
+- Research pools and sponsored discovery.
+
+## Success Gates
+
+- Python tests pass.
+- Passport examples validate against JSON Schema.
+- Web lint, tests, and production build pass.
+- Payment API and CLI paths clearly return private add-on messaging.
+- Repo initializes on `main` with the Phase 0 implementation committed.

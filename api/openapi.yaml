@@ -1,0 +1,59 @@
+openapi: 3.0.3
+info:
+  title: OpenTrust API
+  version: 0.1.0
+paths:
+  /api/v1/health:
+    get:
+      responses:
+        "200": { description: OK }
+  /api/v1/tools:
+    get:
+      responses:
+        "200": { description: List passports }
+    post:
+      responses:
+        "201": { description: Create passport }
+  /api/v1/tools/{slug}:
+    get:
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Get passport }
+    put:
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Update passport }
+  /api/v1/tools/{slug}/badge:
+    get:
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Badge location }
+  /api/v1/search:
+    get:
+      parameters: [{ name: q, in: query, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Search passports }
+  /api/v1/claim:
+    post:
+      responses:
+        "200": { description: Start stateless GitHub OAuth claim }
+  /api/v1/claim/callback:
+    get:
+      responses:
+        "200": { description: Return JWT claim token }
+  /api/v1/payments/checkout:
+    post:
+      responses:
+        "501": { description: Payment provider not installed }
+  /api/v1/payments/verify:
+    post:
+      responses:
+        "501": { description: Payment provider not installed }
+  /api/v1/subscriptions/create:
+    post:
+      responses:
+        "501": { description: Payment provider not installed }
+  /api/v1/escrow/create:
+    post:
+      responses:
+        "501": { description: Payment provider not installed }

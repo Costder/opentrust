@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkout",
+  "type": "object",
+  "required": ["tool_id", "plan", "amount_usdc"],
+  "properties": {
+    "tool_id": { "type": "string" },
+    "plan": { "type": "string" },
+    "amount_usdc": { "type": "number", "minimum": 0 }
+  },
+  "additionalProperties": false
+}

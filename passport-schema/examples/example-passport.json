@@ -1,0 +1,51 @@
+{
+  "tool_identity": {
+    "name": "OpenTrust Validator",
+    "slug": "opentrust-validator",
+    "type": "cli",
+    "category": "security",
+    "source_url": "https://github.com/Costder/opentrust",
+    "license": "MIT",
+    "maintainers": ["Costder"]
+  },
+  "creator_identity": {
+    "creator": "SoulForge",
+    "organization": "SoulForge",
+    "github": "Costder",
+    "domain": "opentrust.dev",
+    "verification_state": "creator_claimed"
+  },
+  "trust_status": "creator_claimed",
+  "version_hash": {
+    "version": "0.1.0",
+    "commit": "main"
+  },
+  "capabilities": ["validate passport schema", "render trust badge", "inspect permission manifest"],
+  "permission_manifest": {
+    "file": true,
+    "network": false,
+    "api": false,
+    "private_data": false,
+    "notes": "Reads local JSON files for validation."
+  },
+  "risk_summary": {
+    "ai_generated_notes": "Local validator with file-read access.",
+    "human_reviewed_findings": []
+  },
+  "review_history": [],
+  "commercial_status": {
+    "status": "freemium",
+    "fee_schedule": { "kind": "flat_fee", "amount_usdc": 25, "notes": "Paid verification checks are planned." }
+  },
+  "billing_plan": {
+    "tier": "verification",
+    "interval": "one_time",
+    "amount_usdc": 25
+  },
+  "fee_schedule": { "kind": "flat_fee", "amount_usdc": 25 },
+  "agent_access": {
+    "api_url": "/api/v1/tools/opentrust-validator",
+    "mcp_readable": true,
+    "cli_command": "opentrust validate passport.json"
+  }
+}

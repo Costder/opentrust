@@ -1,0 +1,12 @@
+{
+  "id": "evt_001",
+  "type": "payment.completed",
+  "tool_id": "opentrust-validator",
+  "account_id": "acct_public_stub",
+  "amount_usdc": "25.00",
+  "occurred_at": "2026-01-01T00:00:00Z",
+  "payload_json": {
+    "payment_id": "pay_001",
+    "session_id": "sess_001"
+  }
+}

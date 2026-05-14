@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenTrust Trust Ladder",
+  "type": "array",
+  "items": {
+    "type": "string",
+    "enum": [
+      "auto_generated_draft",
+      "creator_claimed",
+      "seller_confirmed",
+      "community_reviewed",
+      "reviewer_signed",
+      "security_checked",
+      "continuously_monitored",
+      "disputed"
+    ]
+  },
+  "minItems": 8,
+  "maxItems": 8,
+  "uniqueItems": true,
+  "default": [
+    "auto_generated_draft",
+    "creator_claimed",
+    "seller_confirmed",
+    "community_reviewed",
+    "reviewer_signed",
+    "security_checked",
+    "continuously_monitored",
+    "disputed"
+  ]
+}

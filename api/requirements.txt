@@ -1,0 +1,13 @@
+fastapi>=0.115,<0.116
+starlette>=0.46,<0.47
+uvicorn
+sqlalchemy[asyncio]
+asyncpg
+pydantic-settings
+httpx
+python-jose
+passlib
+python-multipart
+pytest
+pytest-asyncio
+aiosqlite
