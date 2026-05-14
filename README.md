@@ -32,7 +32,16 @@ An Agent Tool Passport is a structured, versioned document tied to a specific to
 | 5 | `reviewer_signed` | Technical reviewer signed attestation |
 | 6 | `security_checked` | Passed defined security checks |
 | 7 | `continuously_monitored` | Version/dependency tracking active |
-| 8 | `disputed` | Claims have been challenged |
+
+`disputed` is not a level — it is an overlay state that can apply to any trust level. A tool can be `security_checked` and `disputed` simultaneously. It means claims on the current passport have been formally challenged and are under review. Agents should treat a disputed tool as untrustworthy regardless of its base level until the dispute is resolved.
+
+## Neutrality and Payments
+
+OpenTrust does not receive money, custody funds, broker payments, or take a cut from tool reviews or marketplace transactions. The protocol has no fee, no treasury, and no financial stake in how tools are rated.
+
+The payment and escrow schemas in this repository are optional extension examples. They describe how a **third-party marketplace or tool provider** can attach machine-readable payment metadata to a trust passport — so an AI agent can discover cost, send payment, and get access in one step without a human in the loop. OpenTrust defines the format. What happens with the money is entirely outside this project.
+
+If a trust label could be purchased, the system would be worthless. It cannot be.
 
 ## Why Crypto Payments — Not Stripe
 
@@ -67,6 +76,12 @@ An autonomous AI agent has none of these things. It is a process. It cannot veri
 **Why Base, not Ethereum mainnet.** Gas fees on mainnet make per-call payments impractical. Base is an Ethereum L2 with sub-cent fees, full EVM compatibility, and Coinbase backing for regulatory clarity.
 
 If and when traditional payment processors build APIs that work without human identity verification — fully programmatic, no interactive auth, sub-cent fees — OpenTrust will support them. The spec's `payment_config.type` field is extensible. Crypto is not the point. Machine-native payments are the point. Crypto is currently the only thing that qualifies.
+
+## Roadmap
+
+- **v0.2 — Granular permission scopes.** The current permission manifest uses booleans (`file: true`, `network: true`). The next version will add path-level and domain-level scoping — e.g. `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. This makes the manifest machine-enforceable, not just declarative. RFC open for contribution.
+- **v0.3 — Evidence requirements per trust level.** `security_checked` will require a structured evidence block: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation.
+- **v1.0 — Stable spec + governance transfer.** Once the schema is stable and adoption exists, governance moves to a neutral foundation.
 
 ## Quick Start
 
