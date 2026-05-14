@@ -104,6 +104,16 @@ opentrust status my-tool --format json
 opentrust badge my-tool
 ```
 
+## Demo Payments
+
+OpenTrust is 100% open source. The reference API includes a mock payment provider for demos:
+
+- `POST /api/v1/payments/checkout` creates a paid demo checkout.
+- `POST /api/v1/payments/verify` verifies a checkout by id.
+- `POST /api/v1/payments/coinbase/checkouts` exposes the Coinbase-shaped checkout path for local demos.
+
+Set `PAYMENT_PROVIDER=mock` for no-secret demo payments. Production operators can replace the provider while keeping the public payment contract schema.
+
 ## Example Passports
 
 See [`passport-schema/examples/`](passport-schema/examples/) for complete, working passport examples:

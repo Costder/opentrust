@@ -76,6 +76,18 @@ class CheckoutResponse(BaseModel):
     checkout_url: str
 
 
+class PaymentVerificationRequest(BaseModel):
+    checkout_id: str
+
+
+class PaymentVerificationResponse(BaseModel):
+    checkout_id: str
+    verified: bool
+    status: PaymentStatus
+    amount_usdc: Decimal
+    provider: str
+
+
 class WalletConnectRequest(BaseModel):
     owner: str = Field(min_length=1)
     address: str = Field(min_length=1)

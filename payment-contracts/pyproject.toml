@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "opentrust-payment-contracts"
 version = "0.1.0"
-description = "Abstract payment contracts for OpenTrust private payment providers"
+description = "Abstract payment contracts for OpenTrust payment providers"
 requires-python = ">=3.11"
 dependencies = ["pydantic>=2.7"]
 
