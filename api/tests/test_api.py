@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException
 from api.src.main import health
-from api.src.routes.payments import checkout
+from api.src.routes.payments import checkout, create_subscription, verify
 from api.src.routes.github_app import list_installed_repos, record_installation, verify_repo, verify_repo_alias
 from api.src.routes.marketplace import (
     connect_wallet,
@@ -18,6 +18,7 @@ from api.src.schemas.marketplace import (
     GitHubInstallationRequest,
     MarketplaceListingRequest,
     MarketplaceOrderRequest,
+    PaymentVerificationRequest,
     ProductCode,
     SeverityCounts,
     TrustReportRequest,
@@ -33,11 +34,22 @@ async def test_health():
 
 
 @pytest.mark.asyncio
-async def test_payment_stub_returns_501():
-    with pytest.raises(HTTPException) as exc:
-        await checkout()
-    assert exc.value.status_code == 501
-    assert "not implemented" in exc.value.detail.lower()
+async def test_public_demo_payment_checkout_and_verify():
+    store.reset()
+    payment = await checkout(CheckoutRequest(product_code=ProductCode.trust_report))
+    assert payment.provider == "mock"
+    assert payment.status == "paid"
+    verified = await verify(PaymentVerificationRequest(checkout_id=payment.checkout_id))
+    assert verified.verified is True
+    assert verified.amount_usdc == payment.amount_usdc
+
+
+@pytest.mark.asyncio
+async def test_public_demo_subscription_checkout():
+    store.reset()
+    payment = await create_subscription()
+    assert payment.product_code == ProductCode.monitoring_monthly
+    assert payment.status == "paid"
 
 
 @pytest.mark.asyncio

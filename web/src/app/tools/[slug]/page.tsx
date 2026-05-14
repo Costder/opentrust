@@ -28,7 +28,7 @@ export default async function ToolPage({ params }: { params: { slug: string } })
           {tool.billing_plan ? (
             <p className="mt-2 text-sm">{tool.billing_plan.tier}: {tool.billing_plan.amount_usdc} USDC / {tool.billing_plan.interval}</p>
           ) : (
-            <p className="mt-2 text-sm text-stone-700">Payment info available with opentrust-private add-on.</p>
+            <p className="mt-2 text-sm text-stone-700">Payment info is available through the public payment contract schema.</p>
           )}
         </div>
       </section>

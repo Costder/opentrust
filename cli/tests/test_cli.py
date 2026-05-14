@@ -2,7 +2,9 @@ from typer.testing import CliRunner
 from opentrust_cli.main import app
 
 
-def test_payment_stub_message():
+def test_payment_checkout_demo_output():
     result = CliRunner().invoke(app, ["payment", "create-checkout", "tool"])
     assert result.exit_code == 0
-    assert "not implemented" in result.output.lower()
+    assert "checkout_id" in result.output
+    assert "paid" in result.output
+    assert "mock" in result.output

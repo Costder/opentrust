@@ -13,6 +13,6 @@ The public repo contains everything:
 
 ## Payment endpoints
 
-The registry API exposes payment endpoint stubs (`POST /payments/checkout`, `/payments/verify`, `/subscriptions/create`, `/escrow/create`) that return `501 Not Implemented`. These are placeholders defined by the OpenTrust payment contract schema.
+The registry API exposes open-source demo payment endpoints (`POST /payments/checkout`, `/payments/verify`, `/subscriptions/create`) backed by the mock provider. Escrow remains outside the demo flow and is defined by the OpenTrust payment contract schema for operators that need it.
 
-**Registry operators** who deploy their own instance of this registry implement these endpoints against the schema in `passport-schema/commercial-status.schema.json` and `passport-schema/escrow.schema.json`. The reference registry does not process payments — it defines what a conforming payment integration must look like. Contributions implementing a real provider are welcome via RFC and PR.
+**Registry operators** who deploy their own instance of this registry can replace the mock provider against the schema in `passport-schema/commercial-status.schema.json` and `passport-schema/escrow.schema.json`. The reference registry defines what a conforming payment integration must look like. Contributions implementing production providers are welcome via RFC and PR.

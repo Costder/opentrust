@@ -2,4 +2,4 @@
 
 API prefix: `/api/v1`.
 
-Payment routes (`/payments/*`, `/subscriptions/*`, `/escrow/*`) return `501 Not Implemented` in the reference registry. Registry operators implement these endpoints against the payment contract schema. See `passport-schema/commercial-status.schema.json`.
+Payment routes include open-source demo checkout and verification endpoints. Escrow returns `501 Not Implemented` because escrow is outside the demo flow.
