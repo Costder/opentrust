@@ -37,7 +37,7 @@ async def test_payment_stub_returns_501():
     with pytest.raises(HTTPException) as exc:
         await checkout()
     assert exc.value.status_code == 501
-    assert "opentrust-private" in exc.value.detail
+    assert "not implemented" in exc.value.detail.lower()
 
 
 @pytest.mark.asyncio

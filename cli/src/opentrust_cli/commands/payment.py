@@ -6,4 +6,8 @@ app = typer.Typer()
 
 @app.command("create-checkout")
 def create_checkout(tool_id: str, plan: str = "verification"):
-    console.print("Payment is a private add-on. Install opentrust-private for payment features.")
+    console.print(
+        "Payment processing is not implemented in the reference registry.\n"
+        "Registry operators implement payment endpoints against the OpenTrust schema.\n"
+        "See: passport-schema/commercial-status.schema.json"
+    )

@@ -12,7 +12,7 @@ Phase 0 is a trust registry first:
 - CLI for inspection, search, status, validation, claim, badge, and payment stubs.
 - Next.js registry frontend with commercial status filters and pricing stubs.
 - Badge generator, manifest validator, passport generator, docs, scripts, CI, and Docker Compose.
-- Payment interfaces only. Real Circle, USDC, checkout, webhook processing, subscriptions, and escrow live in `opentrust-private`.
+- Payment contract schema and 501 stub endpoints. Real payment provider integrations are implemented by registry operators against the schema — not part of the reference registry.
 
 ## Deferred
 
@@ -28,5 +28,5 @@ Phase 0 is a trust registry first:
 - Python tests pass.
 - Passport examples validate against JSON Schema.
 - Web lint, tests, and production build pass.
-- Payment API and CLI paths clearly return private add-on messaging.
+- Payment API and CLI paths return 501 with clear schema reference messaging.
 - Repo initializes on `main` with the Phase 0 implementation committed.

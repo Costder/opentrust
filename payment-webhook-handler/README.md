@@ -1,6 +1,6 @@
 # Payment Webhook Handler
 
-Public contract for payment events emitted by private payment providers.
+Contract for payment events emitted by registry payment providers.
 
 Supported event types:
 
@@ -9,4 +9,4 @@ Supported event types:
 - `subscription.renewed`
 - `escrow.disputed`
 
-The actual Circle or payment-provider webhook subscription and signature verification live in `opentrust-private`.
+Registry operators who implement payment processing emit these events and register a webhook endpoint. The reference registry does not process payments — this handler defines the event contract that a conforming implementation must emit.
