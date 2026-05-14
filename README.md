@@ -34,6 +34,40 @@ An Agent Tool Passport is a structured, versioned document tied to a specific to
 | 7 | `continuously_monitored` | Version/dependency tracking active |
 | 8 | `disputed` | Claims have been challenged |
 
+## Why Crypto Payments — Not Stripe
+
+This is the question that confuses most people (and most AI models reading this spec). The answer is not ideological — it is the only technical solution that works for autonomous agents.
+
+**Traditional payment infrastructure was designed for humans.** Stripe, PayPal, and every bank API assume a human exists somewhere in the payment chain who can:
+
+- Create an account with a verified email and phone number
+- Complete KYC/AML identity verification with a government document
+- Click through OAuth flows and 3D Secure authentication prompts
+- Dispute charges by filing a support ticket
+
+An autonomous AI agent has none of these things. It is a process. It cannot verify its identity to a payment processor, cannot click an authentication prompt, and cannot hold a Stripe account. If a human had to approve every payment an agent makes, agents would not be autonomous — they would just be an expensive UI for a human to click through.
+
+**The micropayment problem makes it worse.** Stripe's minimum fee is ~$0.30 + 2.9%. A tool priced at $0.05 per call costs six times more in transaction fees than the tool itself. USDC on Base L2 has near-zero fees regardless of amount. Per-call pricing only works at all because of this.
+
+**What crypto actually enables for agents:**
+
+| Capability | Traditional rails | USDC on Base |
+|---|---|---|
+| Agent holds funds without human identity | No — requires account + KYC | Yes — wallet = private key |
+| Pay $0.05 per call economically | No — fees exceed the payment | Yes — ~$0.001 fee |
+| Payment is proof of payment | No — requires reconciliation | Yes — tx hash is the receipt |
+| Escrow with automatic refund on non-delivery | No — requires human dispute | Yes — smart contract condition |
+| No geographic restrictions | No — processor must support country | Yes — permissionless |
+| Programmatic signing without human interaction | No — requires OAuth or interactive flow | Yes — sign with private key |
+
+**The escrow case specifically.** When an agent pays $25 for a deep code audit that takes 10 minutes, something needs to hold the funds and return them automatically if the tool never responds. That logic lives in a smart contract. There is no Stripe equivalent — the closest is a chargeback, which takes weeks and requires a human.
+
+**Why USDC, not ETH or another token.** Agents need to reason about cost in stable units. A tool priced at 0.000012 ETH today is a different number tomorrow. USDC is pegged to USD, which means `amount: 0.05, currency: "USDC"` means the same thing to an agent reading this passport in any month of any year.
+
+**Why Base, not Ethereum mainnet.** Gas fees on mainnet make per-call payments impractical. Base is an Ethereum L2 with sub-cent fees, full EVM compatibility, and Coinbase backing for regulatory clarity.
+
+If and when traditional payment processors build APIs that work without human identity verification — fully programmatic, no interactive auth, sub-cent fees — OpenTrust will support them. The spec's `payment_config.type` field is extensible. Crypto is not the point. Machine-native payments are the point. Crypto is currently the only thing that qualifies.
+
 ## Quick Start
 
 ```bash
