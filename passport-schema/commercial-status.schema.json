@@ -80,8 +80,8 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["crypto_direct", "coinbase_commerce", "payment_gateway"],
-          "description": "crypto_direct: agent sends USDC directly to a wallet address. coinbase_commerce: agent calls a Coinbase Commerce checkout URL. payment_gateway: agent calls a custom endpoint that returns a payment intent."
+          "enum": ["crypto_direct", "coinbase_commerce", "payment_gateway", "api_key", "enterprise_invoice", "oauth2", "free"],
+          "description": "crypto_direct: agent sends USDC directly to a wallet address. coinbase_commerce: agent calls a Coinbase Commerce checkout URL. payment_gateway: agent calls a custom endpoint that returns a payment intent. api_key: tool issues a pre-provisioned API key — agent presents key on each call. enterprise_invoice: enterprise agreement, provisioned out-of-band. oauth2: OAuth 2.0 authorization code flow for access token issuance. free: no payment required (use status=free for whole-tool free; this type is for per-method overrides)."
         },
         "network": {
           "type": "string",
@@ -108,9 +108,77 @@
           "items": { "type": "string", "enum": ["USDC", "USDT", "ETH", "SOL"] },
           "default": ["USDC"],
           "description": "Which tokens this tool accepts. Agents should prefer USDC."
+        },
+        "api_key_header": {
+          "type": "string",
+          "description": "For api_key type: the HTTP header name for the API key (e.g. 'X-API-Key', 'Authorization')."
+        },
+        "provisioning_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "For api_key and enterprise_invoice types: URL where an enterprise can provision or request access."
+        },
+        "min_contract_usdc": {
+          "type": "number",
+          "minimum": 0,
+          "description": "For enterprise_invoice type: minimum contract size in USD equivalent."
+        },
+        "contact_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "For enterprise_invoice type: URL to initiate enterprise contact or contract negotiation."
+        },
+        "authorization_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "For oauth2 type: OAuth 2.0 authorization endpoint."
+        },
+        "token_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "For oauth2 type: OAuth 2.0 token endpoint."
+        },
+        "scopes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "For oauth2 type: required OAuth scopes (e.g. ['tool:read', 'tool:execute'])."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Human-readable notes about this payment method."
         }
       },
       "additionalProperties": false
+    },
+
+    "payment_options": {
+      "type": "array",
+      "description": "When a tool supports multiple payment methods, list all options here. Agents should prefer crypto_direct for autonomous operation; enterprises may prefer api_key or enterprise_invoice. If both payment_config and payment_options are present, payment_options takes precedence.",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["crypto_direct", "coinbase_commerce", "payment_gateway", "api_key", "enterprise_invoice", "oauth2", "free"]
+          },
+          "network": { "type": "string", "enum": ["base", "ethereum", "solana", "polygon", "arbitrum"] },
+          "wallet_address": { "type": "string" },
+          "checkout_url": { "type": "string", "format": "uri" },
+          "gateway_url": { "type": "string", "format": "uri" },
+          "supported_tokens": { "type": "array", "items": { "type": "string" } },
+          "api_key_header": { "type": "string" },
+          "provisioning_url": { "type": "string", "format": "uri" },
+          "min_contract_usdc": { "type": "number", "minimum": 0 },
+          "contact_url": { "type": "string", "format": "uri" },
+          "authorization_url": { "type": "string", "format": "uri" },
+          "token_url": { "type": "string", "format": "uri" },
+          "scopes": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
     },
 
     "escrow_config": {
