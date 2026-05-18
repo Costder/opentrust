@@ -90,6 +90,38 @@ def _strip_comments(obj):
     return obj
 
 
+def _load_registry(schema_dir: Path) -> Registry:
+    """Load all sub-schemas from the passport-schema directory into a Registry.
+
+    Reads each schema's $id field and registers it. Also registers each schema
+    under the base URI path (without /v0.2/ if present) to handle relative $refs
+    from passport.schema.json that don't include version segments.
+    """
+    sub_schemas = [
+        "permissions.schema.json",
+        "commercial-status.schema.json",
+        "security.schema.json",
+        "escrow.schema.json",
+        "agent-identity.schema.json",
+        "spend-policy.schema.json",
+    ]
+    resources = []
+    for name in sub_schemas:
+        path = schema_dir / name
+        if path.exists():
+            content = json.loads(path.read_text())
+            # Register under the $id from the schema file
+            schema_id = content.get("$id", f"https://opentrust.dev/schemas/{name}")
+            resources.append((schema_id, Resource.from_contents(content)))
+            # Also register under the base URI path (without version) to handle
+            # relative $refs from passport.schema.json (e.g., permissions.schema.json
+            # resolves to https://opentrust.dev/schemas/permissions.schema.json)
+            base_uri = f"https://opentrust.dev/schemas/{name}"
+            if base_uri != schema_id:
+                resources.append((base_uri, Resource.from_contents(content)))
+    return Registry().with_resources(resources)
+
+
 def validate(path: str) -> tuple[list[str], list[str], str, list[str]]:
     """Validate a passport file.
 
@@ -103,23 +135,13 @@ def validate(path: str) -> tuple[list[str], list[str], str, list[str]]:
     schema_dir = root / "passport-schema"
 
     schema = json.loads((schema_dir / "passport.schema.json").read_text())
-    permissions_schema = json.loads((schema_dir / "permissions.schema.json").read_text())
-    commercial_schema = json.loads((schema_dir / "commercial-status.schema.json").read_text())
-    security_schema = json.loads((schema_dir / "security.schema.json").read_text())
 
     # Strip $comment keys — they are JSON Schema annotations not recognised by
     # validators that enforce additionalProperties: false on the passport schema.
     data = _strip_comments(json.loads(Path(path).read_text()))
 
-    # The passport schema $id is https://opentrust.dev/schemas/passport.schema.json.
-    # Relative $refs resolve against that base, so we register sub-schemas under
-    # their resolved absolute URIs.
-    base = "https://opentrust.dev/schemas/"
-    registry = Registry().with_resources([
-        (base + "permissions.schema.json", Resource.from_contents(permissions_schema)),
-        (base + "commercial-status.schema.json", Resource.from_contents(commercial_schema)),
-        (base + "security.schema.json", Resource.from_contents(security_schema)),
-    ])
+    # Load all sub-schemas into the registry using their $id values
+    registry = _load_registry(schema_dir)
     errors = [e.message for e in Draft202012Validator(schema, registry=registry).iter_errors(data)]
 
     permissions = data.get("permission_manifest", {})
