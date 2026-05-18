@@ -3,7 +3,8 @@
   "tool_identity": {
     "name": "Example Tool",
     "slug": "example-tool",
-    "source_url": "https://github.com/example-org/example-tool"
+    "source_url": "https://github.com/example-org/example-tool",
+    "category": "custom"
   },
   "trust_status": "auto_generated_draft",
   "version_hash": {

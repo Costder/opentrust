@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=82", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "manifest-validator"
+version = "0.2.0"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.26.0", "referencing>=0.35.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["manifest_validator*"]
