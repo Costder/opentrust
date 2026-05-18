@@ -292,6 +292,34 @@
           "type": "boolean",
           "default": false,
           "description": "If true, this tool will only accept calls from human-operated clients or root agents (depth=0). Prevents the tool from being used as a sub-step in autonomous agent chains."
+        },
+        "aria_policy": {
+          "type": "object",
+          "description": "ARIA Protocol policy for callers. ARIA (https://www.aria.bar) defines agent identity and trust levels (L0-L3). When set, the tool runtime must verify the calling agent's ARIA identity before executing the call.",
+          "properties": {
+            "min_level": {
+              "type": "string",
+              "enum": ["L0", "L1", "L2", "L3"],
+              "description": "Minimum ARIA trust level required. L0=anonymous, L1=identity_declared, L2=verified_operator, L3=certified_enterprise."
+            },
+            "require_intent_declaration": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, the calling agent must include an ARIA intent declaration in the call headers."
+            },
+            "require_principal_ref": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, the calling agent must present a principal reference (human operator identity) from their ARIA Agent Identification Document."
+            },
+            "verify_endpoint": {
+              "type": "string",
+              "format": "uri",
+              "description": "ARIA verification endpoint. If omitted, the ARIA public verifier is used.",
+              "examples": ["https://api.aria.bar/v1/verify/{did}"]
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
