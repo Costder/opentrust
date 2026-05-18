@@ -126,6 +126,14 @@ See `POST /api/v1/disputes/ownership` in [api-spec.md](api-spec.md).
 
 ---
 
+## Payment Dispute Resolution
+
+Payment disputes arising from escrow-protected transactions are governed by the three-tier model described in [docs/dispute-resolution.md](dispute-resolution.md). The arbitration process is operationally independent of the registry operator — arbitrators are community volunteers listed in [docs/arbitrator-registry.md](arbitrator-registry.md).
+
+The registry provides arbitration infrastructure at `https://registry.opentrust.dev/api/v1/disputes`. The submission and outcome schema is defined in `payment-contracts/dispute_resolution_v1.json`.
+
+---
+
 ## Registry Self-Verification (Bootstrapping)
 
 The OpenTrust CLI and the reference registry are themselves tools that agents interact with. They cannot be self-reviewed by the spec maintainer.

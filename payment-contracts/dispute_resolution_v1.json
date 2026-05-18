@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opentrust.dev/schemas/dispute-resolution-v1.json",
+  "title": "OpenTrust Dispute Resolution v1",
+  "description": "Schema for dispute submissions to the Tier 3 human arbitration endpoint at https://registry.opentrust.dev/api/v1/disputes. Captures buyer and seller evidence, arbitrator decisions, and appeal status.",
+  "type": "object",
+  "required": [
+    "dispute_id",
+    "payment_tx_hash",
+    "escrow_amount_usdc",
+    "buyer_identity",
+    "seller_tool_slug",
+    "dispute_type",
+    "submitted_at"
+  ],
+  "properties": {
+    "dispute_id": {
+      "type": "string",
+      "description": "Unique dispute identifier (assigned by registry). Format: uuid or similar."
+    },
+    "payment_tx_hash": {
+      "type": "string",
+      "description": "Blockchain transaction hash or off-chain payment identifier for the disputed transaction."
+    },
+    "escrow_amount_usdc": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Amount in USDC held in escrow for this transaction."
+    },
+    "buyer_identity": {
+      "type": "object",
+      "description": "Verified identity of the buyer (from passport or verified blockchain address).",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["github", "did", "wallet_address"],
+          "description": "Identity type: GitHub OAuth, DID, or blockchain wallet address."
+        },
+        "value": {
+          "type": "string",
+          "description": "Identity value: GitHub username, DID string, or wallet address."
+        }
+      },
+      "additionalProperties": false
+    },
+    "seller_tool_slug": {
+      "type": "string",
+      "description": "Registry slug of the tool that was paid for (e.g., 'research-copilot', 'market-analyzer')."
+    },
+    "dispute_type": {
+      "type": "string",
+      "enum": ["non_delivery", "partial_delivery", "quality_dispute", "other"],
+      "description": "Category of dispute: non_delivery (Tier 2), partial_delivery (Tier 3), quality_dispute (Tier 3), or other."
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when dispute was submitted by buyer."
+    },
+    "buyer_evidence": {
+      "type": "object",
+      "description": "Evidence and claim submitted by the buyer.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Buyer's description of the issue and why they believe delivery was insufficient."
+        },
+        "request_timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the buyer made the payment request / initiated the transaction."
+        },
+        "response_received": {
+          "type": "boolean",
+          "description": "True if buyer received any response from the tool; false if no response or timeout."
+        },
+        "http_status": {
+          "type": "integer",
+          "description": "HTTP status code of tool response, if any. Omit if no response received."
+        },
+        "requested_remedy": {
+          "type": "string",
+          "enum": ["full_refund", "partial_refund", "replacement_delivery"],
+          "description": "What the buyer is asking for: full refund, partial refund, or re-delivery."
+        },
+        "partial_refund_amount_usdc": {
+          "type": "number",
+          "minimum": 0,
+          "description": "If requested_remedy is 'partial_refund', the amount in USDC the buyer is requesting."
+        },
+        "evidence_urls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "description": "URLs to logs, screenshots, recordings, or other evidence supporting the buyer's claim."
+        }
+      },
+      "additionalProperties": false
+    },
+    "seller_evidence": {
+      "type": "object",
+      "description": "Evidence and response submitted by the seller (tool author).",
+      "properties": {
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Seller's response: explanation of actions taken, delivery standard met, or technical rebuttal."
+        },
+        "delivery_proof_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to proof of delivery (e.g., signed attestation, delivery log, or output hash)."
+        },
+        "delivery_hash": {
+          "type": "string",
+          "description": "Hash of delivered output (SHA-256 or declared hash type from proof_of_delivery config)."
+        },
+        "access_log_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to tool's access or execution log showing buyer interaction and delivery timestamp."
+        }
+      },
+      "additionalProperties": false
+    },
+    "arbitration_outcome": {
+      "type": "object",
+      "description": "Decision issued by the assigned arbitrator (populated by registry after decision).",
+      "properties": {
+        "arbitrator_identity": {
+          "type": "string",
+          "description": "GitHub handle or DID of the arbitrator who issued the decision."
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when arbitrator issued the decision."
+        },
+        "outcome": {
+          "type": "string",
+          "enum": ["buyer_full_refund", "buyer_partial_refund", "seller_win", "appeal_pending"],
+          "description": "Arbitrator's decision: full refund to buyer, partial refund, seller wins, or appeal is pending."
+        },
+        "refund_amount_usdc": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Amount in USDC to be refunded to buyer (0 if seller wins)."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Written explanation of the arbitrator's reasoning and interpretation of the delivery standard."
+        },
+        "appeal_deadline": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 deadline for either party to file an appeal. Null if appeal window has closed."
+        }
+      },
+      "additionalProperties": false
+    },
+    "appeal_outcome": {
+      "type": "object",
+      "description": "Decision issued by the appeal panel if the dispute was appealed (optional; populated only if appeal occurs).",
+      "properties": {
+        "appeal_filed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when appeal was filed."
+        },
+        "appealing_party": {
+          "type": "string",
+          "enum": ["buyer", "seller"],
+          "description": "Which party filed the appeal."
+        },
+        "appeal_rationale": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Appealing party's reason for disputing the initial arbitrator's decision."
+        },
+        "panel_arbitrators": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "GitHub handles or DIDs of the three arbitrators on the appeal panel."
+        },
+        "panel_decided_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when appeal panel issued its final decision."
+        },
+        "final_outcome": {
+          "type": "string",
+          "enum": ["buyer_full_refund", "buyer_partial_refund", "seller_win"],
+          "description": "Panel's final decision (no further appeals allowed)."
+        },
+        "final_refund_amount_usdc": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Final amount in USDC to be refunded to buyer after appeal."
+        },
+        "panel_rationale": {
+          "type": "string",
+          "description": "Written explanation of the panel's decision and any changes to the initial arbitrator's ruling."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
