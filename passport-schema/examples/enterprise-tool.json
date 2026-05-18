@@ -1,0 +1,134 @@
+{
+  "$comment": "Example: An enterprise analytics tool supporting crypto, invoice, and API key payment paths.",
+  "spec_version": "0.1.0",
+
+  "tool_identity": {
+    "name": "Enterprise Analytics Engine",
+    "slug": "enterprise-analytics-engine",
+    "source_url": "https://github.com/example-corp/analytics-mcp",
+    "category": "data-analysis",
+    "license": "Commercial",
+    "maintainers": ["example-corp"]
+  },
+
+  "creator_identity": {
+    "creator": "Example Corp",
+    "organization": "example-corp",
+    "github": "example-corp",
+    "domain": "example.com",
+    "verification_state": "domain_verified"
+  },
+
+  "trust_status": "security_checked",
+
+  "version_hash": {
+    "version": "3.0.0",
+    "commit": "d4e5f6a7b8c9",
+    "artifact_hash": "sha256:enterprise123"
+  },
+
+  "capabilities": [
+    "SQL and Python analytics over enterprise data warehouses",
+    "Real-time dashboards and scheduled reports",
+    "SOC2 Type II certified infrastructure",
+    "Supports Snowflake, BigQuery, Redshift, and Databricks"
+  ],
+
+  "permission_manifest": {
+    "network": {
+      "allowed_domains": ["*.snowflakecomputing.com", "*.bigquery.googleapis.com", "*.redshift.amazonaws.com"],
+      "allowed_schemes": ["https"],
+      "outbound_only": true
+    },
+    "file": false,
+    "terminal": false,
+    "memory": false,
+    "wallet": false,
+    "api": {
+      "services": ["snowflakecomputing.com", "bigquery.googleapis.com", "redshift.amazonaws.com"],
+      "credential_handling": "caller_provided",
+      "credentials_logged": false
+    },
+    "camera": false,
+    "microphone": false,
+    "private_data": false,
+    "notes": "Network access limited to approved data warehouse endpoints."
+  },
+
+  "data_handling": {
+    "retention_days": 0,
+    "stored_regions": ["us-east-1"],
+    "used_for_training": false,
+    "third_party_sharing": false,
+    "gdpr_compliant": true,
+    "hipaa_eligible": false,
+    "ccpa_compliant": true,
+    "dpa_available": true,
+    "privacy_policy_url": "https://example.com/privacy"
+  },
+
+  "source_formats": ["mcp", "openai_function"],
+
+  "commercial_status": {
+    "status": "enterprise",
+    "pricing": {
+      "model": "per_call",
+      "amount": 0.10,
+      "currency": "USDC",
+      "notes": "Per-query pricing for crypto path. Enterprise invoicing available for committed volume."
+    },
+    "payment_options": [
+      {
+        "type": "crypto_direct",
+        "network": "base",
+        "wallet_address": "0x0000000000000000000000000000000000000001",
+        "supported_tokens": ["USDC"],
+        "notes": "Autonomous agent path: pay per query in USDC on Base L2."
+      },
+      {
+        "type": "enterprise_invoice",
+        "contact_url": "https://example.com/enterprise",
+        "min_contract_usdc": 500,
+        "notes": "Enterprise agreements available for high-volume usage. Includes SLA and DPA."
+      },
+      {
+        "type": "api_key",
+        "api_key_header": "X-API-Key",
+        "provisioning_url": "https://example.com/api/keys/create",
+        "notes": "API keys provisioned via account dashboard."
+      }
+    ],
+    "access_config": {
+      "type": "api_key_issued",
+      "verification_endpoint": "https://api.example.com/v1/verify-access"
+    }
+  },
+
+  "caller_requirements": {
+    "min_agent_trust_status": "github_verified",
+    "require_agent_identity": true,
+    "require_spend_policy": true,
+    "max_caller_depth": 3
+  },
+
+  "review_history": [
+    {
+      "status": "security_checked",
+      "timestamp": "2026-05-01T12:00:00Z",
+      "reviewer": "alice-security",
+      "reviewer_identity": {
+        "type": "github",
+        "github_username": "alice-security",
+        "key_id": "alice-security-2026-v1",
+        "public_key_url": "https://github.com/alice-security.keys"
+      },
+      "attestation": {
+        "key_id": "alice-security-2026-v1",
+        "algorithm": "ed25519",
+        "signature": "BASE64URL_SIGNATURE_PLACEHOLDER",
+        "payload": "enterprise-analytics-engine:3.0.0:security_checked:2026-05-01T12:00:00Z"
+      },
+      "notes": "Full source review. SOC2 report reviewed. No critical findings."
+    }
+  ]
+}
