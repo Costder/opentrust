@@ -1,0 +1,45 @@
+name: OpenTrust Passport Generator
+description: Auto-generate an OpenTrust tool passport on each release. Enables AI agents to discover and trust your tool.
+author: Costder
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  tool_name:
+    description: Display name for the tool (defaults to repo name)
+    required: false
+    default: ''
+  tool_category:
+    description: 'Tool category: search, code-execution, database, file-management, communication, data-analysis, image-generation, audio, video, browser, calendar, crm, finance, hr, legal, marketing, monitoring, security, translation, custom'
+    required: false
+    default: 'custom'
+  github_token:
+    description: GitHub token for creating the PR
+    required: true
+    default: ${{ github.token }}
+  python_version:
+    description: Python version
+    required: false
+    default: '3.11'
+
+outputs:
+  passport_path:
+    description: Path to the generated passport file
+    value: ${{ steps.action.outputs.passport_path }}
+  pr_url:
+    description: URL of the created pull request
+    value: ${{ steps.action.outputs.pr_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run OpenTrust passport generator action
+      id: action
+      uses: ./.github/workflows/opentrust-action
+      with:
+        tool_name: ${{ inputs.tool_name }}
+        tool_category: ${{ inputs.tool_category }}
+        github_token: ${{ inputs.github_token }}
+        python_version: ${{ inputs.python_version }}

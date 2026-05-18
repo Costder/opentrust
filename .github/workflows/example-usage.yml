@@ -1,0 +1,22 @@
+# Example: Add this to YOUR tool repo to auto-generate OpenTrust passports on release.
+# Reference: uses: Costder/opentrust/passport-generator-action@v1
+
+name: Generate OpenTrust Passport on Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  passport:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Costder/opentrust/passport-generator-action@v1
+        with:
+          tool_name: My MCP Tool
+          tool_category: code-execution
+          github_token: ${{ secrets.GITHUB_TOKEN }}
