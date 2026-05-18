@@ -458,7 +458,71 @@
             "$ref": "security.schema.json#/definitions/ReviewerIdentity",
             "description": "Verifiable identity for this reviewer. When present, the CLI verify-signature command can fetch the reviewer's public key and verify the attestation signature without out-of-band coordination."
           },
-          "notes": { "type": "string" }
+          "notes": { "type": "string" },
+          "security_evidence": {
+            "type": "object",
+            "description": "Machine-verifiable evidence for trust levels at or above security_checked. Required when trust_status is security_checked or continuously_monitored (enforced by validate-evidence mode).",
+            "properties": {
+              "scanner_outputs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["tool", "version", "findings_count"],
+                  "properties": {
+                    "tool": { "type": "string", "description": "Scanner name, e.g. semgrep, trivy, snyk, grype." },
+                    "version": { "type": "string" },
+                    "ruleset": { "type": "string", "description": "Ruleset or profile used, e.g. p/security-audit." },
+                    "target": { "type": "string", "description": "For container scanners: the image reference scanned." },
+                    "findings_count": { "type": "integer", "minimum": 0 },
+                    "critical": { "type": "integer", "minimum": 0 },
+                    "high": { "type": "integer", "minimum": 0 },
+                    "report_url": { "type": "string", "format": "uri" },
+                    "report_hash": { "type": "string", "description": "SHA-256 hash of the report, e.g. sha256:abc123..." }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "dependency_snapshot": {
+                "type": "object",
+                "description": "SBOM reference in CycloneDX or SPDX format.",
+                "required": ["sbom_url", "sbom_format"],
+                "properties": {
+                  "sbom_url": { "type": "string", "format": "uri" },
+                  "sbom_format": { "type": "string", "enum": ["cyclonedx", "spdx"] },
+                  "sbom_hash": { "type": "string" }
+                },
+                "additionalProperties": false
+              },
+              "commit_hash": { "type": "string", "description": "Git commit hash of the reviewed source code." },
+              "review_scope": { "type": "string", "description": "Human-readable description of what was reviewed." },
+              "known_issues": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "severity", "description", "mitigation"],
+                  "properties": {
+                    "id": { "type": "string" },
+                    "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                    "description": { "type": "string" },
+                    "mitigation": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "monitoring_config": {
+                "type": "object",
+                "description": "For continuously_monitored trust level: evidence of automated dependency tracking.",
+                "properties": {
+                  "provider": { "type": "string", "description": "e.g. renovate, dependabot, snyk-monitor" },
+                  "config_url": { "type": "string", "format": "uri" },
+                  "webhook_url": { "type": "string", "format": "uri" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       },
