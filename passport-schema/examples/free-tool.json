@@ -35,17 +35,25 @@
   ],
 
   "permission_manifest": {
-    "network": true,
+    "network": {
+      "allowed_domains": ["api.search.brave.com"],
+      "allowed_schemes": ["https"],
+      "outbound_only": true
+    },
     "file": false,
     "terminal": false,
     "browser": false,
     "memory": false,
     "wallet": false,
-    "api": true,
+    "api": {
+      "services": ["api.search.brave.com"],
+      "credential_handling": "caller_provided",
+      "credentials_logged": false
+    },
     "camera": false,
     "microphone": false,
     "private_data": false,
-    "notes": "Outbound HTTPS only to api.search.brave.com"
+    "notes": "Outbound HTTPS only to api.search.brave.com. Caller provides Brave API key."
   },
 
   "data_handling": {

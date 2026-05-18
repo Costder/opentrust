@@ -35,9 +35,19 @@
   ],
 
   "permission_manifest": {
-    "terminal": true,
-    "file": true,
+    "file": {
+      "read": ["./workspace/**"],
+      "write": ["./workspace/output/**"],
+      "delete": ["/tmp/opentrust-*"]
+    },
     "network": false,
+    "terminal": {
+      "allowed_commands": ["python", "node", "npm", "pip"],
+      "forbidden_commands": ["rm -rf", "curl | sh", "wget | bash", "chmod 777"],
+      "shell_access": false,
+      "working_directory": "./workspace",
+      "timeout_seconds": 120
+    },
     "browser": false,
     "memory": false,
     "wallet": false,
@@ -45,7 +55,7 @@
     "camera": false,
     "microphone": false,
     "private_data": false,
-    "notes": "file and terminal access are scoped to the ephemeral sandbox container only"
+    "notes": "file and terminal access are scoped to the ephemeral sandbox container only. Network disabled."
   },
 
   "data_handling": {
