@@ -454,6 +454,10 @@
           "timestamp": { "type": "string", "format": "date-time" },
           "reviewer": { "type": "string" },
           "attestation": { "$ref": "security.schema.json#/definitions/ReviewerAttestation" },
+          "reviewer_identity": {
+            "$ref": "security.schema.json#/definitions/ReviewerIdentity",
+            "description": "Verifiable identity for this reviewer. When present, the CLI verify-signature command can fetch the reviewer's public key and verify the attestation signature without out-of-band coordination."
+          },
           "notes": { "type": "string" }
         },
         "additionalProperties": false

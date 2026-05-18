@@ -62,6 +62,49 @@
       "additionalProperties": false
     },
 
+    "ReviewerIdentity": {
+      "type": "object",
+      "description": "Verifiable identity for a passport reviewer. Enables signature verification without out-of-band coordination.",
+      "oneOf": [
+        {
+          "title": "GitHub identity",
+          "required": ["type", "github_username", "key_id", "public_key_url"],
+          "properties": {
+            "type": { "type": "string", "const": "github" },
+            "github_username": { "type": "string", "description": "GitHub username of the reviewer." },
+            "key_id": { "type": "string", "description": "Key ID matching the attestation.key_id field." },
+            "public_key_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "URL returning the reviewer's SSH public keys, e.g. https://github.com/username.keys"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "title": "DID identity",
+          "required": ["type", "did", "verification_method"],
+          "properties": {
+            "type": { "type": "string", "const": "did" },
+            "did": {
+              "type": "string",
+              "pattern": "^did:[a-z]+:.+",
+              "description": "W3C DID for the reviewer, e.g. did:web:security.example.com or did:aria:abc123"
+            },
+            "verification_method": {
+              "type": "string",
+              "description": "DID URL for the specific verification method, e.g. did:web:security.example.com#key-1"
+            },
+            "public_key_jwk": {
+              "type": "object",
+              "description": "Optional inline JWK public key. If absent, the key is fetched from the DID document."
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
     "WebhookSignatureConfig": {
       "type": "object",
       "description": "Configuration for verifying signed webhook callbacks (payment confirmations, escrow events, delivery proofs). Tools must verify these before acting on payment events.",
