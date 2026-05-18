@@ -29,17 +29,17 @@ Granular scopes solve this by:
 
 ### Schema overview
 
-The v0.2 permission manifest maintains backward compatibility with boolean fields while introducing structured scope objects for each permission type. A permission can be declared as:
+The v0.2 permission manifest maintains backward compatibility with boolean fields while introducing structured scope objects for each permission type. A permission can be declared as either a boolean (old style, advisory-only) or as a granular scope object (new style, enforceable):
 
 ```json
 {
-  "file": true,           // Old style: boolean, advisory-only
-  "network": {            // New style: granular scopes
+  "file": true,
+  "network": {
     "allowed_domains": ["api.github.com"],
     "allowed_schemes": ["https"],
     "outbound_only": true
   },
-  "terminal": false       // Boolean false means no permission
+  "terminal": false
 }
 ```
 
