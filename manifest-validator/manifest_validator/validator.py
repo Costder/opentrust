@@ -149,3 +149,49 @@ def validate(path: str) -> tuple[list[str], list[str], str, list[str]]:
     risk, warnings = compute_risk_score(permissions)
 
     return errors, flags, risk, warnings
+
+
+_EVIDENCE_REQUIRED = {"security_checked", "continuously_monitored"}
+
+
+def validate_evidence(passport: dict) -> list[str]:
+    """Check that review_history entries at security_checked+ have required evidence.
+
+    Returns a list of error strings. Empty list means the passport passes evidence checks.
+    This is an opt-in check — not part of default validate().
+    """
+    errors: list[str] = []
+
+    for i, entry in enumerate(passport.get("review_history", [])):
+        entry_status = entry.get("status", "")
+        if entry_status not in _EVIDENCE_REQUIRED:
+            continue
+
+        evidence = entry.get("security_evidence")
+        if evidence is None:
+            errors.append(
+                f"review_history[{i}] has status '{entry_status}' but no security_evidence block — "
+                f"at least one scanner output and an SBOM are required at this trust level"
+            )
+            continue
+
+        scanners = evidence.get("scanner_outputs", [])
+        if not scanners:
+            errors.append(
+                f"review_history[{i}] security_evidence.scanner_outputs is empty — "
+                f"at least one scanner output is required for '{entry_status}'"
+            )
+
+        if evidence.get("dependency_snapshot") is None:
+            errors.append(
+                f"review_history[{i}] security_evidence missing dependency_snapshot (SBOM) — "
+                f"a CycloneDX or SPDX SBOM reference is required for '{entry_status}'"
+            )
+
+        if entry_status == "continuously_monitored" and evidence.get("monitoring_config") is None:
+            errors.append(
+                f"review_history[{i}] has status 'continuously_monitored' but security_evidence "
+                f"lacks monitoring_config — Renovate/Dependabot/Snyk config reference is required"
+            )
+
+    return errors
