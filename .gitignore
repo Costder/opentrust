@@ -20,11 +20,14 @@ codex_goal_opentrust.txt
 agent_tool_trust_protocol_v3_updated_plan.docx
 docs/marketplace-wallets-implementation-plan.md
 
-# Claude Code session/memory data
-.claude/
+# Claude Code session/memory data (settings.json is tracked for shared project config)
+.claude/*
+!.claude/settings.json
 
 # Local dev artifacts
 *.db
 *.db-shm
 *.db-wal
 opentrust.db
+
+.vercel

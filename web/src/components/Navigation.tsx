@@ -7,6 +7,7 @@ export function Navigation() {
         <Link href="/" className="text-lg font-bold">OpenTrust</Link>
         <div className="flex gap-4 text-sm">
           <Link href="/tools">Tools</Link>
+          <Link href="/launch-lab">Launch Lab</Link>
         </div>
       </div>
     </nav>

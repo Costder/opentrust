@@ -7,7 +7,7 @@ name = "opentrust-payment-contracts"
 version = "0.1.0"
 description = "Abstract payment contracts for OpenTrust payment providers"
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2.7"]
+dependencies = ["pydantic>=2.7", "cryptography>=42"]
 
 [tool.setuptools]
 packages = ["payment_contracts", "payment_contracts.interfaces"]

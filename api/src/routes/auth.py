@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter
 from jose import jwt
-from api.src.config import settings
-from api.src.services.github_verifier import build_github_oauth_url
+from ..config import settings
+from ..services.github_verifier import build_github_oauth_url
 
 router = APIRouter(prefix="/claim", tags=["claim"])
 

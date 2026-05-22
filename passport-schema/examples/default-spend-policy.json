@@ -1,0 +1,22 @@
+{
+  "policy_version": "0.1.0",
+  "max_cost_per_call_usdc": 0.01,
+  "max_cost_per_session_usdc": 0.1,
+  "max_cost_per_day_usdc": 1.0,
+  "min_trust_status": "community_reviewed",
+  "blocked_permissions": ["wallet", "terminal", "private_data"],
+  "allowed_networks": ["base"],
+  "allowed_currencies": ["USDC"],
+  "require_escrow_above_usdc": 0.1,
+  "human_approval_above_usdc": 0.01,
+  "blocked_categories": [],
+  "allowed_registries": [],
+  "max_orchestration_depth": 3,
+  "sub_agent_policy": "restrict",
+  "allow_spawning_agents": false,
+  "dynamic_budget_allocation": {
+    "enabled": false,
+    "allocations": [],
+    "unallocated_fallback": "deny"
+  }
+}

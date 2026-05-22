@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
-from api.src.config import settings
-from api.src.schemas.marketplace import (
+from ..config import settings
+from ..schemas.marketplace import (
     CheckoutRequest,
     CheckoutResponse,
     EvidenceImportRequest,
@@ -16,7 +16,7 @@ from api.src.schemas.marketplace import (
     WalletAccount,
     WalletConnectRequest,
 )
-from api.src.services.marketplace_store import store
+from ..services.marketplace_store import store
 
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
 evidence_router = APIRouter(prefix="/evidence", tags=["evidence"])

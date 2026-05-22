@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
-from api.src.schemas.marketplace import GitHubInstallationRequest, VerifiedRepo, VerifyRepoRequest
-from api.src.services.marketplace_store import store
+from ..schemas.marketplace import GitHubInstallationRequest, VerifiedRepo, VerifyRepoRequest
+from ..services.marketplace_store import store
 
 router = APIRouter(prefix="/github/app", tags=["github-app"])
 github_router = APIRouter(prefix="/github", tags=["github-app"])
