@@ -54,6 +54,16 @@ async def connect_wallet(request: WalletConnectRequest):
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
+@router.get("/listings", response_model=list[MarketplaceListing])
+async def list_listings():
+    return list(store.listings.values())
+
+
+@router.get("/orders", response_model=list[MarketplaceOrder])
+async def list_orders():
+    return list(store.orders.values())
+
+
 @router.post("/listings", response_model=MarketplaceListing)
 async def create_listing(request: MarketplaceListingRequest):
     if not settings.opentrust_marketplace_enabled:

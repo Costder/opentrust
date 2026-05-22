@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   RadioTower,
   ShieldCheck,
-  Lock,
   Wallet,
   Terminal,
   Globe,
@@ -25,7 +24,7 @@ type Passport = {
   tool_identity: { name: string; slug: string; category: string };
   creator_identity: { creator: string; verification_state: string };
   trust_status: string;
-  permission_manifest: Record<string, boolean | string>;
+  permission_manifest: Record<string, boolean | string | Record<string, unknown>>;
   data_handling: {
     retention_days: number;
     used_for_training: boolean;
@@ -237,7 +236,12 @@ function evaluatePassport(passport: Passport) {
   if (trust < minTrust)
     reasons.push(`TRUST TOO LOW: ${passport.trust_status} < ${policy.min_trust_status}`);
   for (const perm of policy.blocked_permissions) {
-    if (passport.permission_manifest[perm] === true)
+    const val = passport.permission_manifest[perm];
+    // Boolean true OR non-empty object both indicate the permission is in use
+    const isGranted =
+      val === true ||
+      (val !== null && typeof val === "object" && !Array.isArray(val) && Object.keys(val).length > 0);
+    if (isGranted)
       reasons.push(`BROAD PERMISSION: ${perm} is blocked by local policy`);
   }
   if (passport.data_handling.used_for_training)
@@ -271,10 +275,12 @@ function PermissionRow({
 }: {
   label: string;
   icon: React.ElementType;
-  value: boolean | string;
+  value: boolean | string | Record<string, unknown>;
   risky: boolean;
 }) {
-  const granted = value === true;
+  const granted =
+    value === true ||
+    (value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length > 0);
   const isRiskyAndGranted = granted && risky;
   return (
     <div className="flex items-center gap-3 rounded-lg border border-stone-200 bg-white px-3 py-2">
@@ -711,49 +717,6 @@ export function LaunchLab() {
           </div>
         </section>
       </div>
-
-      {/* ── Before you go public ─────────────────────────────────────────────── */}
-      <section aria-labelledby="operator-heading">
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-6">
-          <div className="flex items-start gap-3">
-            <Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
-            <div className="min-w-0">
-              <h2 id="operator-heading" className="text-lg font-bold text-amber-900">
-                Before you go public
-              </h2>
-              <p className="mt-1 text-sm text-amber-800">
-                The code is ready. You still need to do these three things before real users visit the site:
-              </p>
-              <ol className="mt-3 space-y-2 text-sm text-amber-900" role="list">
-                <li className="flex items-start gap-2">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-xs font-bold text-amber-900">
-                    1
-                  </span>
-                  <span>
-                    <strong>Get real secret keys.</strong> Generate a registry signing key outside of git and store it in a secrets manager — not in code.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-xs font-bold text-amber-900">
-                    2
-                  </span>
-                  <span>
-                    <strong>Set up a real domain with SSL.</strong> Get a domain name and an SSL certificate so the site runs on <code className="rounded bg-amber-100 px-1 font-mono text-xs">https://</code>.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-xs font-bold text-amber-900">
-                    3
-                  </span>
-                  <span>
-                    <strong>Practice a restore drill.</strong> Make sure you can recover from a backup on your actual server before anything goes wrong.
-                  </span>
-                </li>
-              </ol>
-            </div>
-          </div>
-        </div>
-      </section>
 
     </div>
   );

@@ -74,15 +74,49 @@ class TestListPassports:
     async def test_empty_db_returns_empty_list(self, client):
         resp = await client.get("/api/v1/tools")
         assert resp.status_code == 200
-        assert resp.json() == []
+        body = resp.json()
+        assert body["items"] == []
+        assert body["total"] == 0
+        assert body["page"] == 1
 
     async def test_after_create_list_returns_one_item(self, client):
         await client.post("/api/v1/tools", json=_PASSPORT)
         resp = await client.get("/api/v1/tools")
         assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 1
-        assert data[0]["slug"] == "test-tool"
+        body = resp.json()
+        assert body["total"] == 1
+        assert body["items"][0]["slug"] == "test-tool"
+
+    async def test_search_filter_returns_match(self, client):
+        await client.post("/api/v1/tools", json=_PASSPORT)
+        resp = await client.get("/api/v1/tools", params={"q": "Test"})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["total"] == 1
+
+    async def test_trust_status_filter(self, client):
+        await client.post("/api/v1/tools", json=_PASSPORT)
+        resp = await client.get("/api/v1/tools", params={"trust_status": "auto_generated_draft"})
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+
+    async def test_trust_status_filter_no_match(self, client):
+        await client.post("/api/v1/tools", json=_PASSPORT)
+        resp = await client.get("/api/v1/tools", params={"trust_status": "security_checked"})
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 0
+
+    async def test_pagination_limit(self, client):
+        # Create two tools, then fetch page 1 with limit=1
+        await client.post("/api/v1/tools", json=_PASSPORT)
+        second = {**_PASSPORT, "tool_identity": {**_PASSPORT["tool_identity"], "slug": "test-tool-2", "name": "Test Tool 2"}}
+        await client.post("/api/v1/tools", json=second)
+        resp = await client.get("/api/v1/tools", params={"page": 1, "limit": 1})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["total"] == 2
+        assert len(body["items"]) == 1
+        assert body["page"] == 1
 
 
 class TestGetPassport:
