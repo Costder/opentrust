@@ -77,28 +77,73 @@ An autonomous AI agent has none of these things. It is a process. It cannot veri
 
 If and when traditional payment processors build APIs that work without human identity verification — fully programmatic, no interactive auth, sub-cent fees — OpenTrust will support them. The spec's `payment_config.type` field is extensible. Crypto is not the point. Machine-native payments are the point. Crypto is currently the only thing that qualifies.
 
+## Status
+
+OpenTrust is live. The reference registry and frontend are deployed and backed by a persistent cloud database.
+
+| | |
+|---|---|
+| **Registry API** | https://api-kappa-pied-59.vercel.app/api/v1/health |
+| **Web frontend** | https://web-five-psi-74.vercel.app |
+| **Database** | Turso (SQLite-compatible cloud, free tier) |
+| **Tests** | 155 passing |
+| **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
+
 ## Roadmap
 
-- **v0.2 — Granular permission scopes.** The current permission manifest uses booleans (`file: true`, `network: true`). The next version will add path-level and domain-level scoping — e.g. `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. This makes the manifest machine-enforceable, not just declarative. RFC open for contribution.
+### Done
+
+- ✅ **v0.1 — Reference registry.** Passport schema, FastAPI CRUD, CLI, Next.js frontend, badge generator, Docker Compose, CI.
+- ✅ **v0.4 — Signed registry + revocation.** Ed25519 signing on all passports, pinned public keys at `/.well-known/opentrust-keys.json`, signed revocation list with monotonic versioning and rollback rejection, offline CLI verification. Permanent registry key deployed to production.
+- ✅ **v0.5 — Spend policy + signed payment quotes.** Deny-first local spend policy, signed and expiring payment quotes, nonce protection against replay, wallet-bound quotes, escrow threshold enforcement. 30+ tests across all quote safety properties.
+- ✅ **Production hardening.** HSTS, security headers, rate limiting, bearer-token-protected admin plane with audit log, Turso cloud database, Vercel deployment, 155-test suite.
+
+### Up next
+
+- **v0.2 — Granular permission scopes.** The current manifest uses booleans (`file: true`, `network: true`). The next version adds path-level and domain-level scoping — `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. This makes the manifest machine-enforceable, not just declarative. RFC open for contribution.
 - **v0.3 — Evidence requirements per trust level.** `security_checked` will require a structured evidence block: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation.
-- **v0.4 — Signed registry + revocation.** Registry responses, delegated keys, and revocation lists become locally verifiable with rollback protection. See [`docs/production-readiness.md`](docs/production-readiness.md).
-- **v0.5 — Spend policy + signed payment quotes.** Agents enforce local deny-first spend policy, verify signed quotes, reject replayed invoices, and require escrow above configured thresholds.
-- **v1.0 — Stable spec + governance transfer.** Once the schema is stable, signed verification works, and adoption exists, governance moves to a neutral foundation.
+- **v0.6 — Real marketplace flows.** On-chain USDC payments on Base, live escrow contracts, wallet connect, custodial option for non-crypto operators.
+- **v1.0 — Stable spec + governance transfer.** Once schema is stable, signed verification is in production use, and adoption exists, governance moves to a neutral foundation.
 
 ## Quick Start
+
+### Live (no setup)
+
+```
+API:  https://api-kappa-pied-59.vercel.app/api/v1/health
+Web:  https://web-five-psi-74.vercel.app
+```
+
+### Local dev
+
+```bash
+# Clone and install
+git clone https://github.com/Costder/opentrust
+cd opentrust
+python -m pip install -r api/requirements.txt
+python -m pip install -e cli -e payment-contracts
+
+# Run the API (from repo root)
+JWT_SECRET=dev uvicorn api.src.main:app --reload
+
+# Run the frontend (separate terminal)
+cd web && npm ci && npm run dev
+```
+
+API: `http://localhost:8000/api/v1/health`  
+Web: `http://localhost:3000`
+
+### Docker
 
 ```bash
 cp .env.example .env
 make docker-up
 ```
 
-API: `http://localhost:8000/api/v1/health`
-Web: `http://localhost:3000`
-
 ### CLI
 
 ```bash
-pip install opentrust-cli
+pip install -e cli
 
 opentrust inspect github/file-search-mcp
 opentrust validate my-tool-manifest.json
