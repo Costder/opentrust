@@ -1,15 +1,29 @@
 import sqlite3
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from ..database import Database, get_db
 from ..schemas.passport import PassportCreate, PassportRead
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
 
-@router.get("", response_model=list[PassportRead])
-async def list_tools(db: Database = Depends(get_db)):
-    return [PassportRead.from_model(row) for row in await db.list_passports()]
+@router.get("")
+async def list_tools(
+    q: str | None = Query(default=None, description="Search query (name, description, capabilities)"),
+    trust_status: str | None = Query(default=None, description="Filter by trust_status"),
+    page: int = Query(default=1, ge=1, description="Page number"),
+    limit: int = Query(default=20, ge=1, le=100, description="Results per page"),
+    db: Database = Depends(get_db),
+):
+    offset = (page - 1) * limit
+    items = await db.list_filtered(q=q, trust_status=trust_status, offset=offset, limit=limit)
+    total = await db.count_filtered(q=q, trust_status=trust_status)
+    return {
+        "items": [PassportRead.from_model(row) for row in items],
+        "total": total,
+        "page": page,
+        "limit": limit,
+    }
 
 
 @router.get("/{slug}", response_model=PassportRead)
@@ -35,6 +49,7 @@ async def create_tool(payload: PassportCreate, db: Database = Depends(get_db)):
             "version_hash": payload.version_hash,
             "capabilities": payload.capabilities,
             "permission_manifest": payload.permission_manifest,
+            "evidence": payload.evidence,
             "risk_summary": payload.risk_summary,
             "review_history": payload.review_history,
             "commercial_status": payload.commercial_status,

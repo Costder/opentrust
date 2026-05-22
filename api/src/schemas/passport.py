@@ -28,6 +28,7 @@ class PassportBase(BaseModel):
     version_hash: dict
     capabilities: list[str] = Field(min_length=1)
     permission_manifest: dict
+    evidence: dict | None = None
     risk_summary: dict | None = None
     review_history: list[dict] = []
     commercial_status: dict
@@ -61,6 +62,7 @@ class PassportRead(PassportBase):
             version_hash=model.version_hash,
             capabilities=model.capabilities,
             permission_manifest=model.permission_manifest,
+            evidence=getattr(model, "evidence", None),
             risk_summary=model.risk_summary,
             review_history=model.review_history,
             commercial_status=model.commercial_status,

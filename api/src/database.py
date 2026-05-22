@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS passports (
     version_hash TEXT NOT NULL,
     capabilities TEXT NOT NULL,
     permission_manifest TEXT NOT NULL,
+    evidence TEXT,
     risk_summary TEXT,
     review_history TEXT NOT NULL DEFAULT '[]',
     commercial_status TEXT NOT NULL,
@@ -42,14 +43,14 @@ CREATE TABLE IF NOT EXISTS passports (
 _COLUMNS = [
     "id", "slug", "name", "description", "trust_status",
     "tool_identity", "creator_identity", "version_hash", "capabilities",
-    "permission_manifest", "risk_summary", "review_history",
+    "permission_manifest", "evidence", "risk_summary", "review_history",
     "commercial_status", "billing_plan", "fee_schedule", "agent_access",
     "created_at", "updated_at",
 ]
 
 _JSON_COLS = frozenset({
     "tool_identity", "creator_identity", "version_hash", "capabilities",
-    "permission_manifest", "risk_summary", "review_history",
+    "permission_manifest", "evidence", "risk_summary", "review_history",
     "commercial_status", "billing_plan", "fee_schedule", "agent_access",
 })
 
@@ -164,12 +165,54 @@ class Database:
 
     async def init(self) -> None:
         await self._execute(_SCHEMA_SQL)
+        # Additive migrations: add columns introduced after v0.1 if missing.
+        # SQLite and Turso both ignore errors for existing columns.
+        for migration in [
+            "ALTER TABLE passports ADD COLUMN evidence TEXT",
+        ]:
+            try:
+                await self._execute(migration)
+            except Exception:
+                pass  # Column already exists — that's fine.
 
     # ── Query methods ─────────────────────────────────────────────────────────
 
     async def list_passports(self) -> list[PassportRow]:
         cols = ", ".join(_COLUMNS)
         return await self._execute(f"SELECT {cols} FROM passports ORDER BY name")
+
+    async def list_filtered(
+        self,
+        q: str | None = None,
+        trust_status: str | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> list[PassportRow]:
+        cols = ", ".join(_COLUMNS)
+        conditions: list[str] = []
+        args: list[Any] = []
+        if q:
+            like = f"%{q}%"
+            conditions.append("(name LIKE ? OR description LIKE ? OR capabilities LIKE ?)")
+            args.extend([like, like, like])
+        if trust_status:
+            conditions.append("trust_status = ?")
+            args.append(trust_status)
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        args.extend([limit, offset])
+        return await self._execute(
+            f"SELECT {cols} FROM passports {where} ORDER BY name LIMIT ? OFFSET ?",
+            args,
+        )
+
+    async def count_filtered(
+        self,
+        q: str | None = None,
+        trust_status: str | None = None,
+    ) -> int:
+        """Return total row count matching filters (fetches all matching rows)."""
+        rows = await self.list_filtered(q, trust_status, offset=0, limit=99999)
+        return len(rows)
 
     async def get_by_slug(self, slug: str) -> PassportRow | None:
         cols = ", ".join(_COLUMNS)
