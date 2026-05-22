@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from api.src.schemas.marketplace import (
+from ..schemas.marketplace import (
     CheckoutRequest,
     CheckoutResponse,
     PaymentStatus,
@@ -8,7 +8,7 @@ from api.src.schemas.marketplace import (
     PaymentVerificationResponse,
     ProductCode,
 )
-from api.src.services.marketplace_store import store
+from ..services.marketplace_store import store
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 subscriptions_router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])

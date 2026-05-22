@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opentrust.dev/schemas/spend-policy.schema.json",
+  "description": "Default agent spend policy for the OpenTrust hello-weather demo. Allows free and low-cost tools with safe permissions only.",
+  "max_cost_per_call_usdc": 0.10,
+  "max_cost_per_session_usdc": 1.00,
+  "max_cost_per_day_usdc": 5.00,
+  "min_trust_status": "community_reviewed",
+  "blocked_permissions": ["wallet", "private_data", "terminal", "browser"],
+  "allowed_networks": ["base"],
+  "allowed_currencies": ["USDC"],
+  "require_escrow_above_usdc": 0.10,
+  "human_approval_above_usdc": 0.01,
+  "blocked_categories": ["security", "infrastructure"],
+  "max_orchestration_depth": 3,
+  "sub_agent_policy": "restrict",
+  "policy_version": "1.0.0",
+  "issued_at": "2026-05-21T00:00:00Z",
+  "expires_at": "2027-05-21T00:00:00Z"
+}

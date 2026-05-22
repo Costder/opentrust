@@ -1,10 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.src.config import settings
-from api.src.middleware.rate_limit import RateLimitMiddleware
-from api.src.routes import auth, badges, github_app, marketplace, passports, payments, search
 
-app = FastAPI(title="OpenTrust API", version="0.1.0")
+from .config import run_config_validation, settings
+from .database import db
+from .middleware.rate_limit import RateLimitMiddleware
+from .middleware.security_headers import SecurityHeadersMiddleware
+from .routes import auth, badges, github_app, marketplace, passports, payments, search
+from .routes.well_known import registry_router, well_known_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    run_config_validation()
+    await db.init()
+    yield
+
+
+app = FastAPI(title="OpenTrust API", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -39,3 +55,5 @@ async def health():
 
 
 app.include_router(api)
+app.include_router(well_known_router)
+app.include_router(registry_router)

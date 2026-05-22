@@ -1,6 +1,6 @@
 from fastapi import Header, HTTPException
 from jose import JWTError, jwt
-from api.src.config import settings
+from ..config import settings
 
 
 def decode_bearer(authorization: str | None = Header(default=None)) -> dict:

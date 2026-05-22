@@ -1,8 +1,8 @@
 from decimal import Decimal
 from uuid import uuid4
 
-from api.src.config import settings
-from api.src.schemas.marketplace import (
+from ..config import settings
+from ..schemas.marketplace import (
     CheckoutRequest,
     CheckoutResponse,
     EvidenceImportRequest,

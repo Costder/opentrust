@@ -1,0 +1,90 @@
+{
+  "spec_version": "0.1.0",
+  "tool_identity": {
+    "name": "Hello Weather",
+    "slug": "hello-weather",
+    "category": "research",
+    "source_url": "https://github.com/opentrust/hello-weather",
+    "license": "MIT",
+    "maintainers": [
+      "opentrust-demo"
+    ]
+  },
+  "creator_identity": {
+    "creator": "OpenTrust Demo",
+    "organization": "OpenTrust",
+    "github": "opentrust",
+    "domain": "opentrust.dev",
+    "verification_state": "github_verified"
+  },
+  "trust_status": "community_reviewed",
+  "revocation": {
+    "revoked": false
+  },
+  "version_hash": {
+    "version": "1.0.0",
+    "commit": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifact_hash": "sha256:aabbccddee0011223344556677889900aabbccddee0011223344556677889900"
+  },
+  "capabilities": [
+    "Look up current weather for any city",
+    "Return temperature, humidity, and conditions",
+    "No data stored between calls"
+  ],
+  "permission_manifest": {
+    "file": false,
+    "terminal": false,
+    "browser": false,
+    "network": true,
+    "memory": false,
+    "wallet": false,
+    "api": true,
+    "camera": false,
+    "microphone": false,
+    "private_data": false,
+    "notes": "Makes HTTPS calls to a weather API only. No file system, terminal, or private data access."
+  },
+  "data_handling": {
+    "retention_days": 0,
+    "stored_regions": [],
+    "used_for_training": false,
+    "third_party_sharing": false,
+    "gdpr_compliant": true,
+    "ccpa_compliant": true,
+    "notes": "No data retained between calls. City names are ephemeral request parameters only."
+  },
+  "source_formats": [
+    "cli",
+    "mcp"
+  ],
+  "format_manifests": {
+    "cli": {
+      "command": "python weather.py <city>",
+      "install_instructions": "pip install -r requirements.txt"
+    }
+  },
+  "commercial_status": {
+    "status": "free"
+  },
+  "risk_summary": {
+    "ai_generated_notes": "Safe read-only weather lookup tool. Network access only to public weather API. No credentials stored.",
+    "human_reviewed_findings": [
+      "Only outbound HTTPS to weather API",
+      "No side effects, no data retention"
+    ]
+  },
+  "cache_ttl_seconds": 300,
+  "security": {
+    "transport": {
+      "tls_minimum": "1.2",
+      "hsts": true
+    },
+    "registry_signature": {
+      "key_id": "hello-opentrust-registry-v1",
+      "algorithm": "ed25519",
+      "signature": "NZs0bGXJCB5tBBaEGdSe_o0sO7q-E78G-XtTAY24ZDe6R5LN30_vZrTgD2mwMWzx99ebDb9zxOpgApNameCHDw",
+      "signed_at": "2026-05-21T00:00:00Z",
+      "payload_hash": "sha256:cc89d838d6efe80d874cb21a848655edac5b18dd3501c966fa2e30929641a4af"
+    }
+  }
+}

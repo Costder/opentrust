@@ -1,0 +1,14 @@
+{
+  "quote_id": "qt_hello_weather_001",
+  "passport_slug": "hello-weather",
+  "version_hash": "sha256:aabbccddee0011223344556677889900aabbccddee0011223344556677889900",
+  "amount": "0.05",
+  "currency": "USDC",
+  "chain": "base",
+  "recipient_wallet": "0xRecipientWalletDemo1234567890ABCDEF",
+  "expires_at": "2027-05-21T20:26:12+00:00",
+  "nonce": "nonce_demo_weather_001_abcdef123456",
+  "terms_hash": "sha256:demo_terms_hash_abcdef1234567890",
+  "proof_requirement": "hash_match",
+  "signature": "85a59af8e063966863037fefc84deb85a680e69c044a546873acb97283c345e536d43a26596d0520694d6710af5f9a1e21324605f158a9c38dee49732b71ce01"
+}

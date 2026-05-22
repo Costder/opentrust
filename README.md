@@ -81,7 +81,9 @@ If and when traditional payment processors build APIs that work without human id
 
 - **v0.2 — Granular permission scopes.** The current permission manifest uses booleans (`file: true`, `network: true`). The next version will add path-level and domain-level scoping — e.g. `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. This makes the manifest machine-enforceable, not just declarative. RFC open for contribution.
 - **v0.3 — Evidence requirements per trust level.** `security_checked` will require a structured evidence block: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation.
-- **v1.0 — Stable spec + governance transfer.** Once the schema is stable and adoption exists, governance moves to a neutral foundation.
+- **v0.4 — Signed registry + revocation.** Registry responses, delegated keys, and revocation lists become locally verifiable with rollback protection. See [`docs/production-readiness.md`](docs/production-readiness.md).
+- **v0.5 — Spend policy + signed payment quotes.** Agents enforce local deny-first spend policy, verify signed quotes, reject replayed invoices, and require escrow above configured thresholds.
+- **v1.0 — Stable spec + governance transfer.** Once the schema is stable, signed verification works, and adoption exists, governance moves to a neutral foundation.
 
 ## Quick Start
 

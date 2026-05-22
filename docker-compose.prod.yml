@@ -1,0 +1,70 @@
+# Production Docker Compose override.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+# All secrets are injected via .env — never hardcode in this file.
+#
+# Required .env variables for production:
+#   ENVIRONMENT=production
+#   JWT_SECRET=<openssl rand -hex 64>
+#   POSTGRES_PASSWORD=<strong random password>
+#   DB_URL=postgresql+asyncpg://opentrust:<POSTGRES_PASSWORD>@db:5432/opentrust
+#   CORS_ORIGINS=https://yourdomain.com
+#   RATE_LIMIT=200/60
+#   SECURITY_HSTS_ENABLED=true
+
+services:
+  db:
+    ports:
+      # Do NOT expose DB to the internet in production
+      - "127.0.0.1:5432:5432"
+    restart: unless-stopped
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./passport-schema/migrations:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups:rw
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  api:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      ENVIRONMENT: production
+    # Run with multiple workers for throughput
+    command: >
+      sh -c "
+        uvicorn api.src.main:app
+        --host 0.0.0.0
+        --port 8000
+        --workers 4
+        --proxy-headers
+        # Safe because the prod override binds API to 127.0.0.1; only the local
+        # TLS reverse proxy should be able to connect and set X-Forwarded-*.
+        --forwarded-allow-ips='*'
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  web:
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://api.yourdomain.com
+    command: sh -c "npm ci && npm run build && npm run start"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+volumes:
+  postgres_data_prod:

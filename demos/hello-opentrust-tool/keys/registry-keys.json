@@ -1,0 +1,13 @@
+{
+  "description": "Demo registry keys for hello-opentrust-tool demo",
+  "keys": [
+    {
+      "key_id": "hello-opentrust-registry-v1",
+      "kid": "hello-opentrust-registry-v1",
+      "algorithm": "ed25519",
+      "public_key": "UH-jXUq5-CEbzjlSN6Hq7Tl0KlK9Sg-P2CqNf9Fbmgk",
+      "public_key_der_b64": "MCowBQYDK2VwAyEAUH+jXUq5+CEbzjlSN6Hq7Tl0KlK9Sg+P2CqNf9Fbmgk=",
+      "warning": "PUBLIC TEST KEY ONLY - private signing key intentionally not included"
+    }
+  ]
+}

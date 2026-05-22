@@ -1,5 +1,5 @@
 from .github_verifier import normalize_slug
-from api.src.schemas.passport import AUTO_DRAFT_WARNING
+from ..schemas.passport import AUTO_DRAFT_WARNING
 
 
 def draft_passport_from_metadata(name: str, source_url: str, description: str = "") -> dict:

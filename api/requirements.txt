@@ -1,12 +1,11 @@
 fastapi>=0.115
 uvicorn
-sqlalchemy[asyncio]
-asyncpg
-pydantic-settings
+aiosqlite
 httpx
+pydantic-settings
 python-jose
 passlib
 python-multipart
 pytest
 pytest-asyncio
-aiosqlite
+cryptography
