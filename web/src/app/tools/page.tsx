@@ -76,8 +76,9 @@ function ToolsInner() {
       if (trust) qs.set("trust_status", trust);
       qs.set("page", String(page));
       qs.set("limit", String(PAGE_LIMIT));
-      const base = process.env.NEXT_PUBLIC_API_URL || "";
-      const res = await fetch(`${base}/api/v1/tools?${qs}`, { cache: "no-store" });
+      // Always fetch via relative URL so the Next.js proxy handles it.
+      // This avoids CORS issues in production and works in local dev too.
+      const res = await fetch(`/api/v1/tools?${qs}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         let filtered = (data.items ?? []) as Passport[];
