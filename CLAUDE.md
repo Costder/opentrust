@@ -87,7 +87,7 @@ opentrust badge my-tool                     # generate SVG badge
 opentrust payment create-checkout tool      # demo checkout (uses mock provider)
 ```
 
-The CLI connects to `http://localhost:8000` by default. Set `OPENTRUST_API_BASE_URL` to point at a different registry.
+The CLI connects to `http://localhost:8000` by default. Set `OPENTRUST_API_URL` to point at a different registry.
 
 ---
 

@@ -33,7 +33,7 @@ An Agent Tool Passport is a structured, versioned document tied to a specific to
 |---|---|---|
 | 1 | `auto_generated_draft` | AI-generated, no human review |
 | 2 | `creator_claimed` | Creator has claimed ownership |
-| 3 | `owner_confirmed` | Creator confirmed metadata accuracy |
+| 3 | `seller_confirmed` | Seller confirmed metadata accuracy |
 | 4 | `community_reviewed` | Community feedback received |
 | 5 | `reviewer_signed` | Technical reviewer signed attestation |
 | 6 | `security_checked` | Passed defined security checks |

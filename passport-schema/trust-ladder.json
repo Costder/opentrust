@@ -34,9 +34,9 @@
     },
     {
       "level": 3,
-      "status": "owner_confirmed",
+      "status": "seller_confirmed",
       "color": "#14b8a6",
-      "description": "The owner has actively reviewed and confirmed the passport metadata is accurate.",
+      "description": "The seller/owner has actively reviewed and confirmed the passport metadata is accurate.",
       "requirements": "Creator claimed + manual confirmation of permissions and capabilities.",
       "agent_usable": true
     },

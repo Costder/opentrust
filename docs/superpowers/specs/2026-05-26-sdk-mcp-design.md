@@ -55,7 +55,8 @@ passport = opentrust.get_sync("github-file-search")
 class VerifyResult:
     slug: str
     trust_status: str          # e.g. "community_reviewed"
-    trust_level: int           # 1–7
+    trust_level: int           # 1–7; 0 if trust_status == "disputed"
+    is_disputed: bool          # True when trust_status == "disputed"
     recommendation: str        # plain-English guidance
     risk: str                  # "low" | "medium" | "high"
     passport: dict             # full raw passport
@@ -76,15 +77,18 @@ class ToolsPage:
 
 Recommendations are generated from a lookup table keyed by trust level, with extra warnings appended when `wallet` or `terminal` permissions are active:
 
-| Level | Recommendation |
-|-------|---------------|
-| 1 | "Auto-generated draft. Do not use in any agent workflow." |
-| 2 | "Creator claimed. Verify source independently before use." |
-| 3 | "Owner confirmed. Suitable for sandboxed/test environments only." |
-| 4 | "Community reviewed. Safe for low-risk tasks. Require level 6+ for production." |
-| 5 | "Reviewer signed. Suitable for most production tasks without sensitive permissions." |
-| 6 | "Security checked. Safe for production including sensitive permissions." |
-| 7 | "Continuously monitored. Highest trust level available." |
+| Level | Status | Recommendation |
+|-------|--------|---------------|
+| 0 | `disputed` | "⛔ Under active dispute. Do not use until resolved." |
+| 1 | `auto_generated_draft` | "Auto-generated draft. Do not use in any agent workflow." |
+| 2 | `creator_claimed` | "Creator claimed. Verify source independently before use." |
+| 3 | `seller_confirmed` | "Seller confirmed. Suitable for sandboxed/test environments only." |
+| 4 | `community_reviewed` | "Community reviewed. Safe for low-risk tasks. Require level 6+ for production." |
+| 5 | `reviewer_signed` | "Reviewer signed. Suitable for most production tasks without sensitive permissions." |
+| 6 | `security_checked` | "Security checked. Safe for production including sensitive permissions." |
+| 7 | `continuously_monitored` | "Continuously monitored. Highest trust level available." |
+
+> **Note:** `disputed` returns `trust_level=0` and `is_disputed=True`. The status string "disputed" maps to no progression step — it replaces the prior status entirely in the API. The status values above (`seller_confirmed`, etc.) are the canonical strings used by `api/src/schemas/passport.py` TrustStatus enum and `web/src/types/passport.ts`. The `passport-schema/trust-ladder.json` file uses the stale name `owner_confirmed` at level 3 — that file needs alignment (tracked separately).
 
 Extra warning appended if `wallet=true`: `" ⚠ Wallet access active — verify payment amounts before use."`  
 Extra warning appended if `terminal=true`: `" ⚠ Terminal access active — review allowed commands carefully."`
@@ -93,6 +97,7 @@ Extra warning appended if `terminal=true`: `" ⚠ Terminal access active — rev
 
 - `OPENTRUST_API_URL` env var — defaults to `https://api-kappa-pied-59.vercel.app`
 - Can also be set per-call: `opentrust.verify("slug", api_url="https://my-registry.example.com")`
+- ⚠ `CLAUDE.md` incorrectly documents this as `OPENTRUST_API_BASE_URL` — the actual CLI code (`cli/src/opentrust_cli/api_client.py`) uses `OPENTRUST_API_URL`. SDK follows the code, not the docs. CLAUDE.md will be corrected.
 
 ### File structure
 
@@ -128,11 +133,13 @@ Input: { slug: string }
 Output: {
   passport: object,
   trust_status: string,
-  trust_level: number,   // 1–7
+  trust_level: number,     // 1–7; 0 if disputed
+  is_disputed: boolean,
   recommendation: string,
   risk: "low" | "medium" | "high",
   permissions: object
 }
+Endpoint: GET /api/v1/tools/{slug}
 ```
 
 **`search_tools`**
@@ -140,6 +147,8 @@ Output: {
 Description: Search the OpenTrust registry for tools matching a query.
 Input: { query: string, trust_status?: string }
 Output: [{ slug, name, trust_status, description, risk }]
+Endpoint: GET /api/v1/tools?q={query}&trust_status={trust_status}
+  (NOT /api/v1/search — that legacy endpoint lacks trust_status filtering)
 ```
 
 **`list_tools`**
