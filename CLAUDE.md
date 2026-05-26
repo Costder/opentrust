@@ -123,7 +123,7 @@ Setting `JWT_SECRET` is the only thing required to start the API for development
 
 **Database:** SQLite for development, PostgreSQL for production. The ORM is SQLAlchemy async; migrations are in `passport-schema/migrations/`. The Dockerfile expects `asyncpg` and a real `DB_URL`.
 
-**Trust ladder:** Passports progress through 8 levels (`auto_generated_draft` → `creator_claimed` → `owner_confirmed` → `community_reviewed` → `reviewer_signed` → `security_checked` → `continuously_monitored`; `disputed` can apply at any level). Agents should only call tools at `owner_confirmed` (level 3) or higher.
+**Trust ladder:** Passports progress through 8 levels (`auto_generated_draft` → `creator_claimed` → `seller_confirmed` → `community_reviewed` → `reviewer_signed` → `security_checked` → `continuously_monitored`; `disputed` can apply at any level). Agents should only call tools at `seller_confirmed` (level 3) or higher.
 
 **Web proxy:** `web/src/app/api/[...path]/route.ts` proxies all frontend API calls to the FastAPI backend. The proxy strips the `v1/` prefix handling so both `/api/health` and `/api/v1/health` work from the browser.
 
