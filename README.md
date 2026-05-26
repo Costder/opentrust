@@ -204,6 +204,27 @@ The passport schema evolves through a public RFC process. Anyone can propose a c
 
 OpenTrust is not controlled by any single company or model provider. The spec is designed to be framework-agnostic and eventually governed by a neutral foundation.
 
+## See It in Action
+
+<video src="https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4" controls width="100%" style="max-width:720px;border-radius:8px"></video>
+
+**Try it now:**
+
+```bash
+pip install opentrust-sdk
+python -c "import asyncio, opentrust; print(asyncio.run(opentrust.verify('github-file-search')))"
+```
+
+Or install the MCP server and ask Claude *"Is this tool safe to use?"* — it answers with a trust level, permissions breakdown, and a plain-English recommendation.
+
+```bash
+pip install "opentrust-sdk[mcp]"
+```
+
+**Live registry:** [web-five-psi-74.vercel.app](https://web-five-psi-74.vercel.app)
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The short version: open an RFC for schema changes, open a PR for everything else.
