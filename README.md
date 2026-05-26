@@ -6,6 +6,12 @@ OpenTrust is an open standard and reference implementation for establishing veri
 
 A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an OpenAPI endpoint gets one passport. One trust status. One badge. Readable by any agent, any platform, any runtime.
 
+## Demo
+
+<video src="https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4" controls width="100%" style="max-width:720px;border-radius:8px"></video>
+
+> **Live:** [web-five-psi-74.vercel.app](https://web-five-psi-74.vercel.app) · [API](https://api-kappa-pied-59.vercel.app/api/v1/health)
+
 ## Why This Exists
 
 AI agents call tools. Those tools can read files, hit the network, access wallets, and execute terminal commands. Today there is no standardized way to know what permissions a tool claims to need, whether the creator is who they say, or whether anyone has reviewed it. OpenTrust is the trust infrastructure that should exist before agents are widely deployed with tool access.
