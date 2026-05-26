@@ -11,6 +11,8 @@ OpenTrust is a monorepo implementing an open standard for AI agent tool trust. I
 | `api/` | FastAPI backend — passport registry, marketplace, payments, GitHub OAuth |
 | `web/` | Next.js 16 frontend — tool browser, claim flow, launch lab |
 | `cli/` | Python/Typer CLI — `opentrust inspect`, `validate`, `status`, `badge`, etc. |
+| `sdk/` | Python SDK — `pip install opentrust-sdk`, imports as `opentrust`; MCP server via `opentrust-mcp` entry point |
+| `sdk-ts/` | TypeScript SDK — `npm install @opentrust/client`, `OpenTrust` class for JS/TS agent code |
 | `passport-schema/` | JSON Schema definitions and examples for the passport format |
 | `payment-contracts/` | Abstract payment interfaces (installable Python package) |
 | `docs/` | Protocol documentation — architecture, security, API spec, governance |
@@ -121,7 +123,7 @@ Setting `JWT_SECRET` is the only thing required to start the API for development
 
 **Database:** SQLite for development, PostgreSQL for production. The ORM is SQLAlchemy async; migrations are in `passport-schema/migrations/`. The Dockerfile expects `asyncpg` and a real `DB_URL`.
 
-**Trust ladder:** Passports progress through 8 levels (`auto_generated_draft` → `creator_claimed` → `owner_confirmed` → `community_reviewed` → `reviewer_signed` → `security_checked` → `continuously_monitored`; `disputed` can apply at any level). Agents should only call tools at `owner_confirmed` (level 3) or higher.
+**Trust ladder:** Passports progress through 8 levels (`auto_generated_draft` → `creator_claimed` → `seller_confirmed` → `community_reviewed` → `reviewer_signed` → `security_checked` → `continuously_monitored`; `disputed` can apply at any level). Agents should only call tools at `seller_confirmed` (level 3) or higher.
 
 **Web proxy:** `web/src/app/api/[...path]/route.ts` proxies all frontend API calls to the FastAPI backend. The proxy strips the `v1/` prefix handling so both `/api/health` and `/api/v1/health` work from the browser.
 
