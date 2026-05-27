@@ -9,10 +9,15 @@ const init: CommandModule = {
   command: 'init',
   describe: 'Initialize Hands and Feet (idempotent)',
   builder: (y) =>
-    y.option('re-bind', {
-      type: 'boolean',
-      describe: 'Re-bind to existing registry configuration on a new machine',
-    }),
+    y
+      .option('re-bind', {
+        type: 'boolean',
+        describe: 'Re-bind to existing registry configuration on a new machine',
+      })
+      .option('i-understand-form-1583', {
+        type: 'boolean',
+        describe: 'Acknowledge Form 1583 notarization requirement for PostScan Mail',
+      }),
   handler: async (argv) => {
     if (configExists() && !(argv as { rebind?: boolean }).rebind) {
       const proceed = await confirm({
@@ -109,6 +114,40 @@ const init: CommandModule = {
         console.log('   Set POSTMARK_SERVER_TOKEN env var before running serve.');
       } else if (transport === 'resend') {
         console.log('   Set RESEND_API_KEY env var before running serve.');
+      }
+    }
+
+    // GitHub setup
+    const setupGithub = await confirm({ message: 'Set up GitHub?', default: false });
+    if (setupGithub) {
+      const defaultOwner = await input({ message: 'Default GitHub owner/org (leave blank to require per-call):' });
+      cfg.capabilities.github = { defaultOwner: defaultOwner || undefined };
+      console.log('   Set GITHUB_TOKEN env var (personal access token with repo scope).');
+    }
+
+    // IPFS setup
+    const setupIPFS = await confirm({ message: 'Set up IPFS (requires Kubo daemon)?', default: false });
+    if (setupIPFS) {
+      console.log('   Set IPFS_API_URL env var (default: http://localhost:5001).');
+      console.log('   Or set IPFS_API_URL=web3storage and WEB3_STORAGE_TOKEN for web3.storage fallback.');
+    }
+
+    // PostScan Mail setup
+    const iUnderstandForm1583 = (argv as { 'i-understand-form-1583'?: boolean })['i-understand-form-1583'];
+    const setupMail = await confirm({ message: 'Set up PostScan Mail (physical mailbox)?', default: false });
+    if (setupMail) {
+      if (!iUnderstandForm1583) {
+        console.error('\n\x1b[31m');
+        console.error('⚠️  IMPORTANT LEGAL NOTICE ⚠️');
+        console.error('PostScan Mail requires USPS Form 1583 notarization.');
+        console.error('This physically ties your LEGAL IDENTITY to this mailbox.');
+        console.error('Any mail your AI agent forwards, scans, or shreds is YOUR legal responsibility.');
+        console.error('Proceed only if you have completed Form 1583 notarization.');
+        console.error('\x1b[0m');
+        console.error('Re-run with --i-understand-form-1583 flag to enable PostScan Mail setup.');
+      } else {
+        console.log('   Set POSTSCAN_API_KEY and POSTSCAN_ACCOUNT_ID env vars before running serve.');
+        console.log('   Alternatively set EARTH_CLASS_MAIL_API_KEY for Earth Class Mail fallback.');
       }
     }
 

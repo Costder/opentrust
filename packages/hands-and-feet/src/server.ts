@@ -96,6 +96,33 @@ import {
   startXmppIfConfigured,
   PHONE_JMP_TOOLS,
 } from './capabilities/phone-jmp/index.js';
+import {
+  createRepo,
+  createFile,
+  createPullRequest,
+  listRepos,
+  GITHUB_TOOLS,
+} from './capabilities/github/index.js';
+import {
+  publishContent,
+  getIpfsContent,
+  pinContent,
+  IPFS_TOOLS,
+} from './capabilities/ipfs/index.js';
+import {
+  createFeed,
+  addFeedItem,
+  serveFeed,
+  registerRssRoutes,
+  RSS_TOOLS,
+} from './capabilities/rss/index.js';
+import {
+  listMail,
+  forwardMail,
+  shredMail,
+  scanMail,
+  MAIL_TOOLS,
+} from './capabilities/mail/index.js';
 import type { PassportClaims } from './types.js';
 
 export interface ServerOptions {
@@ -724,6 +751,185 @@ function createMcpServer(claims: PassportClaims): Server {
           required: ['number'],
         },
       },
+      // GitHub tools
+      {
+        name: GITHUB_TOOLS.create_repo.name,
+        description: 'Creates a new GitHub repository for the authenticated user. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            name: { type: 'string', description: 'Repository name' },
+            private: { type: 'boolean', description: 'Make repository private (default: false)' },
+            description: { type: 'string', description: 'Repository description' },
+          },
+          required: ['name'],
+        },
+      },
+      {
+        name: GITHUB_TOOLS.create_file.name,
+        description: 'Creates or updates a file in a GitHub repository. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            owner: { type: 'string', description: 'Repository owner (defaults to configured defaultOwner)' },
+            repo: { type: 'string', description: 'Repository name' },
+            path: { type: 'string', description: 'File path in the repository' },
+            content: { type: 'string', description: 'File content (UTF-8 text)' },
+            message: { type: 'string', description: 'Commit message' },
+            branch: { type: 'string', description: 'Branch name (defaults to default branch)' },
+          },
+          required: ['repo', 'path', 'content', 'message'],
+        },
+      },
+      {
+        name: GITHUB_TOOLS.create_pull_request.name,
+        description: 'Creates a pull request in a GitHub repository. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            owner: { type: 'string', description: 'Repository owner (defaults to configured defaultOwner)' },
+            repo: { type: 'string', description: 'Repository name' },
+            title: { type: 'string', description: 'Pull request title' },
+            body: { type: 'string', description: 'Pull request body' },
+            head: { type: 'string', description: 'Head branch name' },
+            base: { type: 'string', description: 'Base branch name' },
+          },
+          required: ['repo', 'title', 'head', 'base'],
+        },
+      },
+      {
+        name: GITHUB_TOOLS.list_repos.name,
+        description: 'Lists repositories for the authenticated GitHub user. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            type: { type: 'string', enum: ['all', 'owner', 'public', 'private'], description: 'Filter type (default: all)' },
+            per_page: { type: 'number', description: 'Results per page (default: 30)' },
+          },
+        },
+      },
+      // IPFS tools
+      {
+        name: IPFS_TOOLS.publish_content.name,
+        description: 'Publishes content to IPFS via Kubo daemon (or web3.storage fallback). Returns CID. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            content: { type: 'string', description: 'Content to publish (UTF-8 text)' },
+            filename: { type: 'string', description: 'Optional filename hint' },
+          },
+          required: ['content'],
+        },
+      },
+      {
+        name: IPFS_TOOLS.get_ipfs_content.name,
+        description: 'Retrieves content from IPFS by CID. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            cid: { type: 'string', description: 'IPFS CID to fetch' },
+          },
+          required: ['cid'],
+        },
+      },
+      {
+        name: IPFS_TOOLS.pin_content.name,
+        description: 'Pins content on the local IPFS node to prevent garbage collection. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            cid: { type: 'string', description: 'IPFS CID to pin' },
+          },
+          required: ['cid'],
+        },
+      },
+      // RSS tools
+      {
+        name: RSS_TOOLS.create_feed.name,
+        description: 'Creates an RSS feed served at /feeds/{label}. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'URL-safe feed label (e.g. "my-feed")' },
+            title: { type: 'string', description: 'Feed title' },
+            description: { type: 'string', description: 'Feed description' },
+            link: { type: 'string', description: 'Feed website link' },
+          },
+          required: ['label', 'title', 'description', 'link'],
+        },
+      },
+      {
+        name: RSS_TOOLS.add_feed_item.name,
+        description: 'Adds an item to an RSS feed. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            feed_label: { type: 'string', description: 'Feed label' },
+            title: { type: 'string', description: 'Item title' },
+            description: { type: 'string', description: 'Item description/content' },
+            url: { type: 'string', description: 'Item URL (optional)' },
+            guid: { type: 'string', description: 'Item GUID (optional, auto-generated)' },
+          },
+          required: ['feed_label', 'title', 'description'],
+        },
+      },
+      {
+        name: RSS_TOOLS.serve_feed.name,
+        description: 'Returns the public URL for an RSS feed (uses active tunnel if available). Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Feed label' },
+          },
+          required: ['label'],
+        },
+      },
+      // PostScan Mail tools
+      {
+        name: MAIL_TOOLS.list_mail.name,
+        description: 'Lists physical mail items from PostScan Mail (or Earth Class Mail). Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            limit: { type: 'number', description: 'Maximum number of items to return (default: 20)' },
+            status: { type: 'string', description: 'Filter by status (e.g. "new", "scanned")' },
+          },
+        },
+      },
+      {
+        name: MAIL_TOOLS.forward_mail.name,
+        description: 'Forwards a physical mail item to a shipping address. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            mail_id: { type: 'string', description: 'Mail item ID' },
+            address: { type: 'string', description: 'Forwarding address' },
+          },
+          required: ['mail_id', 'address'],
+        },
+      },
+      {
+        name: MAIL_TOOLS.shred_mail.name,
+        description: 'Shreds (destroys) a physical mail item. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            mail_id: { type: 'string', description: 'Mail item ID to shred' },
+          },
+          required: ['mail_id'],
+        },
+      },
+      {
+        name: MAIL_TOOLS.scan_mail.name,
+        description: 'Requests a high-resolution scan of a physical mail item. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            mail_id: { type: 'string', description: 'Mail item ID to scan' },
+          },
+          required: ['mail_id'],
+        },
+      },
     ],
   }));
 
@@ -977,6 +1183,70 @@ function createMcpServer(claims: PassportClaims): Server {
         const result = await releasePhoneNumberJmp(args as { number: string }, claims);
         return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
       }
+
+      // GitHub tools
+      if (name === 'create_repo') {
+        const result = await createRepo(args as { name: string; private?: boolean; description?: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'create_file') {
+        const result = await createFile(args as { owner?: string; repo: string; path: string; content: string; message: string; branch?: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'create_pull_request') {
+        const result = await createPullRequest(args as { owner?: string; repo: string; title: string; body?: string; head: string; base: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'list_repos') {
+        const result = await listRepos(args as { type?: 'all' | 'owner' | 'public' | 'private'; per_page?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // IPFS tools
+      if (name === 'publish_content') {
+        const result = await publishContent(args as { content: string; filename?: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'get_ipfs_content') {
+        const result = await getIpfsContent(args as { cid: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'pin_content') {
+        const result = await pinContent(args as { cid: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // RSS tools
+      if (name === 'create_feed') {
+        const result = await createFeed(args as { label: string; title: string; description: string; link: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'add_feed_item') {
+        const result = await addFeedItem(args as { feed_label: string; title: string; description: string; url?: string; guid?: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'serve_feed') {
+        const result = await serveFeed(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // PostScan Mail tools
+      if (name === 'list_mail') {
+        const result = await listMail(args as { limit?: number; status?: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'forward_mail') {
+        const result = await forwardMail(args as { mail_id: string; address: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'shred_mail') {
+        const result = await shredMail(args as { mail_id: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'scan_mail') {
+        const result = await scanMail(args as { mail_id: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return {
@@ -1008,6 +1278,9 @@ export function createApp(options: ServerOptions): express.Application {
       });
     },
   );
+
+  // RSS feed routes — public, no auth required
+  registerRssRoutes(app);
 
   // Auth middleware
   app.use(async (req: AuthedRequest, res: Response, next: NextFunction) => {
