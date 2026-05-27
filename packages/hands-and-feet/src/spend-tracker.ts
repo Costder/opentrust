@@ -112,6 +112,24 @@ export function openDb(): Database.Database {
       last_fired_at TEXT,
       last_fire_status TEXT
     );
+    CREATE TABLE IF NOT EXISTS rss_feeds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      link TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS rss_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      feed_label TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      url TEXT,
+      guid TEXT,
+      date TEXT NOT NULL,
+      FOREIGN KEY (feed_label) REFERENCES rss_feeds(label) ON DELETE CASCADE
+    );
   `);
   return _db;
 }

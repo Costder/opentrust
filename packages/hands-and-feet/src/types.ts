@@ -68,6 +68,9 @@ export interface HandsAndFeetConfig {
       transport: 'local' | 'postmark' | 'resend';
       localPort?: number;
     };
+    github?: {
+      defaultOwner?: string;
+    };
   };
   allowLocalFallback?: boolean;
 }
