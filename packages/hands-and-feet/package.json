@@ -1,0 +1,39 @@
+{
+  "name": "@opentrust/hands-and-feet",
+  "version": "0.1.0",
+  "description": "Give AI agents real-world capabilities via MCP — email, phone, wallet, payments, virtual cards, and more",
+  "type": "module",
+  "bin": {
+    "hands-and-feet": "./bin/hands-and-feet.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "bin"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "express": "^4.21.0",
+    "yargs": "^17.7.2",
+    "@inquirer/prompts": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/yargs": "^17.0.33",
+    "@types/node": "^20.0.0",
+    "@types/supertest": "^6.0.2",
+    "supertest": "^7.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0",
+    "msw": "^2.4.0"
+  }
+}
