@@ -58,6 +58,9 @@ export interface HandsAndFeetConfig {
       topic: string;
       serverUrl: string;
     };
+    cards?: {
+      sandbox: boolean;
+    };
   };
   allowLocalFallback?: boolean;
 }
