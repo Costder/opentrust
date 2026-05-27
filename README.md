@@ -8,7 +8,7 @@ A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an
 
 ## Demo
 
-<video src="https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4" controls width="100%" style="max-width:720px;border-radius:8px"></video>
+[![Watch the OpenTrust demo](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo-thumb.jpg)](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4)
 
 > **Live:** [web-five-psi-74.vercel.app](https://web-five-psi-74.vercel.app) · [API](https://api-kappa-pied-59.vercel.app/api/v1/health)
 
@@ -206,7 +206,7 @@ OpenTrust is not controlled by any single company or model provider. The spec is
 
 ## See It in Action
 
-<video src="https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4" controls width="100%" style="max-width:720px;border-radius:8px"></video>
+[![Watch the OpenTrust demo](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo-thumb.jpg)](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4)
 
 **Try it now:**
 
