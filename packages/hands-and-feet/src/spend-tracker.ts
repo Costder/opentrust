@@ -55,6 +55,22 @@ export function openDb(): Database.Database {
       date_sent TEXT NOT NULL,
       fetched_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS mailboxes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      address TEXT UNIQUE NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS emails (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mailbox_address TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      from_address TEXT NOT NULL,
+      body_text TEXT NOT NULL,
+      body_html TEXT,
+      received_at TEXT NOT NULL,
+      FOREIGN KEY (mailbox_address) REFERENCES mailboxes(address) ON DELETE CASCADE
+    );
   `);
   return _db;
 }

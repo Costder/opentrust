@@ -93,6 +93,25 @@ const init: CommandModule = {
       }
     }
 
+    // Email setup
+    const setupEmail = await confirm({ message: 'Set up email?', default: false });
+    if (setupEmail) {
+      const transport = await select({
+        message: 'Email transport:',
+        choices: [
+          { value: 'local', name: 'local — self-hosted SMTP, no external account needed' },
+          { value: 'postmark', name: 'postmark — set POSTMARK_SERVER_TOKEN env var' },
+          { value: 'resend', name: 'resend — set RESEND_API_KEY env var' },
+        ],
+      });
+      cfg.capabilities.email = { transport: transport as 'local' | 'postmark' | 'resend' };
+      if (transport === 'postmark') {
+        console.log('   Set POSTMARK_SERVER_TOKEN env var before running serve.');
+      } else if (transport === 'resend') {
+        console.log('   Set RESEND_API_KEY env var before running serve.');
+      }
+    }
+
     writeConfig(cfg);
 
     console.log('\n✅ Hands and Feet initialized successfully.');
