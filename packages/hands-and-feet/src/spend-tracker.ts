@@ -71,6 +71,47 @@ export function openDb(): Database.Database {
       received_at TEXT NOT NULL,
       FOREIGN KEY (mailbox_address) REFERENCES mailboxes(address) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS tunnels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label TEXT UNIQUE NOT NULL,
+      tunnel_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      url TEXT NOT NULL,
+      port INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      closed_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label TEXT UNIQUE NOT NULL,
+      path TEXT NOT NULL,
+      secret_token TEXT NOT NULL,
+      max_payload_bytes INTEGER NOT NULL DEFAULT 1048576,
+      retention_days INTEGER NOT NULL DEFAULT 30,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS webhook_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      webhook_label TEXT NOT NULL,
+      headers TEXT NOT NULL,
+      body TEXT NOT NULL,
+      received_at TEXT NOT NULL,
+      FOREIGN KEY (webhook_label) REFERENCES webhooks(label) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS scheduled_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label TEXT UNIQUE NOT NULL,
+      cron_expression TEXT NOT NULL,
+      tool_name TEXT NOT NULL,
+      tool_args TEXT NOT NULL,
+      passport_id TEXT NOT NULL,
+      passport_version TEXT NOT NULL,
+      permission_snapshot TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL,
+      last_fired_at TEXT,
+      last_fire_status TEXT
+    );
   `);
   return _db;
 }
