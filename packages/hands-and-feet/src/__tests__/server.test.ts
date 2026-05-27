@@ -142,7 +142,7 @@ describe('POST /mcp — kill switch', () => {
 // ---------------------------------------------------------------------------
 
 describe('POST /mcp — MCP protocol', () => {
-  it('responds to tools/list with notify_human in tools list', async () => {
+  it('responds to tools/list with notify_human and all Plan B tools in tools list', async () => {
     const app = createApp(APP_OPTIONS);
     const res = await request(app)
       .post('/mcp')
@@ -158,7 +158,23 @@ describe('POST /mcp — MCP protocol', () => {
     expect(res.status).toBe(200);
     const body = res.body as { result?: { tools?: Array<{ name: string }> } };
     expect(body.result?.tools).toBeDefined();
-    expect(body.result!.tools!.some((t) => t.name === 'notify_human')).toBe(true);
+    const toolNames = body.result!.tools!.map((t) => t.name);
+
+    // Assert notify_human is present
+    expect(toolNames).toContain('notify_human');
+
+    // Assert all 11 Plan B tools are present
+    expect(toolNames).toContain('create_wallet');
+    expect(toolNames).toContain('get_address');
+    expect(toolNames).toContain('get_balance');
+    expect(toolNames).toContain('send_usdc');
+    expect(toolNames).toContain('sign_message');
+    expect(toolNames).toContain('sign_typed_data');
+    expect(toolNames).toContain('bridge_to_polygon');
+    expect(toolNames).toContain('bridge_to_base');
+    expect(toolNames).toContain('get_bridge_status');
+    expect(toolNames).toContain('pay_with_usdc');
+    expect(toolNames).toContain('get_payment_status');
   });
 
   it('calls notifyHuman and returns result on tools/call', async () => {
