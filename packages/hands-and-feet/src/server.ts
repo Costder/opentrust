@@ -54,6 +54,48 @@ import {
   startLocalTransportIfConfigured,
   EMAIL_TOOLS,
 } from './capabilities/email/index.js';
+import {
+  createTunnel,
+  getTunnelUrl,
+  closeTunnel,
+  TUNNEL_TOOLS,
+} from './capabilities/tunnel/index.js';
+import {
+  createWebhook,
+  getWebhookUrl,
+  readWebhookEvents,
+  waitForWebhook,
+  deleteWebhook,
+  webhookReceiver,
+  startPurgeJob,
+  WEBHOOK_TOOLS,
+} from './capabilities/webhook/index.js';
+import {
+  createTask,
+  listTasks,
+  deleteTask,
+  pauseTask,
+  loadActiveTasks,
+  TASK_TOOLS,
+} from './capabilities/tasks/index.js';
+import type { PermissionSnapshot } from './capabilities/tasks/revocation.js';
+import {
+  runContainer,
+  stopContainer,
+  removeContainer,
+  listContainers,
+  containerLogs,
+  execInContainer,
+  DOCKER_TOOLS,
+} from './capabilities/docker/index.js';
+import {
+  provisionPhoneNumberJmp,
+  sendSmsJmp,
+  readSmsJmp,
+  releasePhoneNumberJmp,
+  startXmppIfConfigured,
+  PHONE_JMP_TOOLS,
+} from './capabilities/phone-jmp/index.js';
 import type { PassportClaims } from './types.js';
 
 export interface ServerOptions {
@@ -416,6 +458,272 @@ function createMcpServer(claims: PassportClaims): Server {
           required: ['address'],
         },
       },
+      // Tunnel tools
+      {
+        name: TUNNEL_TOOLS.create_tunnel.name,
+        description: 'Creates a public tunnel (cloudflared or ngrok) for a local port. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            port: { type: 'number', description: 'Local port to tunnel' },
+            label: { type: 'string', description: 'Human-readable label (auto-generated if omitted)' },
+            provider: { type: 'string', enum: ['cloudflared', 'ngrok'], description: 'Tunnel provider (default: cloudflared)' },
+          },
+          required: ['port'],
+        },
+      },
+      {
+        name: TUNNEL_TOOLS.get_tunnel_url.name,
+        description: 'Returns the public URL for an active tunnel. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Tunnel label' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: TUNNEL_TOOLS.close_tunnel.name,
+        description: 'Closes an active tunnel. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Tunnel label to close' },
+          },
+          required: ['label'],
+        },
+      },
+      // Webhook tools
+      {
+        name: WEBHOOK_TOOLS.create_webhook.name,
+        description: 'Creates a webhook endpoint for receiving POST callbacks. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Webhook label' },
+            max_payload_bytes: { type: 'number', description: 'Max payload size in bytes (default: 1MB)' },
+            retention_days: { type: 'number', description: 'Event retention in days (default: 30)' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: WEBHOOK_TOOLS.get_webhook_url.name,
+        description: 'Returns the public URL for a webhook (requires active tunnel). Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Webhook label' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: WEBHOOK_TOOLS.read_webhook_events.name,
+        description: 'Returns received webhook events. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Webhook label' },
+            since: { type: 'string', description: 'ISO timestamp to filter events after' },
+            limit: { type: 'number', description: 'Max events to return (default: 50)' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: WEBHOOK_TOOLS.wait_for_webhook.name,
+        description: 'Polls until a webhook event matching the filter arrives. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Webhook label' },
+            filter: {
+              type: 'object',
+              properties: {
+                body_contains: { type: 'string' },
+              },
+            },
+            timeout_ms: { type: 'number', description: 'Max wait time in milliseconds' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: WEBHOOK_TOOLS.delete_webhook.name,
+        description: 'Deletes a webhook and all its events. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Webhook label to delete' },
+          },
+          required: ['label'],
+        },
+      },
+      // Task tools
+      {
+        name: TASK_TOOLS.create_task.name,
+        description: 'Creates a scheduled task using a cron expression. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string' },
+            cron_expression: { type: 'string', description: 'Cron expression (e.g. "0 * * * *")' },
+            tool_name: { type: 'string' },
+            tool_args: { type: 'object' },
+            passport_id: { type: 'string' },
+            passport_version: { type: 'string' },
+            permission_snapshot: { type: 'object' },
+          },
+          required: ['cron_expression', 'tool_name', 'passport_id', 'passport_version', 'permission_snapshot'],
+        },
+      },
+      {
+        name: TASK_TOOLS.list_tasks.name,
+        description: 'Lists all scheduled tasks. Requires L2 trust.',
+        inputSchema: { type: 'object' as const, properties: {} },
+      },
+      {
+        name: TASK_TOOLS.delete_task.name,
+        description: 'Deletes a scheduled task. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: TASK_TOOLS.pause_task.name,
+        description: 'Pauses a scheduled task without deleting it. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string' },
+          },
+          required: ['label'],
+        },
+      },
+      // Docker tools
+      {
+        name: DOCKER_TOOLS.run_container.name,
+        description: 'Runs a Docker container. Requires L4 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            image: { type: 'string' },
+            name: { type: 'string' },
+            env: { type: 'array', items: { type: 'string' } },
+            ports: { type: 'object' },
+          },
+          required: ['image'],
+        },
+      },
+      {
+        name: DOCKER_TOOLS.stop_container.name,
+        description: 'Stops a running container. Requires L4 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            id: { type: 'string' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: DOCKER_TOOLS.remove_container.name,
+        description: 'Removes a container. Requires L4 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            id: { type: 'string' },
+            force: { type: 'boolean' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: DOCKER_TOOLS.list_containers.name,
+        description: 'Lists Docker containers. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            all: { type: 'boolean', description: 'Include stopped containers' },
+          },
+        },
+      },
+      {
+        name: DOCKER_TOOLS.container_logs.name,
+        description: 'Returns container stdout/stderr logs. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            id: { type: 'string' },
+            tail: { type: 'number' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: DOCKER_TOOLS.exec_in_container.name,
+        description: 'Executes a command inside a running container. Requires L4 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            id: { type: 'string' },
+            command: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['id', 'command'],
+        },
+      },
+      // JMP phone tools
+      {
+        name: PHONE_JMP_TOOLS.provision_phone_number_jmp.name,
+        description: 'Provisions a phone number via JMP XMPP (no KYC). Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            area_code: { type: 'string', description: 'US area code to request' },
+          },
+        },
+      },
+      {
+        name: PHONE_JMP_TOOLS.send_sms_jmp.name,
+        description: 'Sends an SMS via JMP XMPP. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            to: { type: 'string', description: 'Destination phone number (E.164)' },
+            message: { type: 'string' },
+            from_number: { type: 'string', description: 'Source JMP number (optional)' },
+          },
+          required: ['to', 'message'],
+        },
+      },
+      {
+        name: PHONE_JMP_TOOLS.read_sms_jmp.name,
+        description: 'Returns inbound SMS messages buffered from JMP XMPP. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            number: { type: 'string', description: 'Filter by source number' },
+            limit: { type: 'number' },
+          },
+        },
+      },
+      {
+        name: PHONE_JMP_TOOLS.release_phone_number_jmp.name,
+        description: 'Releases a JMP phone number. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            number: { type: 'string', description: 'Phone number to release' },
+          },
+          required: ['number'],
+        },
+      },
     ],
   }));
 
@@ -563,6 +871,112 @@ function createMcpServer(claims: PassportClaims): Server {
         const result = await deleteMailbox(args as { address: string }, claims);
         return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
       }
+
+      // Tunnel tools
+      if (name === 'create_tunnel') {
+        const result = await createTunnel(args as { port: number; label?: string; provider?: 'cloudflared' | 'ngrok' }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'get_tunnel_url') {
+        const result = await getTunnelUrl(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'close_tunnel') {
+        const result = await closeTunnel(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // Webhook tools
+      if (name === 'create_webhook') {
+        const result = await createWebhook(args as { label: string; max_payload_bytes?: number; retention_days?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'get_webhook_url') {
+        const result = await getWebhookUrl(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'read_webhook_events') {
+        const result = await readWebhookEvents(args as { label: string; since?: string; limit?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'wait_for_webhook') {
+        const result = await waitForWebhook(args as { label: string; filter?: { body_contains?: string }; timeout_ms?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'delete_webhook') {
+        const result = await deleteWebhook(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // Task tools
+      if (name === 'create_task') {
+        const result = await createTask(args as {
+          label?: string;
+          cron_expression: string;
+          tool_name: string;
+          tool_args?: Record<string, unknown>;
+          passport_id: string;
+          passport_version: string;
+          permission_snapshot: PermissionSnapshot;
+        }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'list_tasks') {
+        const result = await listTasks({} as Record<string, never>, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'delete_task') {
+        const result = await deleteTask(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'pause_task') {
+        const result = await pauseTask(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // Docker tools
+      if (name === 'run_container') {
+        const result = await runContainer(args as { image: string; name?: string; env?: string[]; ports?: Record<string, string> }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'stop_container') {
+        const result = await stopContainer(args as { id: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'remove_container') {
+        const result = await removeContainer(args as { id: string; force?: boolean }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'list_containers') {
+        const result = await listContainers(args as { all?: boolean }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'container_logs') {
+        const result = await containerLogs(args as { id: string; tail?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'exec_in_container') {
+        const result = await execInContainer(args as { id: string; command: string[] }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // JMP phone tools
+      if (name === 'provision_phone_number_jmp') {
+        const result = await provisionPhoneNumberJmp(args as { area_code?: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'send_sms_jmp') {
+        const result = await sendSmsJmp(args as { to: string; message: string; from_number?: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'read_sms_jmp') {
+        const result = await readSmsJmp(args as { number?: string; limit?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'release_phone_number_jmp') {
+        const result = await releasePhoneNumberJmp(args as { number: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return {
@@ -583,6 +997,17 @@ function createMcpServer(claims: PassportClaims): Server {
 export function createApp(options: ServerOptions): express.Application {
   const app = express();
   app.use(express.json());
+
+  // Webhook receiver route — must be BEFORE auth middleware (public callback endpoint)
+  app.post(
+    '/webhooks/:label/:token',
+    express.json({ limit: '1mb' }),
+    (req: Request, res: Response) => {
+      webhookReceiver(req, res).catch((err: unknown) => {
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      });
+    },
+  );
 
   // Auth middleware
   app.use(async (req: AuthedRequest, res: Response, next: NextFunction) => {
@@ -644,6 +1069,16 @@ export function startServer(options: ServerOptions): Promise<import('http').Serv
       console.log(`Hands and Feet MCP server listening on http://localhost:${port}/mcp`);
       startLocalTransportIfConfigured().catch((err) => {
         console.error('Failed to start local SMTP transport:', err);
+      });
+      // Plan F: load scheduled tasks, start webhook purge job, optionally start XMPP
+      try {
+        loadActiveTasks();
+      } catch (err: unknown) {
+        console.error('Failed to load active tasks:', err instanceof Error ? err.message : String(err));
+      }
+      startPurgeJob();
+      startXmppIfConfigured().catch((err: unknown) => {
+        console.error('Failed to start XMPP client:', err instanceof Error ? err.message : String(err));
       });
       resolve(httpServer);
     });
