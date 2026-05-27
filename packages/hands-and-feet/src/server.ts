@@ -45,6 +45,15 @@ import {
   releasePhoneNumber,
   PHONE_TOOLS,
 } from './capabilities/phone/index.js';
+import {
+  createMailbox,
+  sendEmail,
+  readInbox,
+  waitForEmail,
+  deleteMailbox,
+  startLocalTransportIfConfigured,
+  EMAIL_TOOLS,
+} from './capabilities/email/index.js';
 import type { PassportClaims } from './types.js';
 
 export interface ServerOptions {
@@ -336,6 +345,77 @@ function createMcpServer(claims: PassportClaims): Server {
           required: ['number'],
         },
       },
+      // Email tools
+      {
+        name: EMAIL_TOOLS.create_mailbox.name,
+        description: 'Creates a new mailbox for receiving email. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            address: { type: 'string', description: 'Email address for the mailbox' },
+          },
+          required: ['address'],
+        },
+      },
+      {
+        name: EMAIL_TOOLS.send_email.name,
+        description: 'Sends an email via the configured transport (local, Postmark, or Resend). Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            from: { type: 'string', description: 'Sender email address' },
+            to: { type: 'string', description: 'Recipient email address' },
+            subject: { type: 'string', description: 'Email subject' },
+            body: { type: 'string', description: 'Plain-text body' },
+            html: { type: 'string', description: 'Optional HTML body' },
+          },
+          required: ['from', 'to', 'subject', 'body'],
+        },
+      },
+      {
+        name: EMAIL_TOOLS.read_inbox.name,
+        description: 'Returns messages in a mailbox. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            address: { type: 'string', description: 'Mailbox address' },
+            limit: { type: 'number', description: 'Maximum number of messages to return (default: 20)' },
+          },
+          required: ['address'],
+        },
+      },
+      {
+        name: EMAIL_TOOLS.wait_for_email.name,
+        description: 'Polls until a matching email arrives or timeout_ms elapses. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            address: { type: 'string', description: 'Mailbox address to watch' },
+            filter: {
+              type: 'object',
+              description: 'Optional filter: subject_contains, from_contains, body_contains',
+              properties: {
+                subject_contains: { type: 'string' },
+                from_contains: { type: 'string' },
+                body_contains: { type: 'string' },
+              },
+            },
+            timeout_ms: { type: 'number', description: 'Maximum wait time in milliseconds' },
+          },
+          required: ['address', 'timeout_ms'],
+        },
+      },
+      {
+        name: EMAIL_TOOLS.delete_mailbox.name,
+        description: 'Deletes a mailbox and all its messages (CASCADE). Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            address: { type: 'string', description: 'Mailbox address to delete' },
+          },
+          required: ['address'],
+        },
+      },
     ],
   }));
 
@@ -451,6 +531,38 @@ function createMcpServer(claims: PassportClaims): Server {
         const result = await releasePhoneNumber(args as { number: string }, claims);
         return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
       }
+
+      // Email tools
+      if (name === 'create_mailbox') {
+        const result = await createMailbox(args as { address: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'send_email') {
+        const result = await sendEmail(
+          args as { from: string; to: string; subject: string; body: string; html?: string },
+          claims,
+        );
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'read_inbox') {
+        const result = await readInbox(args as { address: string; limit?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'wait_for_email') {
+        const result = await waitForEmail(
+          args as {
+            address: string;
+            filter?: { subject_contains?: string; from_contains?: string; body_contains?: string };
+            timeout_ms: number;
+          },
+          claims,
+        );
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'delete_mailbox') {
+        const result = await deleteMailbox(args as { address: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return {
@@ -530,6 +642,9 @@ export function startServer(options: ServerOptions): Promise<import('http').Serv
   return new Promise((resolve) => {
     const httpServer = app.listen(port, () => {
       console.log(`Hands and Feet MCP server listening on http://localhost:${port}/mcp`);
+      startLocalTransportIfConfigured().catch((err) => {
+        console.error('Failed to start local SMTP transport:', err);
+      });
       resolve(httpServer);
     });
   });

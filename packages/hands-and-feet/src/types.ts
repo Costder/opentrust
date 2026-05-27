@@ -64,6 +64,10 @@ export interface HandsAndFeetConfig {
     phone?: {
       provider: 'twilio' | 'signalwire';
     };
+    email?: {
+      transport: 'local' | 'postmark' | 'resend';
+      localPort?: number;
+    };
   };
   allowLocalFallback?: boolean;
 }
