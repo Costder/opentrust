@@ -66,6 +66,15 @@ const init: CommandModule = {
       },
     };
 
+    // Moon card setup
+    const setupCards = await confirm({ message: 'Set up Moon (Pay with Moon) virtual cards?', default: false });
+    if (setupCards) {
+      console.log('\n⚠️  Moon requires KYC — you are the legally responsible party for all card activity.');
+      const moonSandbox = await confirm({ message: 'Use Moon sandbox mode?', default: true });
+      cfg.capabilities.cards = { sandbox: moonSandbox };
+      console.log('   Set MOON_CONSUMER_KEY and MOON_CONSUMER_SECRET env vars before running serve.');
+    }
+
     writeConfig(cfg);
 
     console.log('\n✅ Hands and Feet initialized successfully.');

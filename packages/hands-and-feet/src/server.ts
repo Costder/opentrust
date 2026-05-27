@@ -28,6 +28,16 @@ import {
   getPaymentStatus,
   PAYMENT_TOOLS,
 } from './capabilities/payments/index.js';
+import {
+  createVirtualCard,
+  getCardDetails,
+  addFundsToCard,
+  topUpMoonCredit,
+  freezeCard,
+  deleteCard,
+  getCardTransactions,
+  CARD_TOOLS,
+} from './capabilities/cards/index.js';
 import type { PassportClaims } from './types.js';
 
 export interface ServerOptions {
@@ -191,6 +201,87 @@ function createMcpServer(claims: PassportClaims): Server {
           required: ['tx_hash'],
         },
       },
+      // Card tools
+      {
+        name: CARD_TOOLS.create_virtual_card.name,
+        description: 'Issues a Moon X (reloadable) or Moon 1X (single-fund) virtual Visa card. Requires L4 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Human-readable label for the card (defaults to card ID)' },
+            product: { type: 'string', enum: ['moon_x', 'moon_1x'], description: 'Card product: moon_x (reloadable) or moon_1x (single-fund)' },
+            amount: { type: 'number', description: 'Initial funding amount in USD (optional)' },
+          },
+        },
+      },
+      {
+        name: CARD_TOOLS.get_card_details.name,
+        description: 'Returns card number, CVV, and expiry for a Moon virtual card.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Card label or card ID' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: CARD_TOOLS.add_funds_to_card.name,
+        description: 'Loads funds from Moon Credit balance onto a Moon X reloadable card. Requires L4 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Card label or card ID' },
+            amount: { type: 'number', description: 'Amount in USD to add' },
+          },
+          required: ['label', 'amount'],
+        },
+      },
+      {
+        name: CARD_TOOLS.top_up_moon_credit.name,
+        description: 'Returns Moon\'s USDC-Polygon deposit address so you can send USDC to top up Moon Credit. Use send_usdc with chain:"polygon" to the returned address. Requires L4 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            amount: { type: 'number', description: 'Amount in USDC to top up' },
+          },
+          required: ['amount'],
+        },
+      },
+      {
+        name: CARD_TOOLS.freeze_card.name,
+        description: 'Freezes a Moon virtual card, blocking new transactions.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Card label or card ID' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: CARD_TOOLS.delete_card.name,
+        description: 'Permanently deletes a Moon virtual card.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Card label or card ID' },
+          },
+          required: ['label'],
+        },
+      },
+      {
+        name: CARD_TOOLS.get_card_transactions.name,
+        description: 'Returns transaction history for a Moon virtual card.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Card label or card ID' },
+            limit: { type: 'number', description: 'Maximum number of transactions to return (default: 10)' },
+          },
+          required: ['label'],
+        },
+      },
     ],
   }));
 
@@ -253,6 +344,36 @@ function createMcpServer(claims: PassportClaims): Server {
       }
       if (name === 'get_payment_status') {
         const result = await getPaymentStatus(args as { tx_hash: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // Card tools
+      if (name === 'create_virtual_card') {
+        const result = await createVirtualCard(args as { label?: string; product?: 'moon_x' | 'moon_1x'; amount?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'get_card_details') {
+        const result = await getCardDetails(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'add_funds_to_card') {
+        const result = await addFundsToCard(args as { label: string; amount: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'top_up_moon_credit') {
+        const result = await topUpMoonCredit(args as { amount: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'freeze_card') {
+        const result = await freezeCard(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'delete_card') {
+        const result = await deleteCard(args as { label: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'get_card_transactions') {
+        const result = await getCardTransactions(args as { label: string; limit?: number }, claims);
         return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
       }
     } catch (err) {
