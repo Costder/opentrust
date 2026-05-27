@@ -61,6 +61,9 @@ export interface HandsAndFeetConfig {
     cards?: {
       sandbox: boolean;
     };
+    phone?: {
+      provider: 'twilio' | 'signalwire';
+    };
   };
   allowLocalFallback?: boolean;
 }
