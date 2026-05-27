@@ -1,5 +1,5 @@
 import type { CommandModule } from 'yargs';
-import { input, password, confirm } from '@inquirer/prompts';
+import { input, password, confirm, select } from '@inquirer/prompts';
 import { randomUUID } from 'crypto';
 import { configExists, writeConfig } from '../config.js';
 import { hashPassphrase } from '../state.js';
@@ -73,6 +73,24 @@ const init: CommandModule = {
       const moonSandbox = await confirm({ message: 'Use Moon sandbox mode?', default: true });
       cfg.capabilities.cards = { sandbox: moonSandbox };
       console.log('   Set MOON_CONSUMER_KEY and MOON_CONSUMER_SECRET env vars before running serve.');
+    }
+
+    // Phone setup
+    const setupPhone = await confirm({ message: 'Set up phone (SMS)?', default: false });
+    if (setupPhone) {
+      const provider = await select({
+        message: 'Phone provider:',
+        choices: [
+          { value: 'twilio', name: 'Twilio (set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN)' },
+          { value: 'signalwire', name: 'SignalWire (set SIGNALWIRE_PROJECT_ID + SIGNALWIRE_AUTH_TOKEN + SIGNALWIRE_SPACE_URL)' },
+        ],
+      });
+      cfg.capabilities.phone = { provider: provider as 'twilio' | 'signalwire' };
+      if (provider === 'twilio') {
+        console.log('   Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN env vars before running serve.');
+      } else {
+        console.log('   Set SIGNALWIRE_PROJECT_ID, SIGNALWIRE_AUTH_TOKEN, and SIGNALWIRE_SPACE_URL env vars before running serve.');
+      }
     }
 
     writeConfig(cfg);

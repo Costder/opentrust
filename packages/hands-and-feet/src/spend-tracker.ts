@@ -34,6 +34,27 @@ export function openDb(): Database.Database {
       completed_at TEXT,
       tx_hash TEXT
     );
+    CREATE TABLE IF NOT EXISTS phone_numbers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      number TEXT UNIQUE NOT NULL,
+      provider TEXT NOT NULL,
+      sid TEXT NOT NULL,
+      area_code TEXT,
+      provisioned_at TEXT NOT NULL,
+      released_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS sms_inbox (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      number TEXT NOT NULL,
+      sid TEXT UNIQUE NOT NULL,
+      from_number TEXT NOT NULL,
+      to_number TEXT NOT NULL,
+      body TEXT NOT NULL,
+      direction TEXT NOT NULL,
+      status TEXT NOT NULL,
+      date_sent TEXT NOT NULL,
+      fetched_at TEXT NOT NULL
+    );
   `);
   return _db;
 }

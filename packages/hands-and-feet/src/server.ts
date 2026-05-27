@@ -38,6 +38,13 @@ import {
   getCardTransactions,
   CARD_TOOLS,
 } from './capabilities/cards/index.js';
+import {
+  provisionPhoneNumber,
+  sendSms,
+  readSms,
+  releasePhoneNumber,
+  PHONE_TOOLS,
+} from './capabilities/phone/index.js';
 import type { PassportClaims } from './types.js';
 
 export interface ServerOptions {
@@ -282,6 +289,53 @@ function createMcpServer(claims: PassportClaims): Server {
           required: ['label'],
         },
       },
+      // Phone tools
+      {
+        name: PHONE_TOOLS.provision_phone_number.name,
+        description: 'Provisions a phone number via the configured provider (Twilio or SignalWire). Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            area_code: { type: 'string', description: 'US area code to request (optional)' },
+          },
+        },
+      },
+      {
+        name: PHONE_TOOLS.send_sms.name,
+        description: 'Sends an SMS from a provisioned number. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            from_number: { type: 'string', description: 'Provisioned phone number to send from' },
+            to: { type: 'string', description: 'Destination phone number (E.164 format, e.g. +12025551234)' },
+            message: { type: 'string', description: 'SMS message body' },
+          },
+          required: ['from_number', 'to', 'message'],
+        },
+      },
+      {
+        name: PHONE_TOOLS.read_sms.name,
+        description: 'Fetches inbound SMS messages for a provisioned number and upserts them to local DB. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            number: { type: 'string', description: 'Provisioned phone number to read messages for' },
+            limit: { type: 'number', description: 'Maximum number of messages to return (default: 20)' },
+          },
+          required: ['number'],
+        },
+      },
+      {
+        name: PHONE_TOOLS.release_phone_number.name,
+        description: 'Releases a provisioned phone number back to the provider. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            number: { type: 'string', description: 'Phone number to release' },
+          },
+          required: ['number'],
+        },
+      },
     ],
   }));
 
@@ -374,6 +428,27 @@ function createMcpServer(claims: PassportClaims): Server {
       }
       if (name === 'get_card_transactions') {
         const result = await getCardTransactions(args as { label: string; limit?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+
+      // Phone tools
+      if (name === 'provision_phone_number') {
+        const result = await provisionPhoneNumber(args as { area_code?: string }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'send_sms') {
+        const result = await sendSms(
+          args as { from_number: string; to: string; message: string },
+          claims,
+        );
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'read_sms') {
+        const result = await readSms(args as { number: string; limit?: number }, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'release_phone_number') {
+        const result = await releasePhoneNumber(args as { number: string }, claims);
         return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
       }
     } catch (err) {
