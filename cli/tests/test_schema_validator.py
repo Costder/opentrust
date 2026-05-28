@@ -296,3 +296,91 @@ def test_reviewer_signed_with_granular_network_passes_enforcement(tmp_path):
     errors = validate_passport_file(str(path))
     enforcement_errors = [e for e in errors if "granular" in e.lower()]
     assert enforcement_errors == [], f"Unexpected enforcement error for granular scope: {enforcement_errors}"
+
+
+_EVIDENCE_BLOCK = {
+    "scanner_output": {
+        "source": "github_code_scanning",
+        "run_at": "2026-01-15T10:00:00Z",
+        "severity_counts": {"critical": 0, "high": 0, "medium": 2, "low": 5},
+    },
+    "reviewer_identity": {
+        "name": "Alice",
+        "reviewed_at": "2026-01-16T09:00:00Z",
+    },
+    "commit_hash": "abc1234567890abc",
+    "dependency_snapshot": {"fastapi": "0.136.1"},
+    "signed_attestation": {
+        "key_id": "alice-2026-1",
+        "algorithm": "ed25519",
+        "signature": "AAAA",
+        "payload_hash": "sha256:0000",
+    },
+}
+
+
+def _security_checked_passport(overrides=None):
+    """Build a valid security_checked passport for CLI tests."""
+    p = {
+        "spec_version": "0.2.0",
+        "tool_identity": {
+            "slug": "sec-checked-cli",
+            "name": "Sec Checked CLI",
+            "source_url": "https://github.com/example/sec-checked",
+            "category": "developer-tools",
+        },
+        "trust_status": "security_checked",
+        "version_hash": {"version": "1.0.0", "commit": "abc1234567890abc1234"},
+        "capabilities": ["code_review"],
+        "permission_manifest": {
+            "network": {
+                "allowed_domains": ["api.github.com"],
+                "allowed_schemes": ["https"],
+                "outbound_only": True,
+            }
+        },
+        "source_formats": ["mcp"],
+        "commercial_status": {"status": "free"},
+        "review_history": [{"status": "approved", "timestamp": "2026-01-16T09:00:00Z", "reviewer": "alice"}],
+        "security": {
+            "registry_signature": {
+                "key_id": "opentrust-registry-2026-1",
+                "algorithm": "ed25519",
+                "signature": "AAAA",
+                "signed_at": "2026-01-01T00:00:00Z",
+                "payload_hash": "sha256:abc",
+            }
+        },
+        "evidence": _EVIDENCE_BLOCK,
+    }
+    if overrides:
+        p.update(overrides)
+    return p
+
+
+def test_security_checked_with_complete_evidence_passes_cli(tmp_path):
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(_security_checked_passport()))
+    errors = validate_passport_file(str(path))
+    evidence_errors = [e for e in errors if "evidence" in e.lower()]
+    assert evidence_errors == [], f"Unexpected evidence errors: {evidence_errors}"
+
+
+def test_security_checked_without_evidence_fails_cli(tmp_path):
+    passport = _security_checked_passport({"evidence": None})
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    assert any("evidence" in e.lower() for e in errors), f"Expected evidence error, got: {errors}"
+
+
+def test_security_checked_missing_signed_attestation_fails_cli(tmp_path):
+    incomplete_evidence = {k: v for k, v in _EVIDENCE_BLOCK.items() if k != "signed_attestation"}
+    passport = _security_checked_passport({"evidence": incomplete_evidence})
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    assert any(
+        "evidence" in e.lower() or "attestation" in e.lower() or "signed_attestation" in e.lower()
+        for e in errors
+    ), f"Expected attestation error, got: {errors}"
