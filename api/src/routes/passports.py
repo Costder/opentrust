@@ -6,6 +6,29 @@ from ..schemas.passport import PassportCreate, PassportRead
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
+_HIGH_RISK_PERMISSIONS = frozenset({"file", "network", "terminal", "wallet", "private_data"})
+_TRUST_LEVELS_REQUIRING_GRANULAR = frozenset({
+    "reviewer_signed", "security_checked", "continuously_monitored"
+})
+
+
+def _check_permission_scope(payload: PassportCreate) -> None:
+    """Reject boolean true on high-risk permissions when trust_status requires granular scopes."""
+    trust = payload.trust_status.value
+    if trust not in _TRUST_LEVELS_REQUIRING_GRANULAR:
+        return
+    manifest = payload.permission_manifest or {}
+    violations = [key for key in _HIGH_RISK_PERMISSIONS if manifest.get(key) is True]
+    if violations:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"trust_status '{trust}' requires granular permission scopes (v0.2) for: "
+                f"{', '.join(sorted(violations))}. Replace boolean true with a structured scope object. "
+                f"See https://opentrust.dev/schemas/v0.2/permissions.schema.json"
+            ),
+        )
+
 
 @router.get("")
 async def list_tools(
@@ -36,6 +59,7 @@ async def get_tool(slug: str, db: Database = Depends(get_db)):
 
 @router.post("", response_model=PassportRead, status_code=201)
 async def create_tool(payload: PassportCreate, db: Database = Depends(get_db)):
+    _check_permission_scope(payload)
     identity = payload.tool_identity
     try:
         row = await db.create({
@@ -67,6 +91,7 @@ async def create_tool(payload: PassportCreate, db: Database = Depends(get_db)):
 
 @router.put("/{slug}", response_model=PassportRead)
 async def update_tool(slug: str, payload: PassportCreate, db: Database = Depends(get_db)):
+    _check_permission_scope(payload)
     existing = await db.get_by_slug(slug)
     if existing is None:
         raise HTTPException(status_code=404, detail="Passport not found")

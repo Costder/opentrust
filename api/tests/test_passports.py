@@ -223,3 +223,70 @@ class TestSearchPassports:
         resp = await client.get("/api/v1/tools/search/local", params={"q": "TEST TOOL"})
         assert resp.status_code == 200
         assert len(resp.json()) >= 1
+
+
+# ── Permission scope enforcement tests ───────────────────────────────────────
+
+_REVIEWER_SIGNED_BASE = {
+    "tool_identity": {
+        "slug": "reviewer-signed-boolean",
+        "name": "Reviewer Signed Boolean",
+        "version": "1.0.0",
+        "publisher": "test-org",
+    },
+    "description": "A reviewer-signed tool.",
+    "trust_status": "reviewer_signed",
+    "version_hash": {"version": "1.0.0", "commit": "abc1234567"},
+    "capabilities": ["search"],
+    "permission_manifest": {"network": True},  # boolean — rejected at reviewer_signed
+    "commercial_status": {"model": "free"},
+    "agent_access": {"allowed": True},
+}
+
+
+class TestPermissionScopeEnforcement:
+    async def test_reviewer_signed_with_boolean_network_returns_422(self, client):
+        response = await client.post("/api/v1/tools", json=_REVIEWER_SIGNED_BASE)
+        assert response.status_code == 422, response.text
+        detail = response.json()["detail"]
+        assert "granular" in detail.lower() or "boolean" in detail.lower()
+        assert "network" in detail.lower()
+
+    async def test_reviewer_signed_with_granular_network_is_accepted(self, client):
+        passport = {
+            **_REVIEWER_SIGNED_BASE,
+            "tool_identity": {**_REVIEWER_SIGNED_BASE["tool_identity"], "slug": "reviewer-signed-granular"},
+            "permission_manifest": {
+                "network": {
+                    "allowed_domains": ["api.github.com"],
+                    "allowed_schemes": ["https"],
+                    "outbound_only": True,
+                }
+            },
+        }
+        response = await client.post("/api/v1/tools", json=passport)
+        assert response.status_code == 201, response.text
+
+    async def test_creator_claimed_with_boolean_network_is_accepted(self, client):
+        passport = {
+            **_REVIEWER_SIGNED_BASE,
+            "tool_identity": {**_REVIEWER_SIGNED_BASE["tool_identity"], "slug": "creator-claimed-boolean"},
+            "trust_status": "creator_claimed",
+            "permission_manifest": {"network": True},
+        }
+        response = await client.post("/api/v1/tools", json=passport)
+        assert response.status_code == 201, response.text
+
+    async def test_update_reviewer_signed_with_boolean_network_returns_422(self, client):
+        """update_tool must also enforce the check."""
+        # First create at creator_claimed (allowed)
+        create_payload = {
+            **_REVIEWER_SIGNED_BASE,
+            "trust_status": "creator_claimed",
+            "permission_manifest": {"network": True},
+        }
+        await client.post("/api/v1/tools", json=create_payload)
+        # Now try to update to reviewer_signed with boolean network
+        update_payload = {**_REVIEWER_SIGNED_BASE}
+        response = await client.put("/api/v1/tools/reviewer-signed-boolean", json=update_payload)
+        assert response.status_code == 422, response.text
