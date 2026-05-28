@@ -7,6 +7,9 @@ from ..schemas.passport import PassportCreate, PassportRead
 router = APIRouter(prefix="/tools", tags=["tools"])
 
 _HIGH_RISK_PERMISSIONS = frozenset({"file", "network", "terminal", "wallet", "private_data"})
+# "disputed" is intentionally excluded: a disputed passport is under investigation
+# and its trust level will be reassessed. Granular scope enforcement targets the
+# three levels where a reviewer or registry has actively validated the passport.
 _TRUST_LEVELS_REQUIRING_GRANULAR = frozenset({
     "reviewer_signed", "security_checked", "continuously_monitored"
 })
