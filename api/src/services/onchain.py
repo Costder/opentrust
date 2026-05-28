@@ -16,6 +16,33 @@ TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523
 USDC_DECIMALS = 6
 
 
+def _to_hex(value: object) -> str:
+    """Normalise a HexBytes, bytes, or str value to a lowercase 0x-prefixed hex string.
+
+    web3.py v6+ returns topics and data as HexBytes (bytes subclass), not str.
+    This helper ensures both forms work identically.
+    """
+    if isinstance(value, (bytes, bytearray)):
+        return "0x" + value.hex()
+    return str(value).lower()
+
+
+def _extract_address(topic: object, label: str) -> str:
+    """Extract a 20-byte EVM address from a 32-byte padded topic.
+
+    Raises OnchainVerificationError for malformed topics rather than silently
+    producing garbage addresses.
+
+    Returns a lowercase 0x-prefixed address (NOT EIP-55 checksummed).
+    """
+    hex_topic = _to_hex(topic)
+    if len(hex_topic) < 42:
+        raise OnchainVerificationError(
+            f"malformed topic for {label}: expected 66-char hex, got {hex_topic!r}"
+        )
+    return "0x" + hex_topic[-40:]
+
+
 class OnchainVerificationError(Exception):
     """Raised when a transaction cannot be verified as a valid USDC transfer."""
 
@@ -50,8 +77,10 @@ def verify_usdc_transfer(
     if receipt is None:
         raise OnchainVerificationError(f"transaction {tx_hash} not found on chain")
 
-    if receipt.get("status") == 0:
-        raise OnchainVerificationError(f"transaction {tx_hash} reverted (status=0)")
+    if receipt.get("status") != 1:
+        raise OnchainVerificationError(
+            f"transaction {tx_hash} did not succeed (status={receipt.get('status')!r})"
+        )
 
     # Find USDC Transfer log
     transfer_log = None
@@ -59,7 +88,7 @@ def verify_usdc_transfer(
         topics = log.get("topics", [])
         if (
             len(topics) >= 3
-            and topics[0].lower() == TRANSFER_TOPIC.lower()
+            and _to_hex(topics[0]) == TRANSFER_TOPIC.lower()
             and log.get("address", "").lower() == usdc_contract.lower()
         ):
             transfer_log = log
@@ -72,14 +101,19 @@ def verify_usdc_transfer(
         )
 
     # Decode from/to addresses from indexed topics (padded to 32 bytes)
-    raw_from = transfer_log["topics"][1]
-    raw_to = transfer_log["topics"][2]
-    actual_sender = "0x" + (raw_from[-40:] if len(raw_from) >= 42 else raw_from[2:])
-    actual_recipient = "0x" + (raw_to[-40:] if len(raw_to) >= 42 else raw_to[2:])
+    actual_sender = _extract_address(transfer_log["topics"][1], "sender")
+    actual_recipient = _extract_address(transfer_log["topics"][2], "recipient")
 
     # Decode amount from data (hex-encoded uint256)
-    raw_data = transfer_log.get("data", "0x0")
-    amount_raw = int(raw_data, 16) if isinstance(raw_data, str) else int(raw_data)
+    raw_data = _to_hex(transfer_log.get("data") or "0x0")
+    if raw_data in ("0x", ""):
+        raw_data = "0x0"
+    try:
+        amount_raw = int(raw_data, 16)
+    except (ValueError, TypeError) as exc:
+        raise OnchainVerificationError(
+            f"could not decode transfer amount from data field {raw_data!r}: {exc}"
+        ) from exc
     actual_amount = Decimal(amount_raw) / Decimal(10**USDC_DECIMALS)
 
     # Validate sender
