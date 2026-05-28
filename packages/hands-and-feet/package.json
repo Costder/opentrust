@@ -1,6 +1,6 @@
 {
   "name": "@opentrust/hands-and-feet",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Give AI agents real-world capabilities via MCP — email, phone, wallet, payments, virtual cards, and more",
   "type": "module",
   "bin": {
