@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "opentrust-cli"
 version = "1.0.0"
 requires-python = ">=3.11"
-dependencies = ["typer>=0.25.1", "rich>=15.0.0", "httpx>=0.28.1", "jsonschema>=4.26.0", "cryptography>=42", "ecdsa>=0.19"]
+dependencies = ["typer>=0.25.1", "rich>=15.0.0", "httpx>=0.28.1", "jsonschema>=4.26.0", "cryptography>=48.0.0", "ecdsa>=0.19"]
 
 [project.scripts]
 opentrust = "opentrust_cli.main:app"
