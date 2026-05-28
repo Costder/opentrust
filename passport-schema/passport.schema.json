@@ -10,7 +10,7 @@
     "spec_version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Version of the OpenTrust spec this passport was written against (semver). Allows agents and validators to detect schema drift. Current stable spec version: '0.1.0'. Increment to '1.0.0' when the spec reaches stability milestone.",
+      "description": "Version of the OpenTrust spec this passport was written against (semver). Allows agents and validators to detect schema drift. Current stable spec version: '0.2.0'. v0.2 adds granular permission scopes — structured scope objects replace boolean true for file, network, terminal, wallet, and private_data at reviewer_signed and above.",
       "examples": ["0.1.0", "1.0.0"]
     },
 

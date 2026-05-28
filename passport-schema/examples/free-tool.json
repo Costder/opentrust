@@ -1,6 +1,6 @@
 {
   "$comment": "Example: A free MCP search tool at community_reviewed trust level.",
-  "spec_version": "0.1.0",
+  "spec_version": "0.2.0",
 
   "tool_identity": {
     "name": "Brave Search",
@@ -35,7 +35,12 @@
   ],
 
   "permission_manifest": {
-    "network": true,
+    "network": {
+      "allowed_domains": ["api.search.brave.com"],
+      "allowed_schemes": ["https"],
+      "outbound_only": true,
+      "notes": "Outbound HTTPS only to api.search.brave.com. No inbound connections."
+    },
     "file": false,
     "terminal": false,
     "browser": false,
@@ -44,8 +49,7 @@
     "api": true,
     "camera": false,
     "microphone": false,
-    "private_data": false,
-    "notes": "Outbound HTTPS only to api.search.brave.com"
+    "private_data": false
   },
 
   "data_handling": {
