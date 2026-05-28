@@ -31,10 +31,9 @@ def generate_wallet() -> dict[str, str]:
     Returns a dict with 'address' (EIP-55 checksummed) and 'private_key' (0x-prefixed hex).
     """
     account = Account.create()
-    key_hex = account.key.hex()
     return {
         "address": account.address,
-        "private_key": key_hex if key_hex.startswith("0x") else "0x" + key_hex,
+        "private_key": "0x" + account.key.hex(),
     }
 
 

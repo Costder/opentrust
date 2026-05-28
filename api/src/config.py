@@ -172,6 +172,22 @@ def _check_hsts() -> None:
         )
 
 
+def _check_wallet_encryption_secret() -> None:
+    """Warn if WALLET_ENCRYPTION_SECRET is empty when embedded wallets are enabled."""
+    if settings.opentrust_embedded_wallet_enabled:
+        secret = settings.wallet_encryption_secret.strip()
+        if not secret:
+            _ERRORS.append(
+                "WALLET_ENCRYPTION_SECRET is empty but OPENTRUST_EMBEDDED_WALLET_ENABLED=true. "
+                "Generate a strong secret with: openssl rand -hex 32"
+            )
+        elif len(secret) < 32:
+            _WARNINGS.append(
+                f"WALLET_ENCRYPTION_SECRET is only {len(secret)} characters. "
+                "Use at least 32 characters (64 hex chars from: openssl rand -hex 32)."
+            )
+
+
 def _check_environment() -> None:
     """Log the environment mode."""
     _INFOS.append(f"Running in '{settings.environment}' mode")
@@ -189,6 +205,7 @@ def run_config_validation() -> None:
     _check_cors_origins()
     _check_rate_limit()
     _check_hsts()
+    _check_wallet_encryption_secret()
 
     for msg in _INFOS:
         logger.info(msg)
