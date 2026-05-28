@@ -293,3 +293,88 @@ class TestPermissionScopeEnforcement:
         detail = response.json()["detail"]
         assert "granular" in detail.lower() or "boolean" in detail.lower()
         assert "network" in detail.lower()
+
+
+# ── Evidence block enforcement tests ─────────────────────────────────────────
+
+_EVIDENCE_BLOCK = {
+    "scanner_output": {
+        "source": "github_code_scanning",
+        "run_at": "2026-01-15T10:00:00Z",
+        "severity_counts": {"critical": 0, "high": 0, "medium": 2, "low": 5},
+    },
+    "reviewer_identity": {
+        "name": "Alice Reviewer",
+        "github": "alice",
+        "reviewed_at": "2026-01-16T09:00:00Z",
+        "scope": "Full source code review, dependency audit, permission manifest review.",
+    },
+    "commit_hash": "abc1234567890abc1234567890abc1234567890ab",
+    "dependency_snapshot": {"fastapi": "0.136.1", "pydantic": "2.7.0"},
+    "signed_attestation": {
+        "key_id": "alice-reviewer-2026-1",
+        "algorithm": "ed25519",
+        "signature": "AAAAAAAAAAAAAAAA",
+        "payload_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    },
+}
+
+_SECURITY_CHECKED_PASSPORT = {
+    "tool_identity": {
+        "slug": "security-checked-tool",
+        "name": "Security Checked Tool",
+        "version": "1.0.0",
+        "publisher": "test-org",
+    },
+    "description": "A security-checked tool.",
+    "trust_status": "security_checked",
+    "version_hash": {"version": "1.0.0", "commit": "abc1234567"},
+    "capabilities": ["code_review"],
+    "permission_manifest": {
+        "network": {
+            "allowed_domains": ["api.github.com"],
+            "allowed_schemes": ["https"],
+            "outbound_only": True,
+        }
+    },
+    "commercial_status": {"model": "free"},
+    "agent_access": {"allowed": True},
+    "evidence": _EVIDENCE_BLOCK,
+}
+
+
+class TestEvidenceEnforcement:
+    async def test_security_checked_with_complete_evidence_is_accepted(self, client):
+        response = await client.post("/api/v1/tools", json=_SECURITY_CHECKED_PASSPORT)
+        assert response.status_code == 201, response.text
+
+    async def test_security_checked_without_evidence_returns_422(self, client):
+        passport = {
+            **_SECURITY_CHECKED_PASSPORT,
+            "tool_identity": {**_SECURITY_CHECKED_PASSPORT["tool_identity"], "slug": "sec-no-evidence"},
+            "evidence": None,
+        }
+        response = await client.post("/api/v1/tools", json=passport)
+        assert response.status_code == 422, response.text
+        assert "evidence" in response.text.lower()
+
+    async def test_security_checked_with_incomplete_evidence_returns_422(self, client):
+        incomplete = {k: v for k, v in _EVIDENCE_BLOCK.items() if k != "signed_attestation"}
+        passport = {
+            **_SECURITY_CHECKED_PASSPORT,
+            "tool_identity": {**_SECURITY_CHECKED_PASSPORT["tool_identity"], "slug": "sec-incomplete"},
+            "evidence": incomplete,
+        }
+        response = await client.post("/api/v1/tools", json=passport)
+        assert response.status_code == 422, response.text
+
+    async def test_reviewer_signed_does_not_require_evidence(self, client):
+        """reviewer_signed is one level below security_checked — evidence optional."""
+        passport = {
+            **_SECURITY_CHECKED_PASSPORT,
+            "tool_identity": {**_SECURITY_CHECKED_PASSPORT["tool_identity"], "slug": "reviewer-no-evidence"},
+            "trust_status": "reviewer_signed",
+            "evidence": None,
+        }
+        response = await client.post("/api/v1/tools", json=passport)
+        assert response.status_code == 201, response.text

@@ -2,7 +2,7 @@ import sqlite3
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
 from ..database import Database, get_db
-from ..schemas.passport import PassportCreate, PassportRead
+from ..schemas.passport import PassportCreate, PassportRead, SecurityEvidenceBlock
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
@@ -29,6 +29,21 @@ def _check_permission_scope(payload: PassportCreate) -> None:
                 f"trust_status '{trust}' requires granular permission scopes (v0.2) for: "
                 f"{', '.join(sorted(violations))}. Replace boolean true with a structured scope object. "
                 f"See https://opentrust.dev/schemas/v0.2/permissions.schema.json"
+            ),
+        )
+
+
+def _check_evidence_block(payload: PassportCreate) -> None:
+    """Require a complete SecurityEvidenceBlock when trust_status is security_checked."""
+    if payload.trust_status.value not in {"security_checked", "continuously_monitored"}:
+        return
+    if payload.evidence is None:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "trust_status 'security_checked' requires a complete evidence block. "
+                "Provide scanner_output, reviewer_identity, commit_hash, "
+                "dependency_snapshot, and signed_attestation."
             ),
         )
 
@@ -63,6 +78,7 @@ async def get_tool(slug: str, db: Database = Depends(get_db)):
 @router.post("", response_model=PassportRead, status_code=201)
 async def create_tool(payload: PassportCreate, db: Database = Depends(get_db)):
     _check_permission_scope(payload)
+    _check_evidence_block(payload)
     identity = payload.tool_identity
     try:
         row = await db.create({
@@ -95,6 +111,7 @@ async def create_tool(payload: PassportCreate, db: Database = Depends(get_db)):
 @router.put("/{slug}", response_model=PassportRead)
 async def update_tool(slug: str, payload: PassportCreate, db: Database = Depends(get_db)):
     _check_permission_scope(payload)
+    _check_evidence_block(payload)
     existing = await db.get_by_slug(slug)
     if existing is None:
         raise HTTPException(status_code=404, detail="Passport not found")
