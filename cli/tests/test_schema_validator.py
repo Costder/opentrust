@@ -38,6 +38,27 @@ def _base_passport() -> dict:
     }
 
 
+def _minimal_passport(overrides: dict) -> dict:
+    """Return a minimal valid v0.2 passport dict, merging overrides at the top level."""
+    base = {
+        "spec_version": "0.2.0",
+        "tool_identity": {
+            "slug": "test-granular",
+            "name": "Test Granular",
+            "source_url": "https://github.com/example/test",
+            "category": "developer-tools",
+        },
+        "trust_status": "creator_claimed",
+        "version_hash": {"version": "1.0.0", "commit": "abc123def456"},
+        "capabilities": ["search"],
+        "permission_manifest": {},
+        "source_formats": ["mcp"],
+        "commercial_status": {"status": "free"},
+    }
+    base.update(overrides)
+    return base
+
+
 def test_validate_passport_file_accepts_production_bound_hash(tmp_path):
     path = _write(tmp_path, _base_passport())
     assert validate_passport_file(str(path)) == []
@@ -109,3 +130,80 @@ def test_validate_passport_with_security_field_does_not_crash(tmp_path):
     errors = validate_passport_file(str(path))
     # A valid reviewer_signed passport with a security field must produce zero validation errors
     assert errors == []
+
+
+def test_granular_network_scope_is_valid(tmp_path):
+    passport = _minimal_passport({
+        "permission_manifest": {
+            "network": {
+                "allowed_domains": ["api.github.com"],
+                "allowed_schemes": ["https"],
+                "outbound_only": True,
+            }
+        }
+    })
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    network_errors = [e for e in errors if "network" in e.lower()]
+    assert network_errors == [], f"Unexpected network errors: {network_errors}"
+
+
+def test_granular_file_scope_is_valid(tmp_path):
+    passport = _minimal_passport({
+        "permission_manifest": {
+            "file": {
+                "read": ["./docs/**"],
+                "write": ["./output/**"],
+            }
+        }
+    })
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    file_errors = [e for e in errors if "file" in e.lower()]
+    assert file_errors == [], f"Unexpected file errors: {file_errors}"
+
+
+def test_granular_terminal_scope_is_valid(tmp_path):
+    passport = _minimal_passport({
+        "permission_manifest": {
+            "terminal": {
+                "allowed_commands": ["git", "npm"],
+                "forbidden_commands": ["rm -rf", "curl | sh"],
+                "shell_access": False,
+            }
+        }
+    })
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    terminal_errors = [e for e in errors if "terminal" in e.lower()]
+    assert terminal_errors == [], f"Unexpected terminal errors: {terminal_errors}"
+
+
+def test_boolean_true_network_is_valid_for_low_trust(tmp_path):
+    """v0.1-style boolean true must remain valid at creator_claimed (backward compat)."""
+    passport = _minimal_passport({"permission_manifest": {"network": True}})
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    # Schema-level error for network:true must NOT appear (semantic enforcement only at reviewer_signed+)
+    hard_schema_errors = [e for e in errors if "network" in e.lower() and "not valid" in e.lower()]
+    assert hard_schema_errors == [], f"Boolean true broke backward compat: {hard_schema_errors}"
+
+
+def test_invalid_granular_network_field_is_rejected(tmp_path):
+    """Unknown field inside network scope object must fail schema validation."""
+    passport = _minimal_passport({
+        "permission_manifest": {
+            "network": {
+                "allowed_domains": ["api.github.com"],
+                "unknown_extra_field": True,  # not in schema
+            }
+        }
+    })
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    assert len(errors) > 0, "Expected a schema error for unknown network field, got none"
