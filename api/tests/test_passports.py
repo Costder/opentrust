@@ -290,3 +290,6 @@ class TestPermissionScopeEnforcement:
         update_payload = {**_REVIEWER_SIGNED_BASE}
         response = await client.put("/api/v1/tools/reviewer-signed-boolean", json=update_payload)
         assert response.status_code == 422, response.text
+        detail = response.json()["detail"]
+        assert "granular" in detail.lower() or "boolean" in detail.lower()
+        assert "network" in detail.lower()
