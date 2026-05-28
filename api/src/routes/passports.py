@@ -2,7 +2,7 @@ import sqlite3
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
 from ..database import Database, get_db
-from ..schemas.passport import PassportCreate, PassportRead, SecurityEvidenceBlock
+from ..schemas.passport import PassportCreate, PassportRead, SecurityEvidenceBlock  # noqa: F401 — type reference
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
@@ -34,7 +34,7 @@ def _check_permission_scope(payload: PassportCreate) -> None:
 
 
 def _check_evidence_block(payload: PassportCreate) -> None:
-    """Require a complete SecurityEvidenceBlock when trust_status is security_checked."""
+    """Require a complete SecurityEvidenceBlock for security_checked and continuously_monitored trust levels."""
     if payload.trust_status.value not in {"security_checked", "continuously_monitored"}:
         return
     if payload.evidence is None:
