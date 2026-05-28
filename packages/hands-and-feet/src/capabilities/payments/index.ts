@@ -27,6 +27,9 @@ export async function payWithUsdc(
   return { txHash: result.txHash, amount: result.amount, chain: 'base', memo: params.memo };
 }
 
+export { preparePayment } from './prepare-payment.js';
+export type { PreparePaymentParams, PreparePaymentReceipt } from './prepare-payment.js';
+
 export async function getPaymentStatus(
   params: { tx_hash: string },
   claims: PassportClaims,
