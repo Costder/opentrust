@@ -85,7 +85,7 @@ class TestVerifyUsdcTransfer:
             self._make_receipt(sender, recipient, int(Decimal("25.00") * 10**6), success=False)
         )
 
-        with pytest.raises(OnchainVerificationError, match="reverted"):
+        with pytest.raises(OnchainVerificationError, match="did not succeed"):
             verify_usdc_transfer(
                 tx_hash="0x" + "a" * 64,
                 expected_sender=sender,
@@ -114,6 +114,38 @@ class TestVerifyUsdcTransfer:
                 tx_hash="0x" + "a" * 64,
                 expected_sender="0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 expected_recipient="0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                expected_amount_usdc=Decimal("25.00"),
+                rpc_url="https://mainnet.base.org",
+            )
+
+    def test_wrong_sender_raises_error(self, mock_web3):
+        sender = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        recipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        mock_web3.eth.get_transaction_receipt.return_value = (
+            self._make_receipt(sender, recipient, int(Decimal("25.00") * 10**6))
+        )
+
+        with pytest.raises(OnchainVerificationError, match="sender mismatch"):
+            verify_usdc_transfer(
+                tx_hash="0x" + "a" * 64,
+                expected_sender="0xcccccccccccccccccccccccccccccccccccccccc",  # wrong sender
+                expected_recipient=recipient,
+                expected_amount_usdc=Decimal("25.00"),
+                rpc_url="https://mainnet.base.org",
+            )
+
+    def test_wrong_recipient_raises_error(self, mock_web3):
+        sender = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        recipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        mock_web3.eth.get_transaction_receipt.return_value = (
+            self._make_receipt(sender, recipient, int(Decimal("25.00") * 10**6))
+        )
+
+        with pytest.raises(OnchainVerificationError, match="recipient mismatch"):
+            verify_usdc_transfer(
+                tx_hash="0x" + "a" * 64,
+                expected_sender=sender,
+                expected_recipient="0xdddddddddddddddddddddddddddddddddddddddd",  # wrong recipient
                 expected_amount_usdc=Decimal("25.00"),
                 rpc_url="https://mainnet.base.org",
             )
