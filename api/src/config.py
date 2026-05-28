@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     coinbase_business_success_url: str = "http://localhost:3000/payments/success"
     coinbase_business_cancel_url: str = "http://localhost:3000/payments/cancel"
 
+    # Base L2 on-chain
+    base_rpc_url: str = "https://mainnet.base.org"  # Base L2 public RPC
+    base_usdc_contract: str = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"  # USDC on Base
+    wallet_encryption_secret: str = ""  # Set in .env — AES key derivation for embedded wallets
+
     # Rate limiting
     rate_limit: str = "100/60"
 
