@@ -145,8 +145,7 @@ def test_granular_network_scope_is_valid(tmp_path):
     path = tmp_path / "p.json"
     path.write_text(json.dumps(passport))
     errors = validate_passport_file(str(path))
-    network_errors = [e for e in errors if "network" in e.lower()]
-    assert network_errors == [], f"Unexpected network errors: {network_errors}"
+    assert errors == [], f"Expected no errors for valid granular network scope, got: {errors}"
 
 
 def test_granular_file_scope_is_valid(tmp_path):
@@ -161,8 +160,7 @@ def test_granular_file_scope_is_valid(tmp_path):
     path = tmp_path / "p.json"
     path.write_text(json.dumps(passport))
     errors = validate_passport_file(str(path))
-    file_errors = [e for e in errors if "file" in e.lower()]
-    assert file_errors == [], f"Unexpected file errors: {file_errors}"
+    assert errors == [], f"Expected no errors for valid granular file scope, got: {errors}"
 
 
 def test_granular_terminal_scope_is_valid(tmp_path):
@@ -178,8 +176,7 @@ def test_granular_terminal_scope_is_valid(tmp_path):
     path = tmp_path / "p.json"
     path.write_text(json.dumps(passport))
     errors = validate_passport_file(str(path))
-    terminal_errors = [e for e in errors if "terminal" in e.lower()]
-    assert terminal_errors == [], f"Unexpected terminal errors: {terminal_errors}"
+    assert errors == [], f"Expected no errors for valid granular terminal scope, got: {errors}"
 
 
 def test_boolean_true_network_is_valid_for_low_trust(tmp_path):
@@ -189,8 +186,7 @@ def test_boolean_true_network_is_valid_for_low_trust(tmp_path):
     path.write_text(json.dumps(passport))
     errors = validate_passport_file(str(path))
     # Schema-level error for network:true must NOT appear (semantic enforcement only at reviewer_signed+)
-    hard_schema_errors = [e for e in errors if "network" in e.lower() and "not valid" in e.lower()]
-    assert hard_schema_errors == [], f"Boolean true broke backward compat: {hard_schema_errors}"
+    assert errors == [], f"Boolean true for network broke backward compat: {errors}"
 
 
 def test_invalid_granular_network_field_is_rejected(tmp_path):
@@ -207,3 +203,7 @@ def test_invalid_granular_network_field_is_rejected(tmp_path):
     path.write_text(json.dumps(passport))
     errors = validate_passport_file(str(path))
     assert len(errors) > 0, "Expected a schema error for unknown network field, got none"
+    assert any(
+        "network" in e.lower() and ("additional" in e.lower() or "unknown_extra_field" in e.lower() or "remove unknown" in e.lower())
+        for e in errors
+    ), f"Expected an additionalProperties error for network scope, got: {errors}"
