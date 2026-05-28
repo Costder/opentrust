@@ -1,6 +1,6 @@
 {
   "_comment": "Example of a paid tool with a complete machine-readable payment contract. An agent reads commercial_status to discover cost, payment_config to send USDC, and access_config to prove payment and get a token — all without a human in the loop.",
-  "spec_version": "0.1.0",
+  "spec_version": "1.0.0",
 
   "tool_identity": {
     "name": "Code Analysis Pro",

@@ -99,7 +99,7 @@
     "spec_version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Version of the OpenTrust spec this passport was written against (semver). Allows agents and validators to detect schema drift. Current stable spec version: '0.3.0'. v0.3 adds required evidence blocks for security_checked passports (scanner_output, reviewer_identity, commit_hash, dependency_snapshot, signed_attestation).",
+      "description": "Version of the OpenTrust spec this passport was written against (semver). Allows agents and validators to detect schema drift. Current stable spec version: '1.0.0'. v1.0 is the first stable release; v0.3 added required evidence blocks for security_checked passports (scanner_output, reviewer_identity, commit_hash, dependency_snapshot, signed_attestation).",
       "examples": ["0.1.0", "1.0.0"]
     },
 
