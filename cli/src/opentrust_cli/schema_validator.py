@@ -24,6 +24,11 @@ _TRUST_LEVELS_REQUIRING_GRANULAR = frozenset({
     "reviewer_signed", "security_checked", "continuously_monitored"
 })
 
+_EVIDENCE_REQUIRED_KEYS = frozenset({
+    "scanner_output", "reviewer_identity", "commit_hash",
+    "dependency_snapshot", "signed_attestation"
+})
+
 
 def _json_path(error) -> str:
     if not error.absolute_path:
@@ -95,6 +100,23 @@ def _semantic_errors(data: dict[str, Any]) -> list[str]:
                     f"$.permission_manifest.{key}: trust_status '{trust_status}' requires granular "
                     f"scope object (v0.2) — boolean true is not allowed at this trust level. "
                     f"Replace with a structured scope: e.g. network: {{allowed_domains: [...], outbound_only: true}}"
+                )
+
+    # v0.3 enforcement: security_checked requires a complete evidence block
+    if trust_status in {"security_checked", "continuously_monitored"}:
+        evidence = data.get("evidence")
+        if not evidence:
+            errors.append(
+                "$.evidence: trust_status 'security_checked' requires a complete evidence block "
+                "with scanner_output, reviewer_identity, commit_hash, dependency_snapshot, "
+                "and signed_attestation"
+            )
+        elif isinstance(evidence, dict):
+            missing_keys = _EVIDENCE_REQUIRED_KEYS - set(evidence.keys())
+            if missing_keys:
+                errors.append(
+                    f"$.evidence: incomplete evidence block — missing: {', '.join(sorted(missing_keys))}. "
+                    "All five fields are required for security_checked."
                 )
 
     if trust_status in {"reviewer_signed", "security_checked", "continuously_monitored"}:
