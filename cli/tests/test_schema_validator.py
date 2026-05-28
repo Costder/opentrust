@@ -242,9 +242,8 @@ def test_reviewer_signed_with_boolean_network_is_rejected(tmp_path):
     path.write_text(json.dumps(passport))
     errors = validate_passport_file(str(path))
     assert any(
-        "granular" in e.lower() or "reviewer_signed" in e
+        "granular" in e.lower() and "network" in e.lower()
         for e in errors
-        if "network" in e.lower()
     ), f"Expected granular enforcement error for network at reviewer_signed, got: {errors}"
 
 
@@ -255,10 +254,7 @@ def test_creator_claimed_with_boolean_network_is_not_enforcement_rejected(tmp_pa
     path.write_text(json.dumps(passport))
     errors = validate_passport_file(str(path))
     # Must NOT have any granular enforcement error
-    enforcement_errors = [
-        e for e in errors
-        if "granular" in e.lower() and "reviewer_signed" in e
-    ]
+    enforcement_errors = [e for e in errors if "granular" in e.lower()]
     assert enforcement_errors == [], f"Unexpected granular enforcement at creator_claimed: {enforcement_errors}"
 
 

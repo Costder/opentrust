@@ -79,10 +79,12 @@ def _semantic_errors(data: dict[str, Any]) -> list[str]:
     permission_manifest = data.get("permission_manifest") or {}
     for key in DANGEROUS_PERMISSION_FLAGS:
         if permission_manifest.get(key) is True:
-            errors.append(
-                f"$.permission_manifest.{key}: dangerous permissions must be scoped, justified, "
-                "and denied by default in local policy; do not ship a broad boolean true for production"
-            )
+            # At reviewer_signed and above, the granular enforcement block emits a more specific error
+            if trust_status not in _TRUST_LEVELS_REQUIRING_GRANULAR:
+                errors.append(
+                    f"$.permission_manifest.{key}: dangerous permissions must be scoped, justified, "
+                    "and denied by default in local policy; do not ship a broad boolean true for production"
+                )
 
     # v0.2 enforcement: reviewer_signed+ must use granular scopes for high-risk surfaces
     if trust_status in _TRUST_LEVELS_REQUIRING_GRANULAR:
