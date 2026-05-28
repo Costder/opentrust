@@ -1,6 +1,6 @@
 {
   "_comment": "Example of a high-value tool with escrow, dispute resolution, and revenue split. Shows the full agent financial contract — an agent can read this passport and know exactly what it will cost, how funds are protected, and what recourse it has if delivery fails.",
-  "spec_version": "0.1.0",
+  "spec_version": "1.0.0",
 
   "tool_identity": {
     "name": "Deep Code Audit",

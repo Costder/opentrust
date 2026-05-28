@@ -26,8 +26,10 @@ import {
 import {
   payWithUsdc,
   getPaymentStatus,
+  preparePayment,
   PAYMENT_TOOLS,
 } from './capabilities/payments/index.js';
+import type { PreparePaymentParams, PreparePaymentReceipt } from './capabilities/payments/index.js';
 import {
   createVirtualCard,
   getCardDetails,
@@ -284,6 +286,23 @@ function createMcpServer(claims: PassportClaims): Server {
             tx_hash: { type: 'string', description: 'Transaction hash (0x-prefixed)' },
           },
           required: ['tx_hash'],
+        },
+      },
+      {
+        name: PAYMENT_TOOLS.prepare_payment.name,
+        description: 'Checks Base balance, bridges from Polygon if needed, then executes a USDC payment on Base in one step.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['from_label', 'to_address', 'amount_usdc'],
+          properties: {
+            from_label: { type: 'string', description: 'Wallet label to send from' },
+            to_address: { type: 'string', description: 'Recipient wallet address (0x...)' },
+            amount_usdc: { type: 'number', description: 'Amount of USDC to send' },
+            memo: { type: 'string', description: 'Optional payment memo' },
+            bridge_if_needed: { type: 'boolean', description: 'Bridge from Polygon if balance insufficient (default true)' },
+            bridge_timeout_ms: { type: 'number', description: 'Bridge polling timeout in milliseconds (default 120000)' },
+            bridge_poll_interval_ms: { type: 'number', description: 'Bridge polling interval in milliseconds (default 5000)' },
+          },
         },
       },
       // Card tools
@@ -993,6 +1012,11 @@ function createMcpServer(claims: PassportClaims): Server {
       if (name === 'get_payment_status') {
         const result = await getPaymentStatus(args as { tx_hash: string }, claims);
         return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+      }
+      if (name === 'prepare_payment') {
+        const params = args as unknown as PreparePaymentParams;
+        const receipt: PreparePaymentReceipt = await preparePayment(params, claims);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(receipt) }] };
       }
 
       // Card tools

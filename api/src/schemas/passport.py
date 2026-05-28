@@ -10,6 +10,46 @@ AUTO_DRAFT_WARNING = (
 )
 
 
+class SeverityCounts(BaseModel):
+    critical: int = Field(default=0, ge=0)
+    high: int = Field(default=0, ge=0)
+    medium: int = Field(default=0, ge=0)
+    low: int = Field(default=0, ge=0)
+    info: int = Field(default=0, ge=0)
+
+
+class ScannerOutput(BaseModel):
+    source: str
+    scanner_version: str | None = None
+    run_at: str
+    severity_counts: SeverityCounts
+    report_url: str | None = None
+    notes: str | None = None
+
+
+class ReviewerIdentity(BaseModel):
+    name: str = Field(min_length=1)
+    github: str | None = None
+    key_id: str | None = None
+    reviewed_at: str
+    scope: str | None = None
+
+
+class SignedAttestation(BaseModel):
+    key_id: str
+    algorithm: str
+    signature: str
+    payload_hash: str
+
+
+class SecurityEvidenceBlock(BaseModel):
+    scanner_output: ScannerOutput
+    reviewer_identity: ReviewerIdentity
+    commit_hash: str = Field(min_length=7)
+    dependency_snapshot: dict[str, str] = Field(min_length=1)
+    signed_attestation: SignedAttestation
+
+
 class TrustStatus(str, Enum):
     auto_generated_draft = "auto_generated_draft"
     creator_claimed = "creator_claimed"
@@ -28,7 +68,7 @@ class PassportBase(BaseModel):
     version_hash: dict
     capabilities: list[str] = Field(min_length=1)
     permission_manifest: dict
-    evidence: dict | None = None
+    evidence: SecurityEvidenceBlock | None = None
     risk_summary: dict | None = None
     review_history: list[dict] = []
     commercial_status: dict

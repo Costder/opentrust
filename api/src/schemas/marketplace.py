@@ -130,7 +130,12 @@ class MarketplaceListing(BaseModel):
 class MarketplaceOrderRequest(BaseModel):
     listing_id: str
     buyer_wallet_id: str
-    transaction_hash: str | None = None
+    transaction_hash: str | None = Field(
+        default=None,
+        min_length=66,
+        max_length=66,
+        pattern=r"^0x[0-9a-fA-F]{64}$",
+    )
 
 
 class MarketplaceOrder(BaseModel):
@@ -180,3 +185,16 @@ class VerifiedBadge(BaseModel):
     report_id: str
     status: str
     label: str = "OpenTrust Verified"
+
+
+class OnchainPaymentVerificationRequest(BaseModel):
+    order_id: str
+    transaction_hash: str = Field(min_length=66, max_length=66, pattern=r"^0x[0-9a-fA-F]{64}$")
+
+
+class OnchainPaymentVerificationResponse(BaseModel):
+    order_id: str
+    verified: bool
+    transaction_hash: str
+    amount_usdc: str  # Decimal as string for JSON safety
+    message: str

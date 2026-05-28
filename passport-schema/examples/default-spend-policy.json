@@ -1,5 +1,5 @@
 {
-  "policy_version": "0.1.0",
+  "policy_version": "1.0.0",
   "max_cost_per_call_usdc": 0.01,
   "max_cost_per_session_usdc": 0.1,
   "max_cost_per_day_usdc": 1.0,
