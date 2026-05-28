@@ -289,7 +289,7 @@ function createMcpServer(claims: PassportClaims): Server {
         },
       },
       {
-        name: 'prepare_payment',
+        name: PAYMENT_TOOLS.prepare_payment.name,
         description: 'Checks Base balance, bridges from Polygon if needed, then executes a USDC payment on Base in one step.',
         inputSchema: {
           type: 'object' as const,

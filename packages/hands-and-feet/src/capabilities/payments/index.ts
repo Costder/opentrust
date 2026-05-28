@@ -10,6 +10,7 @@ export const PAYMENT_TOOLS = {
     spendPolicy: { maxPerCallUsdc: 1000, dailyCapUsdc: 10000 },
   },
   get_payment_status: { name: 'get_payment_status', minTrustLevel: 2 as const },
+  prepare_payment: { name: 'prepare_payment', minTrustLevel: 4 as const },
 } as const;
 
 const BASE_RPC = process.env.BASE_RPC_URL ?? 'https://mainnet.base.org';
