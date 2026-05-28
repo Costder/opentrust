@@ -27,12 +27,15 @@ def _load_schema_bundle(root: Path) -> tuple[dict[str, Any], Registry]:
     schema = json.loads((root / "passport.schema.json").read_text())
     permissions = json.loads((root / "permissions.schema.json").read_text())
     commercial = json.loads((root / "commercial-status.schema.json").read_text())
+    security = json.loads((root / "security.schema.json").read_text())
     registry = Registry().with_resources(
         [
             ("permissions.schema.json", Resource.from_contents(permissions)),
             ("commercial-status.schema.json", Resource.from_contents(commercial)),
+            ("security.schema.json", Resource.from_contents(security)),
             ("https://opentrust.dev/schemas/permissions.schema.json", Resource.from_contents(permissions)),
             ("https://opentrust.dev/schemas/commercial-status.schema.json", Resource.from_contents(commercial)),
+            ("https://opentrust.dev/schemas/security.schema.json", Resource.from_contents(security)),
         ]
     )
     return schema, registry
