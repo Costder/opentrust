@@ -16,6 +16,14 @@ DANGEROUS_PERMISSION_FLAGS = (
     "network_unrestricted",
 )
 
+_REQUIRES_GRANULAR_AT_REVIEWER_SIGNED = frozenset({
+    "file", "network", "terminal", "wallet", "private_data"
+})
+
+_TRUST_LEVELS_REQUIRING_GRANULAR = frozenset({
+    "reviewer_signed", "security_checked", "continuously_monitored"
+})
+
 
 def _json_path(error) -> str:
     if not error.absolute_path:
@@ -66,6 +74,8 @@ def _semantic_errors(data: dict[str, Any]) -> list[str]:
             "a version string alone is not enough to bind trust to code"
         )
 
+    trust_status = data.get("trust_status")
+
     permission_manifest = data.get("permission_manifest") or {}
     for key in DANGEROUS_PERMISSION_FLAGS:
         if permission_manifest.get(key) is True:
@@ -74,7 +84,17 @@ def _semantic_errors(data: dict[str, Any]) -> list[str]:
                 "and denied by default in local policy; do not ship a broad boolean true for production"
             )
 
-    trust_status = data.get("trust_status")
+    # v0.2 enforcement: reviewer_signed+ must use granular scopes for high-risk surfaces
+    if trust_status in _TRUST_LEVELS_REQUIRING_GRANULAR:
+        for key in _REQUIRES_GRANULAR_AT_REVIEWER_SIGNED:
+            val = permission_manifest.get(key)
+            if val is True:
+                errors.append(
+                    f"$.permission_manifest.{key}: trust_status '{trust_status}' requires granular "
+                    f"scope object (v0.2) — boolean true is not allowed at this trust level. "
+                    f"Replace with a structured scope: e.g. network: {{allowed_domains: [...], outbound_only: true}}"
+                )
+
     if trust_status in {"reviewer_signed", "security_checked", "continuously_monitored"}:
         if not data.get("review_history"):
             errors.append(

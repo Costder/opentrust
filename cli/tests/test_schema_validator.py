@@ -207,3 +207,96 @@ def test_invalid_granular_network_field_is_rejected(tmp_path):
         "network" in e.lower() and ("additional" in e.lower() or "unknown_extra_field" in e.lower() or "remove unknown" in e.lower())
         for e in errors
     ), f"Expected an additionalProperties error for network scope, got: {errors}"
+
+
+def test_reviewer_signed_with_boolean_network_is_rejected(tmp_path):
+    """reviewer_signed passports must not use boolean true for high-risk permissions (v0.2 enforcement)."""
+    passport = {
+        "spec_version": "0.2.0",
+        "tool_identity": {
+            "slug": "signed-bool-network",
+            "name": "Signed Bool Network",
+            "source_url": "https://github.com/example/signed-bool",
+            "category": "developer-tools",
+        },
+        "trust_status": "reviewer_signed",
+        "version_hash": {"version": "1.0.0", "commit": "abc123def456"},
+        "capabilities": ["code_review"],
+        "permission_manifest": {
+            "network": True,  # boolean true — must be rejected at reviewer_signed
+        },
+        "source_formats": ["mcp"],
+        "commercial_status": {"status": "free"},
+        "security": {
+            "registry_signature": {
+                "key_id": "opentrust-registry-2026-1",
+                "algorithm": "ed25519",
+                "signature": "AAAA",
+                "signed_at": "2026-01-01T00:00:00Z",
+                "payload_hash": "sha256:abc",
+            }
+        },
+        "review_history": [{"status": "approved", "timestamp": "2026-01-01T00:00:00Z", "reviewer": "alice"}],
+    }
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    assert any(
+        "granular" in e.lower() or "reviewer_signed" in e
+        for e in errors
+        if "network" in e.lower()
+    ), f"Expected granular enforcement error for network at reviewer_signed, got: {errors}"
+
+
+def test_creator_claimed_with_boolean_network_is_not_enforcement_rejected(tmp_path):
+    """creator_claimed passports may still use boolean true — enforcement only at reviewer_signed+."""
+    passport = _minimal_passport({"permission_manifest": {"network": True}})
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    # Must NOT have any granular enforcement error
+    enforcement_errors = [
+        e for e in errors
+        if "granular" in e.lower() and "reviewer_signed" in e
+    ]
+    assert enforcement_errors == [], f"Unexpected granular enforcement at creator_claimed: {enforcement_errors}"
+
+
+def test_reviewer_signed_with_granular_network_passes_enforcement(tmp_path):
+    """reviewer_signed passports with a proper granular scope must NOT get an enforcement error."""
+    passport = {
+        "spec_version": "0.2.0",
+        "tool_identity": {
+            "slug": "signed-granular-network",
+            "name": "Signed Granular Network",
+            "source_url": "https://github.com/example/signed-granular",
+            "category": "developer-tools",
+        },
+        "trust_status": "reviewer_signed",
+        "version_hash": {"version": "1.0.0", "commit": "abc123def456"},
+        "capabilities": ["code_review"],
+        "permission_manifest": {
+            "network": {
+                "allowed_domains": ["api.github.com"],
+                "allowed_schemes": ["https"],
+                "outbound_only": True,
+            }
+        },
+        "source_formats": ["mcp"],
+        "commercial_status": {"status": "free"},
+        "security": {
+            "registry_signature": {
+                "key_id": "opentrust-registry-2026-1",
+                "algorithm": "ed25519",
+                "signature": "AAAA",
+                "signed_at": "2026-01-01T00:00:00Z",
+                "payload_hash": "sha256:abc",
+            }
+        },
+        "review_history": [{"status": "approved", "timestamp": "2026-01-01T00:00:00Z", "reviewer": "alice"}],
+    }
+    path = tmp_path / "p.json"
+    path.write_text(json.dumps(passport))
+    errors = validate_passport_file(str(path))
+    enforcement_errors = [e for e in errors if "granular" in e.lower()]
+    assert enforcement_errors == [], f"Unexpected enforcement error for granular scope: {enforcement_errors}"
