@@ -1,6 +1,6 @@
 {
   "$comment": "Example: A free MCP search tool at community_reviewed trust level.",
-  "spec_version": "0.2.0",
+  "spec_version": "1.0.0",
 
   "tool_identity": {
     "name": "Brave Search",

@@ -1,6 +1,6 @@
 {
   "_comment": "Example passport using v0.2 granular permission scopes. Contrast with free-tool.json (v0.1 boolean permissions). This is a GitHub file-search MCP tool with scoped permissions instead of broad boolean flags.",
-  "spec_version": "0.2.0",
+  "spec_version": "1.0.0",
 
   "tool_identity": {
     "name": "GitHub File Search MCP",
