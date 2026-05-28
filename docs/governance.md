@@ -143,3 +143,30 @@ This bootstrapping limitation is documented here rather than hidden. Users evalu
 ## Questions
 
 Open a GitHub Discussion or reach out to [@Costder](https://github.com/Costder).
+
+---
+
+## Governance Transfer
+
+OpenTrust v1.0.0 marks the point at which the protocol moves from sole-author stewardship
+toward community governance.
+
+### Transfer timeline
+
+- **v1.0.0 (2026-05-28)** — Protocol frozen. Registry operator: Joshua Herron / SoulForge Registry.
+  Passport schema v1.0.0 is the stable baseline; future changes require an RFC.
+- **v1.1+ (community)** — RFC process opens. Changes to `passport.schema.json`, the trust ladder,
+  or payment interfaces require a 14-day public comment period before merge.
+- **Multi-operator** — Additional registry operators may register by submitting a signed operator
+  declaration to `/.well-known/opentrust-keys.json` and opening a PR to `registry-operators.json`
+  (to be created at v1.1).
+
+### RFC process
+
+Schema changes require an RFC (Request for Comment):
+1. Open an issue titled `RFC: <change summary>`
+2. 14-day comment period
+3. Core maintainers review; supermajority (2/3) required for breaking changes
+4. Merged changes bump the minor version; breaking changes bump the major version
+
+See `CONTRIBUTING.md` for the full contribution guide.
