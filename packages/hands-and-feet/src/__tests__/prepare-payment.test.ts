@@ -5,6 +5,10 @@ import type { PassportClaims } from '../types.js';
 // Mocks
 // ---------------------------------------------------------------------------
 
+vi.mock('../trust.js', () => ({
+  enforceTrust: vi.fn(),
+}));
+
 vi.mock('../capabilities/wallet/index.js', () => ({
   getBalance: vi.fn(),
 }));
@@ -64,8 +68,8 @@ describe('preparePayment', () => {
     expect(receipt.amountSent).toBe(25);
     expect(receipt.bridged).toBe(false);
     expect(receipt.bridge_id).toBeUndefined();
-    expect(bridgeToBase).not.toHaveBeenCalled();
-    expect(payWithUsdc).toHaveBeenCalledWith(
+    expect(vi.mocked(bridgeToBase)).not.toHaveBeenCalled();
+    expect(vi.mocked(payWithUsdc)).toHaveBeenCalledWith(
       expect.objectContaining({ from_label: 'my-wallet', to_address: '0xrecipient', amount: 25 }),
       SYSTEM_CLAIMS,
     );
@@ -112,8 +116,8 @@ describe('preparePayment', () => {
     expect(receipt.txHash).toBe('0xabc');
     expect(receipt.bridged).toBe(true);
     expect(receipt.bridge_id).toBe('bridge-123');
-    expect(getBridgeStatus).toHaveBeenCalledTimes(2);
-    expect(payWithUsdc).toHaveBeenCalledOnce();
+    expect(vi.mocked(getBridgeStatus)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(payWithUsdc)).toHaveBeenCalledOnce();
   });
 
   // -------------------------------------------------------------------------
@@ -135,8 +139,8 @@ describe('preparePayment', () => {
 
     expect(receipt.status).toBe('failed');
     expect(receipt.error).toContain('insufficient');
-    expect(bridgeToBase).not.toHaveBeenCalled();
-    expect(payWithUsdc).not.toHaveBeenCalled();
+    expect(vi.mocked(bridgeToBase)).not.toHaveBeenCalled();
+    expect(vi.mocked(payWithUsdc)).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -171,7 +175,7 @@ describe('preparePayment', () => {
     expect(receipt.status).toBe('failed');
     expect(receipt.error).toContain('bridge failed');
     expect(receipt.bridge_id).toBe('bridge-stuck');
-    expect(payWithUsdc).not.toHaveBeenCalled();
+    expect(vi.mocked(payWithUsdc)).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -205,6 +209,6 @@ describe('preparePayment', () => {
 
     expect(receipt.status).toBe('failed');
     expect(receipt.error).toContain('timeout');
-    expect(payWithUsdc).not.toHaveBeenCalled();
+    expect(vi.mocked(payWithUsdc)).not.toHaveBeenCalled();
   });
 });

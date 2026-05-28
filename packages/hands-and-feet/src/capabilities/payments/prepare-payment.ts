@@ -1,4 +1,6 @@
+import { parseUnits } from 'ethers';
 import type { PassportClaims } from '../../types.js';
+import { enforceTrust } from '../../trust.js';
 import { getBalance } from '../wallet/index.js';
 import { bridgeToBase, getBridgeStatus } from '../bridge/index.js';
 import { payWithUsdc } from './index.js';
@@ -26,10 +28,17 @@ export interface PreparePaymentReceipt {
   error?: string;
 }
 
+const PREPARE_PAYMENT_TOOL = {
+  name: 'prepare_payment',
+  minTrustLevel: 4 as const,
+} as const;
+
 export async function preparePayment(
   params: PreparePaymentParams,
   claims: PassportClaims,
 ): Promise<PreparePaymentReceipt> {
+  enforceTrust(claims, PREPARE_PAYMENT_TOOL);
+
   const bridgeIfNeeded = params.bridge_if_needed !== false;
   const bridgeTimeoutMs = params.bridge_timeout_ms ?? 120_000;
   const bridgePollIntervalMs = params.bridge_poll_interval_ms ?? 5_000;
@@ -39,13 +48,14 @@ export async function preparePayment(
     { label: params.from_label, chain: 'base' },
     claims,
   );
-  const currentBalance = parseFloat(balanceResult.usdc);
+  const balanceMicro = parseUnits(balanceResult.usdc, 6);     // bigint
+  const requiredMicro = parseUnits(params.amount_usdc.toString(), 6);  // bigint
 
   let bridged = false;
   let bridge_id: string | undefined;
 
   // Step 2: Bridge if needed
-  if (currentBalance < params.amount_usdc) {
+  if (balanceMicro < requiredMicro) {
     if (!bridgeIfNeeded) {
       return {
         status: 'failed',
