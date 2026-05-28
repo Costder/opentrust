@@ -54,6 +54,10 @@ def test_invalid_permission_field_returns_schema_error(tmp_path):
     data = {**MINIMAL, "permission_manifest": {"network": {"unknown_field": True}}}
     errors, _ = validate(_write(tmp_path, data))
     assert len(errors) > 0
+    assert any(
+        "unknown_field" in e or "additional" in e.lower()
+        for e in errors
+    ), f"Expected additionalProperties error for unknown_field, got: {errors}"
 
 
 def test_passport_with_security_field_does_not_crash(tmp_path):
