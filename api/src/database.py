@@ -73,8 +73,12 @@ class PassportRow:
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 def _serialize(col: str, val: Any) -> Any:
-    if col in _JSON_COLS and isinstance(val, (dict, list)):
-        return json.dumps(val)
+    if col in _JSON_COLS:
+        if hasattr(val, "model_dump"):
+            # Pydantic v2 BaseModel — serialise to dict then JSON
+            return json.dumps(val.model_dump())
+        if isinstance(val, (dict, list)):
+            return json.dumps(val)
     return val
 
 
