@@ -70,7 +70,7 @@ def test_validate_passport_file_blocks_dangerous_broad_permissions(tmp_path):
 def test_validate_passport_with_security_field_does_not_crash(tmp_path):
     """Passports with a security field must not crash the validator (regression: security.schema.json was not registered)."""
     passport = {
-        "spec_version": "0.2.0",
+        "spec_version": "0.1.0",
         "tool_identity": {
             "slug": "secure-tool",
             "name": "Secure Tool",
@@ -89,7 +89,7 @@ def test_validate_passport_with_security_field_does_not_crash(tmp_path):
         },
         "source_formats": ["mcp"],
         "commercial_status": {"status": "free"},
-        "agent_access": {"level": "caller_controlled"},
+        "agent_access": {"mcp_readable": True},
         "security": {
             "registry_signature": {
                 "key_id": "opentrust-registry-2026-1",
@@ -100,12 +100,12 @@ def test_validate_passport_with_security_field_does_not_crash(tmp_path):
             }
         },
         "review_history": [
-            {"reviewer": "alice", "date": "2026-01-01", "result": "approved"}
+            {"status": "approved", "timestamp": "2026-01-01T00:00:00Z", "reviewer": "alice"}
         ],
     }
     path = tmp_path / "passport.json"
     path.write_text(json.dumps(passport))
     # Must not raise — previously crashed with Unresolvable: security.schema.json
     errors = validate_passport_file(str(path))
-    # No Unresolvable exception means the bundle is complete
-    assert isinstance(errors, list)
+    # A valid reviewer_signed passport with a security field must produce zero validation errors
+    assert errors == []
