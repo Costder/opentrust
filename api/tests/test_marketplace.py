@@ -80,11 +80,14 @@ class TestEscrowOrderFlow:
 
     async def test_order_with_valid_tx_hash_verifies_and_creates_order(self, client):
         """Orders with a valid tx_hash call verify_usdc_transfer and create the order."""
-        # Set up: connect buyer and seller wallets
         with patch("api.src.routes.marketplace.settings") as mock_settings:
             mock_settings.opentrust_customer_wallets_enabled = True
             mock_settings.opentrust_byo_wallet_enabled = True
             mock_settings.opentrust_embedded_wallet_enabled = False
+            mock_settings.base_rpc_url = "https://mainnet.base.org"
+            mock_settings.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+
+            # Set up: connect buyer and seller wallets
             buyer_resp = await client.post(
                 "/api/v1/wallets/connect",
                 json={"owner": "buyer", "address": "0x" + "b" * 40, "kind": "byo"},
@@ -93,31 +96,28 @@ class TestEscrowOrderFlow:
                 "/api/v1/wallets/connect",
                 json={"owner": "seller", "address": "0x" + "c" * 40, "kind": "byo"},
             )
-        buyer_wallet_id = buyer_resp.json()["wallet_id"]
-        seller_wallet_id = seller_resp.json()["wallet_id"]
+            buyer_wallet_id = buyer_resp.json()["wallet_id"]
+            seller_wallet_id = seller_resp.json()["wallet_id"]
 
-        # Create a listing in the store directly (bypasses repo verification for test simplicity)
-        from api.src.schemas.marketplace import MarketplaceListing
-        listing = MarketplaceListing(
-            listing_id="listing_test_001",
-            seller_wallet_id=seller_wallet_id,
-            repo_id="repo_test",
-            title="Test Tool",
-            price_usdc=Decimal("19.00"),
-        )
-        store.listings[listing.listing_id] = listing
-
-        # Mock verify_usdc_transfer to succeed
-        with patch("api.src.routes.marketplace.verify_usdc_transfer") as mock_verify:
-            mock_verify.return_value = MagicMock(
-                verified=True,
-                amount_usdc=Decimal("19.00"),
-                sender="0x" + "b" * 40,
-                recipient="0x" + "c" * 40,
+            # Create a listing in the store directly (bypasses repo verification for test simplicity)
+            from api.src.schemas.marketplace import MarketplaceListing
+            listing = MarketplaceListing(
+                listing_id="listing_test_001",
+                seller_wallet_id=seller_wallet_id,
+                repo_id="repo_test",
+                title="Test Tool",
+                price_usdc=Decimal("19.00"),
             )
-            with patch("api.src.routes.marketplace.settings") as mock_settings:
-                mock_settings.base_rpc_url = "https://mainnet.base.org"
-                mock_settings.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+            store.listings[listing.listing_id] = listing
+
+            # Mock verify_usdc_transfer to succeed
+            with patch("api.src.routes.marketplace.verify_usdc_transfer") as mock_verify:
+                mock_verify.return_value = MagicMock(
+                    verified=True,
+                    amount_usdc=Decimal("19.00"),
+                    sender="0x" + "b" * 40,
+                    recipient="0x" + "c" * 40,
+                )
                 order_resp = await client.post(
                     "/api/v1/marketplace/orders",
                     json={
@@ -136,11 +136,14 @@ class TestEscrowOrderFlow:
         from api.src.schemas.marketplace import MarketplaceListing
         from api.src.services.onchain import OnchainVerificationError
 
-        # Set up wallets and listing
         with patch("api.src.routes.marketplace.settings") as mock_settings:
             mock_settings.opentrust_customer_wallets_enabled = True
             mock_settings.opentrust_byo_wallet_enabled = True
             mock_settings.opentrust_embedded_wallet_enabled = False
+            mock_settings.base_rpc_url = "https://mainnet.base.org"
+            mock_settings.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+
+            # Set up wallets and listing
             buyer_resp = await client.post(
                 "/api/v1/wallets/connect",
                 json={"owner": "buyer", "address": "0x" + "b" * 40, "kind": "byo"},
@@ -149,23 +152,20 @@ class TestEscrowOrderFlow:
                 "/api/v1/wallets/connect",
                 json={"owner": "seller", "address": "0x" + "c" * 40, "kind": "byo"},
             )
-        buyer_wallet_id = buyer_resp.json()["wallet_id"]
-        seller_wallet_id = seller_resp.json()["wallet_id"]
+            buyer_wallet_id = buyer_resp.json()["wallet_id"]
+            seller_wallet_id = seller_resp.json()["wallet_id"]
 
-        listing = MarketplaceListing(
-            listing_id="listing_test_002",
-            seller_wallet_id=seller_wallet_id,
-            repo_id="repo_test",
-            title="Test Tool",
-            price_usdc=Decimal("19.00"),
-        )
-        store.listings[listing.listing_id] = listing
+            listing = MarketplaceListing(
+                listing_id="listing_test_002",
+                seller_wallet_id=seller_wallet_id,
+                repo_id="repo_test",
+                title="Test Tool",
+                price_usdc=Decimal("19.00"),
+            )
+            store.listings[listing.listing_id] = listing
 
-        with patch("api.src.routes.marketplace.verify_usdc_transfer") as mock_verify:
-            mock_verify.side_effect = OnchainVerificationError("amount mismatch")
-            with patch("api.src.routes.marketplace.settings") as mock_settings:
-                mock_settings.base_rpc_url = "https://mainnet.base.org"
-                mock_settings.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+            with patch("api.src.routes.marketplace.verify_usdc_transfer") as mock_verify:
+                mock_verify.side_effect = OnchainVerificationError("amount mismatch")
                 order_resp = await client.post(
                     "/api/v1/marketplace/orders",
                     json={

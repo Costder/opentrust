@@ -11,8 +11,6 @@ from ..schemas.marketplace import (
     MarketplaceListingRequest,
     MarketplaceOrder,
     MarketplaceOrderRequest,
-    OnchainPaymentVerificationRequest,
-    OnchainPaymentVerificationResponse,
     TrustReport,
     TrustReportRequest,
     VerifiedBadge,
