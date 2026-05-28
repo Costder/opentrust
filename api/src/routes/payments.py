@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ..config import settings
 from ..schemas.marketplace import (
@@ -17,9 +17,26 @@ from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
 
 class OnchainVerifyRequest(BaseModel):
     tx_hash: str = Field(min_length=66, max_length=66, pattern=r"^0x[0-9a-fA-F]{64}$")
-    expected_sender: str = Field(min_length=42, max_length=42)
-    expected_recipient: str = Field(min_length=42, max_length=42)
+    expected_sender: str = Field(
+        min_length=42,
+        max_length=42,
+        pattern=r"^0x[0-9a-fA-F]{40}$",
+    )
+    expected_recipient: str = Field(
+        min_length=42,
+        max_length=42,
+        pattern=r"^0x[0-9a-fA-F]{40}$",
+    )
     expected_amount_usdc: str  # string to avoid float precision issues
+
+    @field_validator("expected_amount_usdc")
+    @classmethod
+    def validate_decimal_string(cls, v: str) -> str:
+        try:
+            Decimal(v)
+        except Exception:
+            raise ValueError("expected_amount_usdc must be a valid decimal string (e.g. '25.00')")
+        return v
 
 
 class OnchainVerifyResponse(BaseModel):

@@ -181,9 +181,6 @@ class TestEscrowOrderFlow:
 class TestOnchainPaymentVerificationEndpoint:
     async def test_valid_tx_returns_verified_true(self, client):
         """POST /payments/verify-onchain returns 200 and verified=True for a valid tx."""
-        from decimal import Decimal
-        from unittest.mock import MagicMock, patch
-
         with patch("api.src.routes.payments.verify_usdc_transfer") as mock_verify:
             mock_verify.return_value = MagicMock(
                 verified=True,
@@ -210,7 +207,6 @@ class TestOnchainPaymentVerificationEndpoint:
 
     async def test_invalid_tx_returns_400(self, client):
         """POST /payments/verify-onchain returns 400 when on-chain verification fails."""
-        from unittest.mock import patch
         from api.src.services.onchain import OnchainVerificationError
 
         with patch("api.src.routes.payments.verify_usdc_transfer") as mock_verify:
@@ -236,6 +232,19 @@ class TestOnchainPaymentVerificationEndpoint:
                 "expected_sender": "0x" + "a" * 40,
                 "expected_recipient": "0x" + "b" * 40,
                 "expected_amount_usdc": "25.00",
+            },
+        )
+        assert response.status_code == 422
+
+    async def test_invalid_amount_string_returns_422(self, client):
+        """POST /payments/verify-onchain returns 422 for a non-numeric amount string."""
+        response = await client.post(
+            "/api/v1/payments/verify-onchain",
+            json={
+                "tx_hash": "0x" + "c" * 64,
+                "expected_sender": "0x" + "a" * 40,
+                "expected_recipient": "0x" + "b" * 40,
+                "expected_amount_usdc": "not-a-number",
             },
         )
         assert response.status_code == 422
