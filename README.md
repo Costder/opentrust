@@ -163,7 +163,7 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 | **Database** | Turso (SQLite-compatible cloud, free tier) |
 | **Tests** | 483 passing (155 core + 328 hands-and-feet) |
 | **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
-| **Hands and Feet** | `@opentrust/hands-and-feet` v0.1.0 — V1/V2/V3 complete, ~50 MCP tools |
+| **Hands and Feet** | `@opentrust/hands-and-feet` v1.0.0 — V1/V2/V3 complete, ~50 MCP tools |
 
 ## Roadmap
 
@@ -173,15 +173,15 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 - ✅ **v0.4 — Signed registry + revocation.** Ed25519 signing on all passports, pinned public keys at `/.well-known/opentrust-keys.json`, signed revocation list with monotonic versioning and rollback rejection, offline CLI verification. Permanent registry key deployed to production.
 - ✅ **v0.5 — Spend policy + signed payment quotes.** Deny-first local spend policy, signed and expiring payment quotes, nonce protection against replay, wallet-bound quotes, escrow threshold enforcement. 30+ tests across all quote safety properties.
 - ✅ **Production hardening.** HSTS, security headers, rate limiting, bearer-token-protected admin plane with audit log, Turso cloud database, Vercel deployment, 155-test suite.
-- ✅ **Hands and Feet v0.1.** Full V1–V3 MCP capability layer shipped as `@opentrust/hands-and-feet`. ~50 tools: notify, wallet (Base + Polygon), USDC payments, Across Protocol bridge, Moon virtual cards, phone (Twilio/SignalWire/JMP), email (local SMTP + Postmark/Resend), tunnel, webhooks, scheduled tasks, Docker, GitHub, IPFS, RSS, PostScan Mail. Trust enforcement matrix, spend caps, kill switch, EIP-712 guard, fail-closed secrets, scheduled task credential lifecycle. 328 tests.
+- ✅ **Hands and Feet v1.0.** Full V1–V3 MCP capability layer shipped as `@opentrust/hands-and-feet`. ~50 tools: notify, wallet (Base + Polygon), USDC payments, Across Protocol bridge, Moon virtual cards, phone (Twilio/SignalWire/JMP), email (local SMTP + Postmark/Resend), tunnel, webhooks, scheduled tasks, Docker, GitHub, IPFS, RSS, PostScan Mail. Trust enforcement matrix, spend caps, kill switch, EIP-712 guard, fail-closed secrets, scheduled task credential lifecycle. 328 tests.
+- ✅ **v1.0 — Stable spec + governance transfer.** Passport schema frozen at `spec_version: 1.0.0`. All packages at 1.0.0. Governance transfer documented. **v1.0.0** — Stable release. Passport schema frozen. All packages at 1.0.0.
 
 ### Up next
 
-- **v0.2 — Granular permission scopes.** The current manifest uses booleans (`file: true`, `network: true`). The next version adds path-level and domain-level scoping — `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. This makes the manifest machine-enforceable, not just declarative. RFC open for contribution.
-- **v0.3 — Evidence requirements per trust level.** `security_checked` will require a structured evidence block: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation.
-- **v0.6 — Real marketplace flows.** On-chain USDC payments on Base, live escrow contracts, wallet connect, custodial option for non-crypto operators.
+- **v1.1 — Granular permission scopes.** The current manifest uses booleans (`file: true`, `network: true`). The next version adds path-level and domain-level scoping — `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. This makes the manifest machine-enforceable, not just declarative. RFC open for contribution.
+- **v1.2 — Evidence requirements per trust level.** `security_checked` will require a structured evidence block: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation.
+- **v1.3 — Real marketplace flows.** On-chain USDC payments on Base, live escrow contracts, wallet connect, custodial option for non-crypto operators.
 - **Hands and Feet v1.x — `prepare_payment` composite helper.** Detects chain balances, bridges Polygon→Base if needed, polls bridge status, then executes `pay_with_usdc` — internalizes the multi-step bridge-then-pay workflow into one tool call. Bridge fees still surface in the receipt so cost stays visible.
-- **v1.0 — Stable spec + governance transfer.** Once schema is stable, signed verification is in production use, and adoption exists, governance moves to a neutral foundation.
 
 ## Quick Start
 
