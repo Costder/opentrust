@@ -367,6 +367,7 @@ class TestEvidenceEnforcement:
         }
         response = await client.post("/api/v1/tools", json=passport)
         assert response.status_code == 422, response.text
+        assert "signed_attestation" in response.text.lower()
 
     async def test_reviewer_signed_does_not_require_evidence(self, client):
         """reviewer_signed is one level below security_checked — evidence optional."""
