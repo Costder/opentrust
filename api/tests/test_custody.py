@@ -36,11 +36,11 @@ class TestEncryptDecrypt:
         private_key = "0x" + "a" * 64
         secret = "test-secret-key-32-chars-xxxxxxxxx"
         encrypted = encrypt_private_key(private_key, secret, "user-123")
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             decrypt_private_key(encrypted, secret, "user-999")
 
     def test_wrong_secret_cannot_decrypt(self):
         private_key = "0x" + "a" * 64
         encrypted = encrypt_private_key(private_key, "correct-secret-xxxxxxxxxxxxxxxxxx", "user-123")
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             decrypt_private_key(encrypted, "wrong-secret-xxxxxxxxxxxxxxxxxxx", "user-123")
