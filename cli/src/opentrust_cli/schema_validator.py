@@ -16,6 +16,19 @@ DANGEROUS_PERMISSION_FLAGS = (
     "network_unrestricted",
 )
 
+_REQUIRES_GRANULAR_AT_REVIEWER_SIGNED = frozenset({
+    "file", "network", "terminal", "wallet", "private_data"
+})
+
+_TRUST_LEVELS_REQUIRING_GRANULAR = frozenset({
+    "reviewer_signed", "security_checked", "continuously_monitored"
+})
+
+_EVIDENCE_REQUIRED_KEYS = frozenset({
+    "scanner_output", "reviewer_identity", "commit_hash",
+    "dependency_snapshot", "signed_attestation"
+})
+
 
 def _json_path(error) -> str:
     if not error.absolute_path:
@@ -27,12 +40,15 @@ def _load_schema_bundle(root: Path) -> tuple[dict[str, Any], Registry]:
     schema = json.loads((root / "passport.schema.json").read_text())
     permissions = json.loads((root / "permissions.schema.json").read_text())
     commercial = json.loads((root / "commercial-status.schema.json").read_text())
+    security = json.loads((root / "security.schema.json").read_text())
     registry = Registry().with_resources(
         [
             ("permissions.schema.json", Resource.from_contents(permissions)),
             ("commercial-status.schema.json", Resource.from_contents(commercial)),
+            ("security.schema.json", Resource.from_contents(security)),
             ("https://opentrust.dev/schemas/permissions.schema.json", Resource.from_contents(permissions)),
             ("https://opentrust.dev/schemas/commercial-status.schema.json", Resource.from_contents(commercial)),
+            ("https://opentrust.dev/schemas/security.schema.json", Resource.from_contents(security)),
         ]
     )
     return schema, registry
@@ -63,15 +79,46 @@ def _semantic_errors(data: dict[str, Any]) -> list[str]:
             "a version string alone is not enough to bind trust to code"
         )
 
+    trust_status = data.get("trust_status")
+
     permission_manifest = data.get("permission_manifest") or {}
     for key in DANGEROUS_PERMISSION_FLAGS:
         if permission_manifest.get(key) is True:
-            errors.append(
-                f"$.permission_manifest.{key}: dangerous permissions must be scoped, justified, "
-                "and denied by default in local policy; do not ship a broad boolean true for production"
-            )
+            # At reviewer_signed and above, the granular enforcement block emits a more specific error
+            if trust_status not in _TRUST_LEVELS_REQUIRING_GRANULAR:
+                errors.append(
+                    f"$.permission_manifest.{key}: dangerous permissions must be scoped, justified, "
+                    "and denied by default in local policy; do not ship a broad boolean true for production"
+                )
 
-    trust_status = data.get("trust_status")
+    # v0.2 enforcement: reviewer_signed+ must use granular scopes for high-risk surfaces
+    if trust_status in _TRUST_LEVELS_REQUIRING_GRANULAR:
+        for key in _REQUIRES_GRANULAR_AT_REVIEWER_SIGNED:
+            val = permission_manifest.get(key)
+            if val is True:
+                errors.append(
+                    f"$.permission_manifest.{key}: trust_status '{trust_status}' requires granular "
+                    f"scope object (v0.2) — boolean true is not allowed at this trust level. "
+                    f"Replace with a structured scope: e.g. network: {{allowed_domains: [...], outbound_only: true}}"
+                )
+
+    # v0.3 enforcement: security_checked requires a complete evidence block
+    if trust_status in {"security_checked", "continuously_monitored"}:
+        evidence = data.get("evidence")
+        if not evidence:
+            errors.append(
+                "$.evidence: trust_status 'security_checked' requires a complete evidence block "
+                "with scanner_output, reviewer_identity, commit_hash, dependency_snapshot, "
+                "and signed_attestation"
+            )
+        elif isinstance(evidence, dict):
+            missing_keys = _EVIDENCE_REQUIRED_KEYS - set(evidence.keys())
+            if missing_keys:
+                errors.append(
+                    f"$.evidence: incomplete evidence block — missing: {', '.join(sorted(missing_keys))}. "
+                    "All five fields are required for security_checked."
+                )
+
     if trust_status in {"reviewer_signed", "security_checked", "continuously_monitored"}:
         if not data.get("review_history"):
             errors.append(

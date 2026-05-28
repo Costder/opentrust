@@ -9,3 +9,4 @@ python-multipart
 pytest
 pytest-asyncio
 cryptography
+web3>=7.0,<8.0

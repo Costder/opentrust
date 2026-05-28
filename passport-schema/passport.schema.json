@@ -5,12 +5,101 @@
   "description": "Universal trust record for any AI agent tool, regardless of framework or model provider.",
   "type": "object",
   "required": ["spec_version", "tool_identity", "trust_status", "version_hash", "capabilities", "permission_manifest", "source_formats"],
+  "$defs": {
+    "SecurityEvidenceBlock": {
+      "type": "object",
+      "description": "Structured evidence required for trust_status: security_checked. Every field is required — partial evidence blocks are rejected. This is the machine-readable audit trail that lets agents and operators verify security claims without trusting the creator's word.",
+      "required": [
+        "scanner_output",
+        "reviewer_identity",
+        "commit_hash",
+        "dependency_snapshot",
+        "signed_attestation"
+      ],
+      "properties": {
+        "scanner_output": {
+          "type": "object",
+          "description": "Results from one or more static analysis / dependency scanners.",
+          "required": ["source", "run_at", "severity_counts"],
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "github_code_scanning",
+                "github_dependabot",
+                "sarif",
+                "socket",
+                "aikido",
+                "semgrep",
+                "snyk",
+                "other"
+              ]
+            },
+            "scanner_version": { "type": "string" },
+            "run_at": { "type": "string", "format": "date-time" },
+            "severity_counts": {
+              "type": "object",
+              "required": ["critical", "high", "medium", "low"],
+              "properties": {
+                "critical": { "type": "integer", "minimum": 0 },
+                "high":     { "type": "integer", "minimum": 0 },
+                "medium":   { "type": "integer", "minimum": 0 },
+                "low":      { "type": "integer", "minimum": 0 },
+                "info":     { "type": "integer", "minimum": 0 }
+              },
+              "additionalProperties": false
+            },
+            "report_url": { "type": "string", "format": "uri" },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "reviewer_identity": {
+          "type": "object",
+          "description": "Identity of the human who performed the security review.",
+          "required": ["name", "reviewed_at"],
+          "properties": {
+            "name":        { "type": "string", "minLength": 1 },
+            "github":      { "type": "string" },
+            "key_id":      { "type": "string" },
+            "reviewed_at": { "type": "string", "format": "date-time" },
+            "scope":       { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "commit_hash": {
+          "type": "string",
+          "minLength": 7,
+          "description": "The exact git commit hash reviewed. Binds the evidence to a specific code state."
+        },
+        "dependency_snapshot": {
+          "type": "object",
+          "description": "Snapshot of direct dependencies reviewed. Key: package name. Value: version string. At least one entry required. Tools with zero dependencies use {\"none\": \"n/a\"}.",
+          "additionalProperties": { "type": "string" },
+          "minProperties": 1
+        },
+        "signed_attestation": {
+          "type": "object",
+          "description": "Reviewer Ed25519 attestation over the evidence payload.",
+          "required": ["key_id", "algorithm", "signature", "payload_hash"],
+          "properties": {
+            "key_id":       { "type": "string" },
+            "algorithm":    { "type": "string", "enum": ["ed25519"] },
+            "signature":    { "type": "string" },
+            "payload_hash": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "properties": {
 
     "spec_version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Version of the OpenTrust spec this passport was written against (semver). Allows agents and validators to detect schema drift. Current stable spec version: '0.1.0'. Increment to '1.0.0' when the spec reaches stability milestone.",
+      "description": "Version of the OpenTrust spec this passport was written against (semver). Allows agents and validators to detect schema drift. Current stable spec version: '1.0.0'. v1.0 is the first stable release; v0.3 added required evidence blocks for security_checked passports (scanner_output, reviewer_identity, commit_hash, dependency_snapshot, signed_attestation).",
       "examples": ["0.1.0", "1.0.0"]
     },
 
@@ -538,6 +627,14 @@
         }
       },
       "additionalProperties": false
+    },
+
+    "evidence": {
+      "oneOf": [
+        { "$ref": "#/$defs/SecurityEvidenceBlock" },
+        { "type": "null" }
+      ],
+      "description": "Structured evidence block. Required when trust_status is security_checked. Must include scanner_output, reviewer_identity, commit_hash, dependency_snapshot, and signed_attestation."
     }
 
   },
