@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from ..config import settings
 from ..schemas.marketplace import (
@@ -10,13 +11,17 @@ from ..schemas.marketplace import (
     MarketplaceListingRequest,
     MarketplaceOrder,
     MarketplaceOrderRequest,
+    OnchainPaymentVerificationRequest,
+    OnchainPaymentVerificationResponse,
     TrustReport,
     TrustReportRequest,
     VerifiedBadge,
     WalletAccount,
     WalletConnectRequest,
+    WalletKind,
 )
 from ..services.marketplace_store import store
+from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
 
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
 evidence_router = APIRouter(prefix="/evidence", tags=["evidence"])
@@ -54,6 +59,33 @@ async def connect_wallet(request: WalletConnectRequest):
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
+class _GenerateWalletRequest(BaseModel):
+    owner: str = Field(min_length=1)
+
+
+@wallets_router.post("/generate", response_model=WalletAccount)
+async def generate_embedded_wallet(request: _GenerateWalletRequest):
+    """Generate a new embedded wallet server-side. Requires OPENTRUST_EMBEDDED_WALLET_ENABLED=true."""
+    if not settings.opentrust_embedded_wallet_enabled:
+        raise HTTPException(status_code=403, detail="embedded wallet generation is disabled")
+    if not settings.wallet_encryption_secret:
+        raise HTTPException(status_code=503, detail="WALLET_ENCRYPTION_SECRET is not configured")
+    from ..services.custody import encrypt_private_key, generate_wallet
+    wallet_data = generate_wallet()
+    encrypt_private_key(wallet_data["private_key"], settings.wallet_encryption_secret, request.owner)
+    # NOTE: In production, store encrypted_key in the database with wallet_id as key.
+    # For now (in-memory dev mode) we only store the public wallet account, not the private key.
+    account = WalletAccount(
+        wallet_id=f"emb_{wallet_data['address'][-8:]}",
+        owner=request.owner,
+        address=wallet_data["address"],
+        kind=WalletKind.embedded,
+        custody="opentrust_encrypted",
+    )
+    store.wallets[account.wallet_id] = account
+    return account
+
+
 @router.get("/listings", response_model=list[MarketplaceListing])
 async def list_listings():
     return list(store.listings.values())
@@ -76,8 +108,28 @@ async def create_listing(request: MarketplaceListingRequest):
 
 @router.post("/orders", response_model=MarketplaceOrder)
 async def create_order(request: MarketplaceOrderRequest):
-    if settings.opentrust_custodial_wallets_enabled or settings.opentrust_escrow_enabled:
-        raise HTTPException(status_code=501, detail="custody and escrow are intentionally disabled")
+    if request.transaction_hash:
+        # On-chain escrow: verify the USDC transfer before creating the order
+        listing = store.listings.get(request.listing_id)
+        if listing is None:
+            raise HTTPException(status_code=404, detail="listing not found")
+        buyer_wallet = store.wallets.get(request.buyer_wallet_id)
+        seller_wallet = store.wallets.get(listing.seller_wallet_id)
+        if buyer_wallet is None or seller_wallet is None:
+            raise HTTPException(status_code=404, detail="wallet not found")
+        try:
+            verify_usdc_transfer(
+                tx_hash=request.transaction_hash,
+                expected_sender=buyer_wallet.address,
+                expected_recipient=seller_wallet.address,
+                expected_amount_usdc=listing.price_usdc,
+                rpc_url=settings.base_rpc_url,
+                usdc_contract=settings.base_usdc_contract,
+            )
+        except OnchainVerificationError as exc:
+            raise HTTPException(status_code=402, detail=f"payment verification failed: {exc}") from exc
+    elif not (settings.opentrust_custodial_wallets_enabled or settings.opentrust_escrow_enabled):
+        raise HTTPException(status_code=501, detail="on-chain escrow and custody are not enabled")
     try:
         return store.create_order(request)
     except KeyError as exc:
