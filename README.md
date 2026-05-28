@@ -12,6 +12,75 @@ A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an
 
 > **Live:** [web-five-psi-74.vercel.app](https://web-five-psi-74.vercel.app) · [API](https://api-kappa-pied-59.vercel.app/api/v1/health)
 
+---
+
+## Hands and Feet — Agent Real-World Capabilities
+
+[`packages/hands-and-feet`](packages/hands-and-feet/) is a local MCP server that gives AI agents real-world hands. Any MCP-compatible agent (Claude, Codex, Hermes, hyperagent, etc.) connects via Bearer token and gains the ability to send and receive email, provision phone numbers, manage crypto wallets, make USDC payments, issue virtual Visa cards, browse the web, manage infrastructure, and more — with no human-in-the-loop required after initial setup.
+
+**OpenTrust is the trust and identity layer underneath.** Every tool call is gated by the agent's OpenTrust passport trust level (L1–L7). Spend caps, a kill switch, and fail-closed secret loading are enforced throughout.
+
+```bash
+# Install and configure
+npx @opentrust/hands-and-feet init
+
+# Start the MCP server (default: http://localhost:3847)
+npx @opentrust/hands-and-feet serve
+
+# Point any MCP-compatible agent at it:
+# POST http://localhost:3847/mcp
+# Authorization: Bearer <OpenTrust-signed agent passport token>
+```
+
+### V1 — Foundation & Core Capabilities
+
+| Capability | Tools | Min trust |
+|---|---|---|
+| **Notify** | `notify_human` — push notification via ntfy.sh | L2 |
+| **Wallet** | `create_wallet`, `get_address`, `get_balance`, `send_usdc`, `sign_message`, `sign_typed_data` | L3–L4 |
+| **Bridge** | `bridge_to_polygon`, `bridge_to_base`, `get_bridge_status` (Across Protocol) | L4 |
+| **Payments** | `pay_with_usdc`, `get_payment_status` — USDC on Base, thin wrapper over OpenTrust's payment schema | L4 |
+| **Cards** | `create_virtual_card`, `get_card_details`, `add_funds_to_card`, `top_up_moon_credit`, `freeze_card`, `delete_card`, `get_card_transactions` — Pay with Moon virtual Visa | L4 |
+| **Phone** | `provision_phone_number`, `send_sms`, `read_sms`, `release_phone_number` — Twilio or SignalWire | L3 |
+| **Email** | `create_mailbox`, `send_email`, `read_inbox`, `wait_for_email`, `delete_mailbox` — local SMTP or Postmark/Resend | L2 |
+
+### V2 — Reach & Autonomy
+
+| Capability | Tools | Min trust |
+|---|---|---|
+| **Tunnel** | `create_tunnel`, `get_tunnel_url`, `close_tunnel` — cloudflared or ngrok | L3 |
+| **Webhook** | `create_webhook`, `get_webhook_url`, `read_webhook_events`, `wait_for_webhook`, `delete_webhook` | L3 |
+| **Scheduled Tasks** | `create_task`, `list_tasks`, `delete_task`, `pause_task` — node-cron with passport credential lifecycle | L3 |
+| **Docker** | `run_container`, `stop_container`, `remove_container`, `list_containers`, `container_logs`, `exec_in_container` | L4 |
+| **Phone (JMP)** | `provision_phone_number_jmp`, `send_sms_jmp`, `read_sms_jmp`, `release_phone_number_jmp` — no-KYC XMPP/JMP | L3 |
+
+### V3 — Full Power
+
+| Capability | Tools | Min trust |
+|---|---|---|
+| **GitHub** | `create_repo`, `create_file`, `create_pull_request`, `list_repos` — `@octokit/rest` | L3 |
+| **IPFS** | `publish_content`, `get_ipfs_content`, `pin_content` — kubo-rpc-client + web3.storage fallback | L3 |
+| **RSS Feed** | `create_feed`, `add_feed_item`, `serve_feed` — served at `/feeds/:label` | L3 |
+| **PostScan Mail** | `list_mail`, `forward_mail`, `shred_mail`, `scan_mail` — physical mailbox API, requires USPS Form 1583 | L3 |
+
+### Safety features
+
+- **Trust enforcement matrix** — every tool enforces a minimum passport trust level before executing. L4 tools (wallets, cards, Docker) require elevated trust.
+- **Spend caps** — per-wallet `max_per_call`, `daily_cap`, and `gas_reserve_amount`. Transactions rejected pre-broadcast; never silently downgraded.
+- **Kill switch** — `hands-and-feet pause / resume`, passphrase-protected, CLI only. Propagates across all instances via registry flag.
+- **EIP-712 guard** — first use of any new `(domain, primaryType)` pair is rejected with `notify_human` fired. Human adds to allowlist via `hands-and-feet allowlist-add-typed-data`.
+- **Fail-closed secrets** — if the OpenTrust registry is unreachable, the server refuses to start. `--allow-local-fallback` opts in with a prominent warning.
+- **Scheduled task credential lifecycle** — task stores passport ID + version + permission snapshot at schedule time. On fire: narrower-of-(old, new) scope wins; widened permissions require task re-creation. Never silently elevated.
+- **`unwind-impossible` flagging** — `send_usdc`, `bridge_to_polygon`, `top_up_moon_credit` flag mid-op if pause fires after broadcast.
+
+```bash
+hands-and-feet status   # kill switch state, wallets, spend policy, active bridges, outsourced deps
+hands-and-feet pause    # passphrase required — halts all tool calls (503 PAUSED)
+hands-and-feet resume   # re-validates all passports against revocation list before resuming
+```
+
+---
+
 ## Why This Exists
 
 AI agents call tools. Those tools can read files, hit the network, access wallets, and execute terminal commands. Today there is no standardized way to know what permissions a tool claims to need, whether the creator is who they say, or whether anyone has reviewed it. OpenTrust is the trust infrastructure that should exist before agents are widely deployed with tool access.
@@ -92,8 +161,9 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 | **Registry API** | https://api-kappa-pied-59.vercel.app/api/v1/health |
 | **Web frontend** | https://web-five-psi-74.vercel.app |
 | **Database** | Turso (SQLite-compatible cloud, free tier) |
-| **Tests** | 155 passing |
+| **Tests** | 483 passing (155 core + 328 hands-and-feet) |
 | **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
+| **Hands and Feet** | `@opentrust/hands-and-feet` v0.1.0 — V1/V2/V3 complete, ~50 MCP tools |
 
 ## Roadmap
 
@@ -103,12 +173,14 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 - ✅ **v0.4 — Signed registry + revocation.** Ed25519 signing on all passports, pinned public keys at `/.well-known/opentrust-keys.json`, signed revocation list with monotonic versioning and rollback rejection, offline CLI verification. Permanent registry key deployed to production.
 - ✅ **v0.5 — Spend policy + signed payment quotes.** Deny-first local spend policy, signed and expiring payment quotes, nonce protection against replay, wallet-bound quotes, escrow threshold enforcement. 30+ tests across all quote safety properties.
 - ✅ **Production hardening.** HSTS, security headers, rate limiting, bearer-token-protected admin plane with audit log, Turso cloud database, Vercel deployment, 155-test suite.
+- ✅ **Hands and Feet v0.1.** Full V1–V3 MCP capability layer shipped as `@opentrust/hands-and-feet`. ~50 tools: notify, wallet (Base + Polygon), USDC payments, Across Protocol bridge, Moon virtual cards, phone (Twilio/SignalWire/JMP), email (local SMTP + Postmark/Resend), tunnel, webhooks, scheduled tasks, Docker, GitHub, IPFS, RSS, PostScan Mail. Trust enforcement matrix, spend caps, kill switch, EIP-712 guard, fail-closed secrets, scheduled task credential lifecycle. 328 tests.
 
 ### Up next
 
 - **v0.2 — Granular permission scopes.** The current manifest uses booleans (`file: true`, `network: true`). The next version adds path-level and domain-level scoping — `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. This makes the manifest machine-enforceable, not just declarative. RFC open for contribution.
 - **v0.3 — Evidence requirements per trust level.** `security_checked` will require a structured evidence block: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation.
 - **v0.6 — Real marketplace flows.** On-chain USDC payments on Base, live escrow contracts, wallet connect, custodial option for non-crypto operators.
+- **Hands and Feet v1.x — `prepare_payment` composite helper.** Detects chain balances, bridges Polygon→Base if needed, polls bridge status, then executes `pay_with_usdc` — internalizes the multi-step bridge-then-pay workflow into one tool call. Bridge fees still surface in the receipt so cost stays visible.
 - **v1.0 — Stable spec + governance transfer.** Once schema is stable, signed verification is in production use, and adoption exists, governance moves to a neutral foundation.
 
 ## Quick Start
@@ -157,6 +229,28 @@ opentrust status my-tool --format json
 opentrust badge my-tool
 ```
 
+### Hands and Feet (MCP capability server)
+
+```bash
+# Install and run interactive setup
+npx @opentrust/hands-and-feet init
+
+# Start the MCP server (localhost:3847 by default)
+npx @opentrust/hands-and-feet serve
+
+# Or with Docker Compose
+cd packages/hands-and-feet
+docker-compose up
+```
+
+Configure your MCP-compatible agent to connect:
+```
+POST http://localhost:3847/mcp
+Authorization: Bearer <OpenTrust-signed agent passport token>
+```
+
+See [`packages/hands-and-feet/`](packages/hands-and-feet/) for the full setup guide, capability docs, and CLI reference.
+
 ## Demo Payments
 
 OpenTrust is 100% open source. The reference API includes a mock payment provider for demos:
@@ -187,15 +281,19 @@ OpenTrust passports understand every major AI tool format. A single passport can
 ## Repository Structure
 
 ```
-passport-schema/    JSON Schema — the canonical spec (single source of truth)
-api/                FastAPI registry — CRUD, search, GitHub OAuth, badges
-cli/                opentrust CLI — inspect, validate, search, claim, badge
-web/                Next.js frontend — directory, passport pages, claim flow
-badge-generator/    SVG badge generator for all 8 trust levels
-manifest-validator/ Permission manifest validator with risk flagging
-passport-generator/ Auto-draft passports from GitHub metadata
-rfcs/               Spec proposals — how the standard evolves
-docs/               Architecture, spec docs, governance
+passport-schema/         JSON Schema — the canonical spec (single source of truth)
+api/                     FastAPI registry — CRUD, search, GitHub OAuth, badges
+cli/                     opentrust CLI — inspect, validate, search, claim, badge
+web/                     Next.js frontend — directory, passport pages, claim flow
+packages/
+  hands-and-feet/        @opentrust/hands-and-feet — MCP server giving agents
+                         real-world capabilities (email, phone, wallet, cards,
+                         tunnel, docker, GitHub, IPFS, and more)
+badge-generator/         SVG badge generator for all 8 trust levels
+manifest-validator/      Permission manifest validator with risk flagging
+passport-generator/      Auto-draft passports from GitHub metadata
+rfcs/                    Spec proposals — how the standard evolves
+docs/                    Architecture, spec docs, governance
 ```
 
 ## Spec Governance
