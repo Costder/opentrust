@@ -16,7 +16,7 @@ let tempDir: string;
 
 beforeEach(() => {
   // Create a fresh temp directory for each test
-  tempDir = mkdtempSync(join(tmpdir(), 'hands-and-feet-test-'));
+  tempDir = mkdtempSync(join(tmpdir(), 'hands-body-and-feet-test-'));
 });
 
 afterEach(() => {

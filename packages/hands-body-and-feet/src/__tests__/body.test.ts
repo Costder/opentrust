@@ -1,4 +1,4 @@
-// packages/hands-and-feet/src/__tests__/body.test.ts
+// packages/hands-body-and-feet/src/__tests__/body.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PassportClaims } from '../types.js';
 

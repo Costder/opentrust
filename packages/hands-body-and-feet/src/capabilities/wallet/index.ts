@@ -9,7 +9,7 @@ import type { PassportClaims } from '../../types.js';
 // Uses a synthetic L7 passport for internal calls
 const SYSTEM_CLAIMS: PassportClaims = {
   passportId: 'system',
-  agentId: 'hands-and-feet-system',
+  agentId: 'hands-body-and-feet-system',
   trustLevel: 7,
   trustStatus: 'continuously_monitored',
   flags: [],

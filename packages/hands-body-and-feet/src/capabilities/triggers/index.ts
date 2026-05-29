@@ -1,4 +1,4 @@
-// packages/hands-and-feet/src/capabilities/triggers/index.ts
+// packages/hands-body-and-feet/src/capabilities/triggers/index.ts
 import * as cron from 'node-cron';
 import { randomUUID } from 'crypto';
 import { openDb } from '../../spend-tracker.js';

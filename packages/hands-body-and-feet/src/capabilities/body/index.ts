@@ -1,4 +1,4 @@
-// packages/hands-and-feet/src/capabilities/body/index.ts
+// packages/hands-body-and-feet/src/capabilities/body/index.ts
 import { openDb } from '../../spend-tracker.js';
 import { enforceTrust } from '../../trust.js';
 import type { PassportClaims, ToolDefinition } from '../../types.js';

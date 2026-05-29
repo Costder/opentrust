@@ -11,6 +11,8 @@
 for backwards compatibility. Existing v1.0.0 users will find their data intact after upgrading.
 New installations will use the same path. Docker users: the compose file now uses
 `~/.hands-body-and-feet` for new deployments.
+Docker users upgrading from v1.0.0: migrate your existing data with:
+`mv ~/.hands-and-feet ~/.hands-body-and-feet`
 
 **Migration:** Update your `package.json` dependency and MCP client config:
 ```json

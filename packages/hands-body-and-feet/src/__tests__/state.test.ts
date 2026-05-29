@@ -7,7 +7,7 @@ import { hashPassphrase, verifyPassphrase, isPaused, pause, resume } from '../st
 let tempDir: string;
 
 beforeEach(() => {
-  tempDir = mkdtempSync(join(tmpdir(), 'hands-and-feet-state-test-'));
+  tempDir = mkdtempSync(join(tmpdir(), 'hands-body-and-feet-state-test-'));
 });
 
 afterEach(() => {

@@ -1,4 +1,4 @@
-// packages/hands-and-feet/src/capabilities/delegations/index.ts
+// packages/hands-body-and-feet/src/capabilities/delegations/index.ts
 import { randomUUID } from 'crypto';
 import { openDb } from '../../spend-tracker.js';
 import { readConfig } from '../../config.js';

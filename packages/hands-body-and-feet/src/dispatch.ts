@@ -1,4 +1,4 @@
-// packages/hands-and-feet/src/dispatch.ts
+// packages/hands-body-and-feet/src/dispatch.ts
 // Single execution seam for all tool calls.
 // Called by the /mcp handler, fireTask, and executeUnderDelegation.
 import { notifyHuman } from './capabilities/notify/index.js';
