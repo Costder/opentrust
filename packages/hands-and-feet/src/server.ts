@@ -933,7 +933,7 @@ function createMcpServer(claims: PassportClaims): Server {
       },
       {
         name: 'set_identity_binding',
-        description: 'Sets one field of the agent\'s identity (primary_wallet, email, or phone). Requires L2 trust.',
+        description: 'Sets one field of the agent\'s identity (primary_wallet, email, or phone). Requires L3 trust.',
         inputSchema: {
           type: 'object' as const,
           required: ['field', 'value'],

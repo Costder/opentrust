@@ -5,11 +5,11 @@ import type { PassportClaims, ToolDefinition } from '../../types.js';
 
 // ── Tool definitions ────────────────────────────────────────────
 const GET_IDENTITY_TOOL: ToolDefinition     = { name: 'get_identity',        minTrustLevel: 2 };
-const SET_IDENTITY_TOOL: ToolDefinition     = { name: 'set_identity_binding', minTrustLevel: 2 };
+const SET_IDENTITY_TOOL: ToolDefinition     = { name: 'set_identity_binding', minTrustLevel: 3 };
 const GET_MEMORY_TOOL: ToolDefinition       = { name: 'get_memory',          minTrustLevel: 2 };
 const SET_MEMORY_TOOL: ToolDefinition       = { name: 'set_memory',          minTrustLevel: 2 };
 const LIST_MEMORY_TOOL: ToolDefinition      = { name: 'list_memory',         minTrustLevel: 2 };
-const DELETE_MEMORY_TOOL: ToolDefinition    = { name: 'delete_memory',       minTrustLevel: 2 };
+const DELETE_MEMORY_TOOL: ToolDefinition    = { name: 'delete_memory',       minTrustLevel: 3 };
 
 export const BODY_TOOLS = {
   get_identity: GET_IDENTITY_TOOL,
