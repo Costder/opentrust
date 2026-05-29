@@ -82,7 +82,10 @@ async function fireTask(label: string): Promise<void> {
     return;
   }
 
-  // Reconstruct claims from stored passport snapshot
+  // Phase 2 trust reconstruction: tasks created before Phase 3 don't store
+  // trustLevel/trustStatus explicitly. L3 (seller_confirmed) is the design-specified
+  // default (see 2026-05-28-hands-body-and-feet-design.md Phase 2). Phase 3
+  // delegations will store these fields explicitly and won't use this path.
   const effectiveCaps = validation.effectiveSnapshot.spendCaps;
   const reconstructedClaims = {
     passportId: row.passport_id,
@@ -98,11 +101,17 @@ async function fireTask(label: string): Promise<void> {
   };
 
   const toolArgs = JSON.parse(row.tool_args) as Record<string, unknown>;
-  await dispatchTool(row.tool_name, toolArgs, reconstructedClaims);
+  let fireStatus = 'success';
+  try {
+    await dispatchTool(row.tool_name, toolArgs, reconstructedClaims);
+  } catch (error: unknown) {
+    fireStatus = `error: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(`[tasks] dispatchTool error for task '${label}':`, error instanceof Error ? error.message : String(error));
+  }
 
   db.prepare(
     'UPDATE scheduled_tasks SET last_fired_at = ?, last_fire_status = ? WHERE label = ?',
-  ).run(new Date().toISOString(), 'success', label);
+  ).run(new Date().toISOString(), fireStatus, label);
 }
 
 // ────────────────────────────────────────────────────────────
