@@ -4,7 +4,19 @@ import { randomUUID } from 'crypto';
 import { openDb } from '../../spend-tracker.js';
 import { enforceTrust } from '../../trust.js';
 import { executeUnderDelegation } from '../delegations/index.js';
-import type { PassportClaims, ToolDefinition } from '../../types.js';
+import { dispatchTool } from '../../dispatch.js';
+import type { PassportClaims, TrustLevel, TrustStatus, ToolDefinition } from '../../types.js';
+
+// System-level claims for notify_human dispatch from triggers without a delegation
+const TRIGGER_SYSTEM_CLAIMS: PassportClaims = {
+  passportId: 'system',
+  agentId: 'hands-body-and-feet-system',
+  trustLevel: 2 as TrustLevel,
+  trustStatus: 'creator_claimed' as TrustStatus,
+  flags: [],
+  isDisputed: false,
+  version: '1',
+};
 
 // ── Tool definitions ────────────────────────────────────────────
 const CREATE_TRIGGER_TOOL: ToolDefinition = { name: 'create_trigger', minTrustLevel: 3 };
@@ -173,8 +185,11 @@ export async function matchAndFire(
         // No delegation — only allow notify_human (HITL)
         if (action.tool_name !== 'notify_human') {
           fireStatus = 'error:no_delegation_required';
+        } else {
+          // Fire notify_human with system claims — HITL alert, no passport required
+          const result = await dispatchTool('notify_human', renderedArgs, TRIGGER_SYSTEM_CLAIMS);
+          if (result.isError) fireStatus = `error:${result.content[0]?.text ?? 'unknown'}`;
         }
-        // notify_human without delegation is allowed (human-side alert, not an agent action)
       }
     } catch (e) {
       fireStatus = `error:${e instanceof Error ? e.message : String(e)}`;

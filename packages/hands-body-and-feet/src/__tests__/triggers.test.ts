@@ -2,14 +2,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PassportClaims } from '../types.js';
 
-const { mockExecuteUnder, mockCronSchedule, mockCronValidate } = vi.hoisted(() => ({
+const { mockExecuteUnder, mockCronSchedule, mockCronValidate, mockDispatchTool } = vi.hoisted(() => ({
   mockExecuteUnder: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: '{}' }] }),
   mockCronSchedule: vi.fn(),
   mockCronValidate: vi.fn().mockReturnValue(true),
+  mockDispatchTool: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: '{}' }] }),
 }));
 
 vi.mock('../capabilities/delegations/index.js', () => ({
   executeUnderDelegation: mockExecuteUnder,
+}));
+vi.mock('../dispatch.js', () => ({
+  dispatchTool: mockDispatchTool,
 }));
 vi.mock('node-cron', () => ({
   schedule: mockCronSchedule,
@@ -58,6 +62,7 @@ beforeEach(() => {
   mockCronValidate.mockReturnValue(true);
   mockCronSchedule.mockReturnValue({ start: vi.fn(), stop: vi.fn() });
   mockExecuteUnder.mockResolvedValue({ content: [{ type: 'text', text: '{}' }] });
+  mockDispatchTool.mockResolvedValue({ content: [{ type: 'text', text: '{}' }] });
 });
 
 describe('renderTemplate', () => {
@@ -144,5 +149,28 @@ describe('matchAndFire (webhook source)', () => {
     mockExecuteUnder.mockClear();
     await matchAndFire('webhook', { webhook_label: 'my-hook' });
     expect(mockExecuteUnder).not.toHaveBeenCalled();
+  });
+
+  it('fires notify_human via dispatchTool when there is no delegation (HITL path)', async () => {
+    await createTrigger({
+      label: 'hitl-alert',
+      source: 'webhook',
+      match: { webhook_label: 'alert-hook' },
+      action: { tool_name: 'notify_human', tool_args_template: { message: 'alert: {{event.details}}' } },
+      delegation_label: null,
+    }, makeL3Claims());
+
+    await matchAndFire('webhook', { webhook_label: 'alert-hook', details: 'threshold exceeded' });
+
+    expect(mockDispatchTool).toHaveBeenCalledWith(
+      'notify_human',
+      { message: 'alert: threshold exceeded' },
+      expect.objectContaining({ passportId: 'system', agentId: 'hands-body-and-feet-system' }),
+    );
+
+    // Verify DB records success
+    const db = (await import('../spend-tracker.js')).openDb();
+    const row = db.prepare("SELECT last_fire_status FROM triggers WHERE label = 'hitl-alert'").get() as { last_fire_status: string };
+    expect(row.last_fire_status).toBe('success');
   });
 });
