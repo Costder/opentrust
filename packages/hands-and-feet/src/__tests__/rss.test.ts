@@ -124,10 +124,10 @@ describe('add_feed_item', () => {
 
     // Verify matchAndFire was called with correct source and payload
     expect(matchAndFire).toHaveBeenCalledWith('rss', expect.objectContaining({
-      feed_label: expect.any(String),
-      title: expect.any(String),
-      description: expect.any(String),
-      url: expect.any(String),
+      feed_label: 'items-feed',
+      title: 'New Item',
+      description: 'Item description',
+      url: 'https://example.com/1',
     }));
   });
 });

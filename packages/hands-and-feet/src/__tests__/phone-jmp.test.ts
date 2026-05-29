@@ -260,11 +260,11 @@ describe('read_sms_jmp', () => {
     stanzaHandler(fakeStanza);
 
     // Allow the microtask queue to flush
-    await Promise.resolve();
+    await new Promise(process.nextTick);
 
     expect(matchAndFire).toHaveBeenCalledWith('sms', expect.objectContaining({
-      from_number: expect.any(String),
-      body: expect.any(String),
+      from_number: '+15550001111@jmp.chat',
+      body: 'hello from test',
     }));
   });
 });

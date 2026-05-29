@@ -145,9 +145,9 @@ describe('webhookReceiver', () => {
 
     // Verify matchAndFire was called with correct source and payload
     expect(matchAndFire).toHaveBeenCalledWith('webhook', expect.objectContaining({
-      webhook_label: expect.any(String),
-      body: expect.any(String),
-      headers: expect.any(String),
+      webhook_label: 'recv-wh',
+      body: JSON.stringify({ event: 'payment' }),
+      headers: JSON.stringify({ 'content-type': 'application/json' }),
     }));
 
     // Verify event was stored
