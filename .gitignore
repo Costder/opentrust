@@ -31,3 +31,6 @@ docs/marketplace-wallets-implementation-plan.md
 opentrust.db
 
 .vercel
+
+# Git worktrees
+.worktrees/
