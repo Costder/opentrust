@@ -7,124 +7,38 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { extractBearerToken, validatePassport, AuthError } from './auth.js';
 import { isPaused } from './state.js';
-import { notifyHuman, NOTIFY_TOOL } from './capabilities/notify/index.js';
+import { NOTIFY_TOOL } from './capabilities/notify/index.js';
+import { WALLET_TOOLS } from './capabilities/wallet/index.js';
+import { BRIDGE_TOOLS } from './capabilities/bridge/index.js';
+import { PAYMENT_TOOLS } from './capabilities/payments/index.js';
+import { CARD_TOOLS } from './capabilities/cards/index.js';
+import { PHONE_TOOLS } from './capabilities/phone/index.js';
 import {
-  createWallet,
-  getAddress,
-  getBalance,
-  sendUsdc,
-  signMessage,
-  signTypedData,
-  WALLET_TOOLS,
-} from './capabilities/wallet/index.js';
-import {
-  bridgeToPolygon,
-  bridgeToBase,
-  getBridgeStatus,
-  BRIDGE_TOOLS,
-} from './capabilities/bridge/index.js';
-import {
-  payWithUsdc,
-  getPaymentStatus,
-  preparePayment,
-  PAYMENT_TOOLS,
-} from './capabilities/payments/index.js';
-import type { PreparePaymentParams, PreparePaymentReceipt } from './capabilities/payments/index.js';
-import {
-  createVirtualCard,
-  getCardDetails,
-  addFundsToCard,
-  topUpMoonCredit,
-  freezeCard,
-  deleteCard,
-  getCardTransactions,
-  CARD_TOOLS,
-} from './capabilities/cards/index.js';
-import {
-  provisionPhoneNumber,
-  sendSms,
-  readSms,
-  releasePhoneNumber,
-  PHONE_TOOLS,
-} from './capabilities/phone/index.js';
-import {
-  createMailbox,
-  sendEmail,
-  readInbox,
-  waitForEmail,
-  deleteMailbox,
   startLocalTransportIfConfigured,
   EMAIL_TOOLS,
 } from './capabilities/email/index.js';
+import { TUNNEL_TOOLS } from './capabilities/tunnel/index.js';
 import {
-  createTunnel,
-  getTunnelUrl,
-  closeTunnel,
-  TUNNEL_TOOLS,
-} from './capabilities/tunnel/index.js';
-import {
-  createWebhook,
-  getWebhookUrl,
-  readWebhookEvents,
-  waitForWebhook,
-  deleteWebhook,
   webhookReceiver,
   startPurgeJob,
   WEBHOOK_TOOLS,
 } from './capabilities/webhook/index.js';
 import {
-  createTask,
-  listTasks,
-  deleteTask,
-  pauseTask,
   loadActiveTasks,
   TASK_TOOLS,
 } from './capabilities/tasks/index.js';
-import type { PermissionSnapshot } from './capabilities/tasks/revocation.js';
+import { DOCKER_TOOLS } from './capabilities/docker/index.js';
 import {
-  runContainer,
-  stopContainer,
-  removeContainer,
-  listContainers,
-  containerLogs,
-  execInContainer,
-  DOCKER_TOOLS,
-} from './capabilities/docker/index.js';
-import {
-  provisionPhoneNumberJmp,
-  sendSmsJmp,
-  readSmsJmp,
-  releasePhoneNumberJmp,
   startXmppIfConfigured,
   PHONE_JMP_TOOLS,
 } from './capabilities/phone-jmp/index.js';
+import { GITHUB_TOOLS } from './capabilities/github/index.js';
+import { IPFS_TOOLS } from './capabilities/ipfs/index.js';
 import {
-  createRepo,
-  createFile,
-  createPullRequest,
-  listRepos,
-  GITHUB_TOOLS,
-} from './capabilities/github/index.js';
-import {
-  publishContent,
-  getIpfsContent,
-  pinContent,
-  IPFS_TOOLS,
-} from './capabilities/ipfs/index.js';
-import {
-  createFeed,
-  addFeedItem,
-  serveFeed,
   registerRssRoutes,
   RSS_TOOLS,
 } from './capabilities/rss/index.js';
-import {
-  listMail,
-  forwardMail,
-  shredMail,
-  scanMail,
-  MAIL_TOOLS,
-} from './capabilities/mail/index.js';
+import { MAIL_TOOLS } from './capabilities/mail/index.js';
 import type { PassportClaims } from './types.js';
 import { dispatchTool } from './dispatch.js';
 
