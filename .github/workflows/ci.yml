@@ -29,4 +29,6 @@ jobs:
         run: cd web && npm audit signatures
       - run: cd web && npm ci --ignore-scripts && npm run lint && npm run build
       - run: cd sdk-ts && npm ci && npm run typecheck && npm test
+      # hands-body-and-feet has native deps (better-sqlite3), so install WITH scripts.
+      # Tests are self-contained (no network/secrets) via msw/supertest mocks.
       - run: cd packages/hands-body-and-feet && npm ci && npm run typecheck && npm test
