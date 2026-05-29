@@ -11,6 +11,7 @@ const cli = yargs(hideBin(process.argv))
 const commands = [
   import('./cli/init.js'),
   import('./cli/serve.js'),
+  import('./cli/stdio.js'),
   import('./cli/pause.js'),
   import('./cli/resume.js'),
   import('./cli/status.js'),

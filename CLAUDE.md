@@ -175,9 +175,13 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
 3. npm audit signatures (verifies package integrity)
 4. Next.js lint + build
 5. `sdk-ts` typecheck + tests
-6. `packages/hands-body-and-feet` typecheck + tests
+6. `packages/hands-body-and-feet` typecheck + tests (375 tests)
 
 All steps must pass before merge.
+
+**Import resolution:** `pytest.ini` sets `pythonpath = .` so `api.src.*` imports
+resolve under a bare `pytest` invocation (as CI runs it), not only under
+`python -m pytest` (which adds the CWD to `sys.path` itself).
 
 ---
 

@@ -20,16 +20,33 @@ A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an
 
 **OpenTrust is the trust and identity layer underneath.** Every tool call is gated by the agent's OpenTrust passport trust level (L1–L7). Spend caps, a kill switch, and fail-closed secret loading are enforced throughout.
 
+**Easiest — stdio (one line, any harness, zero config):**
+
+Add it like any other MCP server. Claude Code:
+
 ```bash
-# Install and configure
-npx @opentrust/hands-body-and-feet init
+claude mcp add hands-body-and-feet -- npx -y @opentrust/hands-body-and-feet stdio
+```
 
-# Start the MCP server (default: http://localhost:3847)
-npx @opentrust/hands-body-and-feet serve
+Claude Desktop / Cursor / any MCP client (`claude_desktop_config.json` etc.):
 
-# Point any MCP-compatible agent at it:
-# POST http://localhost:3847/mcp
-# Authorization: Bearer <OpenTrust-signed agent passport token>
+```jsonc
+{ "mcpServers": { "hands-body-and-feet": {
+  "command": "npx", "args": ["-y", "@opentrust/hands-body-and-feet", "stdio"]
+}}}
+```
+
+No `init`, no daemon, no token header. Identity defaults to a local L3 agent;
+set `OPENTRUST_PASSPORT_TOKEN` (real passport) or `OPENTRUST_AGENT_ID` /
+`OPENTRUST_TRUST_STATUS` to customize. Trust levels, spend caps, and the kill
+switch are still enforced per tool call.
+
+**Advanced — HTTP (multi-tenant, per-request passport auth):**
+
+```bash
+npx @opentrust/hands-body-and-feet init    # interactive config
+npx @opentrust/hands-body-and-feet serve   # http://localhost:3847/mcp
+# Then POST /mcp with: Authorization: Bearer <OpenTrust-signed passport token>
 ```
 
 ### V1 — Foundation & Core Capabilities
@@ -161,9 +178,9 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 | **Registry API** | https://api-kappa-pied-59.vercel.app/api/v1/health |
 | **Web frontend** | https://web-five-psi-74.vercel.app |
 | **Database** | Turso (SQLite-compatible cloud, free tier) |
-| **Tests** | 483 passing (155 core + 328 hands-body-and-feet) |
+| **Tests** | 530 passing (155 core + 375 hands-body-and-feet) |
 | **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
-| **Hands Body and Feet** | `@opentrust/hands-body-and-feet` v2.0.0 — V1/V2/V3 complete, ~50 MCP tools |
+| **Hands Body and Feet** | `@opentrust/hands-body-and-feet` v2.1.0 — V1/V2/V3 + persistence epic, stdio + HTTP transports, ~60 MCP tools |
 
 ## Roadmap
 
