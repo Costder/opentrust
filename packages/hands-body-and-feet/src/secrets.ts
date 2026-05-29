@@ -25,7 +25,7 @@ export function getNotifyTopic(): { topic: string; serverUrl: string } {
   const secrets = loadSecrets();
   if (!secrets.notify?.topic) {
     throw new SecretsError(
-      'ntfy.sh topic not configured. Run "hands-and-feet init" to set it up.',
+      'ntfy.sh topic not configured. Run "hands-body-and-feet init" to set it up.',
     );
   }
   return {

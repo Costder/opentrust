@@ -38,11 +38,11 @@ function getProvider(chain: 'base' | 'polygon'): ethers.JsonRpcProvider {
 }
 
 function requirePassphrase(): string {
-  const pp = process.env.HANDS_AND_FEET_PASSPHRASE;
+  const pp = process.env.HANDS_BODY_AND_FEET_PASSPHRASE;
   if (!pp) {
     throw new Error(
-      'HANDS_AND_FEET_PASSPHRASE env var is required for wallet operations. ' +
-      'Set it before running "hands-and-feet serve".',
+      'HANDS_BODY_AND_FEET_PASSPHRASE env var is required for wallet operations. ' +
+      'Set it before running "hands-body-and-feet serve".',
     );
   }
   return pp;
@@ -165,13 +165,13 @@ export async function signTypedData(
   // TODO: Implement per-passport allowlist in allowlist-add-typed-data CLI command (Plan A stub)
   // For now, always reject with instructions
   await notifyHuman({
-    message: `sign_typed_data rejected: New EIP-712 domain ${JSON.stringify(params.domain)} with primaryType. Use CLI to allowlist: hands-and-feet allowlist-add-typed-data`,
+    message: `sign_typed_data rejected: New EIP-712 domain ${JSON.stringify(params.domain)} with primaryType. Use CLI to allowlist: hands-body-and-feet allowlist-add-typed-data`,
     priority: 'urgent',
     title: 'EIP-712 First-Use Rejection',
   }, SYSTEM_CLAIMS).catch(() => undefined); // don't fail if notify is not configured
 
   throw new Error(
     'UNTRUSTED_TYPED_DATA: First-use of this EIP-712 domain/primaryType is rejected. ' +
-    'Run: hands-and-feet allowlist-add-typed-data <passport-id> <domain-json> <primary-type>',
+    'Run: hands-body-and-feet allowlist-add-typed-data <passport-id> <domain-json> <primary-type>',
   );
 }

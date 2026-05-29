@@ -17,7 +17,7 @@ const pauseCmd: CommandModule = {
 
     const state = pause(cfg.instanceId);
     console.log(`\n🔴 Hands and Feet PAUSED at ${state.pausedAt}`);
-    console.log('   All MCP tool calls will return 503 until you run "hands-and-feet resume".');
+    console.log('   All MCP tool calls will return 503 until you run "hands-body-and-feet resume".');
   },
 };
 

@@ -2,7 +2,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 const cli = yargs(hideBin(process.argv))
-  .scriptName('hands-and-feet')
+  .scriptName('hands-body-and-feet')
   .usage('$0 <command> [options]')
   .strict()
   .help();

@@ -25,7 +25,7 @@ export const GITHUB_TOOLS = {
 export function getOctokit(): Octokit {
   const token = process.env['GITHUB_TOKEN'];
   if (!token) {
-    throw new SecretsError('GITHUB_TOKEN env var not set. Run: hands-and-feet init');
+    throw new SecretsError('GITHUB_TOKEN env var not set. Run: hands-body-and-feet init');
   }
   return new Octokit({ auth: token });
 }

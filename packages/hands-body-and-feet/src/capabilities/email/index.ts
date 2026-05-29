@@ -27,7 +27,7 @@ function getTransport() {
   const cfg = readConfig();
   const transport = cfg.capabilities.email?.transport;
   if (!transport) {
-    throw new SecretsError('Email capability not configured. Run "hands-and-feet init" first.');
+    throw new SecretsError('Email capability not configured. Run "hands-body-and-feet init" first.');
   }
   switch (transport) {
     case 'local':

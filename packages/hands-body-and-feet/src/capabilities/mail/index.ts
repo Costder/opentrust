@@ -49,7 +49,7 @@ export function getMailCredentials(): MailCredentials {
 
   throw new SecretsError(
     'POSTSCAN_API_KEY and POSTSCAN_ACCOUNT_ID env vars required. ' +
-    'Run: hands-and-feet init --i-understand-form-1583\n' +
+    'Run: hands-body-and-feet init --i-understand-form-1583\n' +
     'Alternatively set EARTH_CLASS_MAIL_API_KEY for Earth Class Mail.',
   );
 }

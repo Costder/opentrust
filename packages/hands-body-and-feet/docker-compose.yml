@@ -1,15 +1,15 @@
 services:
-  hands-and-feet:
-    image: ghcr.io/costder/opentrust/hands-and-feet:latest
+  hands-body-and-feet:
+    image: ghcr.io/costder/opentrust/hands-body-and-feet:latest
     ports:
       - "3847:3847"
       - "25:25"
     volumes:
-      - ~/.hands-and-feet:/data
+      - ~/.hands-body-and-feet:/data
     environment:
       - OPENTRUST_REGISTRY_URL=${OPENTRUST_REGISTRY_URL}
       - MOON_API_ENV=${MOON_API_ENV:-production}
-      - HANDS_AND_FEET_PASSPHRASE=${HANDS_AND_FEET_PASSPHRASE}
+      - HANDS_BODY_AND_FEET_PASSPHRASE=${HANDS_BODY_AND_FEET_PASSPHRASE}
       - BASE_RPC_URL=${BASE_RPC_URL:-https://mainnet.base.org}
       - POLYGON_RPC_URL=${POLYGON_RPC_URL:-https://polygon-rpc.com}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}

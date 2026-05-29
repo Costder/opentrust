@@ -122,7 +122,7 @@ function makeWalletEntry(overrides: Partial<WalletEntry> = {}): WalletEntry {
 describe('wallet capability', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.HANDS_AND_FEET_PASSPHRASE = 'test-passphrase';
+    process.env.HANDS_BODY_AND_FEET_PASSPHRASE = 'test-passphrase';
   });
 
   // -------------------------------------------------------------------------
@@ -155,9 +155,9 @@ describe('wallet capability', () => {
       expect(result.label).toMatch(/^wallet-\d+$/);
     });
 
-    it('throws if HANDS_AND_FEET_PASSPHRASE is not set', async () => {
-      delete process.env.HANDS_AND_FEET_PASSPHRASE;
-      await expect(createWallet({}, makeL3Claims())).rejects.toThrow(/HANDS_AND_FEET_PASSPHRASE/);
+    it('throws if HANDS_BODY_AND_FEET_PASSPHRASE is not set', async () => {
+      delete process.env.HANDS_BODY_AND_FEET_PASSPHRASE;
+      await expect(createWallet({}, makeL3Claims())).rejects.toThrow(/HANDS_BODY_AND_FEET_PASSPHRASE/);
     });
   });
 

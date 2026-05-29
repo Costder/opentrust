@@ -161,7 +161,7 @@ function getProvider(): PhoneProvider {
   const cfg = readConfig();
   const provider = cfg.capabilities.phone?.provider;
   if (!provider) {
-    throw new SecretsError('Phone capability not configured. Run "hands-and-feet init" first.');
+    throw new SecretsError('Phone capability not configured. Run "hands-body-and-feet init" first.');
   }
   return provider === 'twilio' ? new TwilioProvider() : new SignalWireProvider();
 }

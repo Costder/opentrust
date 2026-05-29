@@ -39,7 +39,7 @@ function getXmppCredentials(): { jid: string; password: string } {
   if (!jid || !password) {
     throw new SecretsError(
       'XMPP_JID and XMPP_PASSWORD environment variables are required for JMP phone. ' +
-        'Run "hands-and-feet init" and configure JMP.',
+        'Run "hands-body-and-feet init" and configure JMP.',
     );
   }
   return { jid, password };
@@ -56,7 +56,7 @@ async function getXmppClient(): Promise<unknown> {
   const xmpp = xmppClient({
     service: 'xmpp://xmpp.jmp.chat',
     domain: 'jmp.chat',
-    resource: 'hands-and-feet',
+    resource: 'hands-body-and-feet',
     username: jid.split('@')[0],
     password,
   });

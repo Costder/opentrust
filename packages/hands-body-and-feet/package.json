@@ -4,7 +4,7 @@
   "description": "Give AI agents real-world capabilities via MCP — email, phone, wallet, payments, virtual cards, and more",
   "type": "module",
   "bin": {
-    "hands-body-and-feet": "./bin/hands-and-feet.js"
+    "hands-body-and-feet": "./bin/hands-body-and-feet.js"
   },
   "exports": {
     ".": {

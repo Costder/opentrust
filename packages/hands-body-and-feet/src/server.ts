@@ -1020,7 +1020,7 @@ export function createApp(options: ServerOptions): express.Application {
     if (isPaused()) {
       res.status(503).json({
         error: 'PAUSED',
-        message: 'Hands and Feet is paused. Run "hands-and-feet resume" to re-enable.',
+        message: 'Hands Body and Feet is paused. Run "hands-body-and-feet resume" to re-enable.',
       });
       return;
     }
@@ -1053,7 +1053,7 @@ export function startServer(options: ServerOptions): Promise<import('http').Serv
   const port = options.port ?? 3847;
   return new Promise((resolve) => {
     const httpServer = app.listen(port, () => {
-      console.log(`Hands and Feet MCP server listening on http://localhost:${port}/mcp`);
+      console.log(`Hands Body and Feet MCP server listening on http://localhost:${port}/mcp`);
       startLocalTransportIfConfigured().catch((err) => {
         console.error('Failed to start local SMTP transport:', err);
       });

@@ -452,7 +452,7 @@ describe('phone capability', () => {
 
     it('SecretsError message mentions init command', async () => {
       setNoPhoneConfig();
-      await expect(provisionPhoneNumber({}, makeL3Claims())).rejects.toThrow(/hands-and-feet init/);
+      await expect(provisionPhoneNumber({}, makeL3Claims())).rejects.toThrow(/hands-body-and-feet init/);
     });
   });
 });

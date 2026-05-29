@@ -16,16 +16,16 @@ A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an
 
 ## Hands and Feet — Agent Real-World Capabilities
 
-[`packages/hands-and-feet`](packages/hands-and-feet/) is a local MCP server that gives AI agents real-world hands. Any MCP-compatible agent (Claude, Codex, Hermes, hyperagent, etc.) connects via Bearer token and gains the ability to send and receive email, provision phone numbers, manage crypto wallets, make USDC payments, issue virtual Visa cards, browse the web, manage infrastructure, and more — with no human-in-the-loop required after initial setup.
+[`packages/hands-body-and-feet`](packages/hands-body-and-feet/) is a local MCP server that gives AI agents real-world hands. Any MCP-compatible agent (Claude, Codex, Hermes, hyperagent, etc.) connects via Bearer token and gains the ability to send and receive email, provision phone numbers, manage crypto wallets, make USDC payments, issue virtual Visa cards, browse the web, manage infrastructure, and more — with no human-in-the-loop required after initial setup.
 
 **OpenTrust is the trust and identity layer underneath.** Every tool call is gated by the agent's OpenTrust passport trust level (L1–L7). Spend caps, a kill switch, and fail-closed secret loading are enforced throughout.
 
 ```bash
 # Install and configure
-npx @opentrust/hands-and-feet init
+npx @opentrust/hands-body-and-feet init
 
 # Start the MCP server (default: http://localhost:3847)
-npx @opentrust/hands-and-feet serve
+npx @opentrust/hands-body-and-feet serve
 
 # Point any MCP-compatible agent at it:
 # POST http://localhost:3847/mcp
@@ -67,16 +67,16 @@ npx @opentrust/hands-and-feet serve
 
 - **Trust enforcement matrix** — every tool enforces a minimum passport trust level before executing. L4 tools (wallets, cards, Docker) require elevated trust.
 - **Spend caps** — per-wallet `max_per_call`, `daily_cap`, and `gas_reserve_amount`. Transactions rejected pre-broadcast; never silently downgraded.
-- **Kill switch** — `hands-and-feet pause / resume`, passphrase-protected, CLI only. Propagates across all instances via registry flag.
-- **EIP-712 guard** — first use of any new `(domain, primaryType)` pair is rejected with `notify_human` fired. Human adds to allowlist via `hands-and-feet allowlist-add-typed-data`.
+- **Kill switch** — `hands-body-and-feet pause / resume`, passphrase-protected, CLI only. Propagates across all instances via registry flag.
+- **EIP-712 guard** — first use of any new `(domain, primaryType)` pair is rejected with `notify_human` fired. Human adds to allowlist via `hands-body-and-feet allowlist-add-typed-data`.
 - **Fail-closed secrets** — if the OpenTrust registry is unreachable, the server refuses to start. `--allow-local-fallback` opts in with a prominent warning.
 - **Scheduled task credential lifecycle** — task stores passport ID + version + permission snapshot at schedule time. On fire: narrower-of-(old, new) scope wins; widened permissions require task re-creation. Never silently elevated.
 - **`unwind-impossible` flagging** — `send_usdc`, `bridge_to_polygon`, `top_up_moon_credit` flag mid-op if pause fires after broadcast.
 
 ```bash
-hands-and-feet status   # kill switch state, wallets, spend policy, active bridges, outsourced deps
-hands-and-feet pause    # passphrase required — halts all tool calls (503 PAUSED)
-hands-and-feet resume   # re-validates all passports against revocation list before resuming
+hands-body-and-feet status   # kill switch state, wallets, spend policy, active bridges, outsourced deps
+hands-body-and-feet pause    # passphrase required — halts all tool calls (503 PAUSED)
+hands-body-and-feet resume   # re-validates all passports against revocation list before resuming
 ```
 
 ---
@@ -161,9 +161,9 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 | **Registry API** | https://api-kappa-pied-59.vercel.app/api/v1/health |
 | **Web frontend** | https://web-five-psi-74.vercel.app |
 | **Database** | Turso (SQLite-compatible cloud, free tier) |
-| **Tests** | 483 passing (155 core + 328 hands-and-feet) |
+| **Tests** | 483 passing (155 core + 328 hands-body-and-feet) |
 | **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
-| **Hands and Feet** | `@opentrust/hands-and-feet` v1.0.0 — V1/V2/V3 complete, ~50 MCP tools |
+| **Hands Body and Feet** | `@opentrust/hands-body-and-feet` v2.0.0 — V1/V2/V3 complete, ~50 MCP tools |
 
 ## Roadmap
 
@@ -176,8 +176,8 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 - ✅ **v0.2 — Granular permission scopes.** Path-level and domain-level scoping — `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. Machine-enforceable manifests, not just declarative. Enforced at `reviewer_signed+` in API and CLI.
 - ✅ **v0.3 — Evidence requirements per trust level.** Structured `SecurityEvidenceBlock` on passports: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation. Required at `security_checked`.
 - ✅ **v0.6 — Real marketplace flows.** On-chain USDC verification via web3.py on Base L2, embedded wallet custody (AES-256-GCM), escrow order flow with `verify_usdc_transfer` gating, `/payments/verify-onchain` endpoint.
-- ✅ **Hands and Feet v1.0.** Full V1–V3 MCP capability layer shipped as `@opentrust/hands-and-feet`. ~50 tools: notify, wallet (Base + Polygon), USDC payments, Across Protocol bridge, Moon virtual cards, phone (Twilio/SignalWire/JMP), email (local SMTP + Postmark/Resend), tunnel, webhooks, scheduled tasks, Docker, GitHub, IPFS, RSS, PostScan Mail. Trust enforcement matrix, spend caps, kill switch, EIP-712 guard, fail-closed secrets, scheduled task credential lifecycle. 333 tests.
-- ✅ **Hands and Feet v1.x — `prepare_payment` composite helper.** Detects chain balances, bridges Polygon→Base if needed, polls bridge status, then executes `pay_with_usdc` — internalizes the multi-step bridge-then-pay workflow into one tool call. Bridge fees surface in the receipt.
+- ✅ **Hands Body and Feet v1.0.** Full V1–V3 MCP capability layer shipped as `@opentrust/hands-body-and-feet`. ~50 tools: notify, wallet (Base + Polygon), USDC payments, Across Protocol bridge, Moon virtual cards, phone (Twilio/SignalWire/JMP), email (local SMTP + Postmark/Resend), tunnel, webhooks, scheduled tasks, Docker, GitHub, IPFS, RSS, PostScan Mail. Trust enforcement matrix, spend caps, kill switch, EIP-712 guard, fail-closed secrets, scheduled task credential lifecycle. 333 tests.
+- ✅ **Hands Body and Feet v1.x — `prepare_payment` composite helper.** Detects chain balances, bridges Polygon→Base if needed, polls bridge status, then executes `pay_with_usdc` — internalizes the multi-step bridge-then-pay workflow into one tool call. Bridge fees surface in the receipt.
 - ✅ **v1.0 — Stable spec + governance transfer.** Passport schema frozen at `spec_version: 1.0.0`. All packages at 1.0.0. Governance transfer and RFC process documented in `docs/governance.md`.
 
 ### Up next
@@ -236,13 +236,13 @@ opentrust badge my-tool
 
 ```bash
 # Install and run interactive setup
-npx @opentrust/hands-and-feet init
+npx @opentrust/hands-body-and-feet init
 
 # Start the MCP server (localhost:3847 by default)
-npx @opentrust/hands-and-feet serve
+npx @opentrust/hands-body-and-feet serve
 
 # Or with Docker Compose
-cd packages/hands-and-feet
+cd packages/hands-body-and-feet
 docker-compose up
 ```
 
@@ -252,7 +252,7 @@ POST http://localhost:3847/mcp
 Authorization: Bearer <OpenTrust-signed agent passport token>
 ```
 
-See [`packages/hands-and-feet/`](packages/hands-and-feet/) for the full setup guide, capability docs, and CLI reference.
+See [`packages/hands-body-and-feet/`](packages/hands-body-and-feet/) for the full setup guide, capability docs, and CLI reference.
 
 ## Demo Payments
 
@@ -289,7 +289,7 @@ api/                     FastAPI registry — CRUD, search, GitHub OAuth, badges
 cli/                     opentrust CLI — inspect, validate, search, claim, badge
 web/                     Next.js frontend — directory, passport pages, claim flow
 packages/
-  hands-and-feet/        @opentrust/hands-and-feet — MCP server giving agents
+  hands-body-and-feet/   @opentrust/hands-body-and-feet — MCP server giving agents
                          real-world capabilities (email, phone, wallet, cards,
                          tunnel, docker, GitHub, IPFS, and more)
 badge-generator/         SVG badge generator for all 8 trust levels

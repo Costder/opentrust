@@ -522,14 +522,14 @@ describe('email capability', () => {
       ).rejects.toThrow(SecretsError);
     });
 
-    it('SecretsError message mentions hands-and-feet init', async () => {
+    it('SecretsError message mentions hands-body-and-feet init', async () => {
       setNoEmailConfig();
       await expect(
         sendEmail(
           { from: 'a@local.test', to: 'b@local.test', subject: 'Hi', body: 'Body' },
           makeL2Claims(),
         ),
-      ).rejects.toThrow(/hands-and-feet init/);
+      ).rejects.toThrow(/hands-body-and-feet init/);
     });
   });
 

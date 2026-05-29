@@ -20,7 +20,7 @@ export function configExists(configDir = CONFIG_DIR): boolean {
 export function readConfig(configDir = CONFIG_DIR): HandsAndFeetConfig {
   const configPath = join(configDir, 'config.json');
   if (!existsSync(configPath)) {
-    throw new Error(`No config found at ${configPath}. Run 'hands-and-feet init' first.`);
+    throw new Error(`No config found at ${configPath}. Run 'hands-body-and-feet init' first.`);
   }
   return JSON.parse(readFileSync(configPath, 'utf-8')) as HandsAndFeetConfig;
 }

@@ -154,7 +154,7 @@ const init: CommandModule = {
     writeConfig(cfg);
 
     console.log('\n✅ Hands and Feet initialized successfully.');
-    console.log('   Run "hands-and-feet serve" to start the MCP server.');
+    console.log('   Run "hands-body-and-feet serve" to start the MCP server.');
   },
 };
 

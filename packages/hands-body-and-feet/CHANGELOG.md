@@ -7,6 +7,11 @@
 - Binary renamed from `hands-and-feet` to `hands-body-and-feet`
 - MCP server name string changed from `hands-and-feet` to `hands-body-and-feet`
 
+**Data directory:** The on-disk config directory (`~/.hands-and-feet`) is intentionally preserved
+for backwards compatibility. Existing v1.0.0 users will find their data intact after upgrading.
+New installations will use the same path. Docker users: the compose file now uses
+`~/.hands-body-and-feet` for new deployments.
+
 **Migration:** Update your `package.json` dependency and MCP client config:
 ```json
 // Before
