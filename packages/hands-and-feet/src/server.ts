@@ -864,6 +864,35 @@ function createMcpServer(claims: PassportClaims): Server {
           required: ['mail_id'],
         },
       },
+      // Delegation tools
+      {
+        name: 'create_delegation',
+        description: 'Creates a bounded delegation grant for unattended execution. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            label: { type: 'string', description: 'Delegation label (auto-generated if omitted)' },
+            tool_allowlist: { type: 'array', items: { type: 'string' }, description: 'Tools this delegation may call' },
+            spend_caps: { type: 'object', properties: { maxPerCallUsdc: { type: 'number' }, dailyCapUsdc: { type: 'number' } }, description: 'USDC spend caps' },
+            action_budgets: { type: 'object', description: 'Per-tool call budgets e.g. {"notify_human": 10}' },
+          },
+          required: ['tool_allowlist', 'spend_caps', 'action_budgets'],
+        },
+      },
+      {
+        name: 'list_delegations',
+        description: 'Lists all delegations. Requires L2 trust.',
+        inputSchema: { type: 'object' as const, properties: {} },
+      },
+      {
+        name: 'revoke_delegation',
+        description: 'Revokes an active delegation. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: { label: { type: 'string' } },
+          required: ['label'],
+        },
+      },
     ],
   }));
 

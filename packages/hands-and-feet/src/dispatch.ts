@@ -19,6 +19,7 @@ import { createRepo, createFile, createPullRequest, listRepos } from './capabili
 import { publishContent, getIpfsContent, pinContent } from './capabilities/ipfs/index.js';
 import { createFeed, addFeedItem, serveFeed } from './capabilities/rss/index.js';
 import { listMail, forwardMail, shredMail, scanMail } from './capabilities/mail/index.js';
+import { createDelegation, listDelegations, revokeDelegation } from './capabilities/delegations/index.js';
 import type { PassportClaims } from './types.js';
 
 export type DispatchResult = {
@@ -105,6 +106,9 @@ export async function dispatchTool(
     if (name === 'forward_mail') return ok(await forwardMail(args as { mail_id: string; address: string }, claims));
     if (name === 'shred_mail') return ok(await shredMail(args as { mail_id: string }, claims));
     if (name === 'scan_mail') return ok(await scanMail(args as { mail_id: string }, claims));
+    if (name === 'create_delegation') return ok(await createDelegation(args as { label?: string; tool_allowlist: string[]; spend_caps: { maxPerCallUsdc?: number; dailyCapUsdc?: number }; action_budgets: Record<string, number> }, claims));
+    if (name === 'list_delegations')  return ok(await listDelegations({}, claims));
+    if (name === 'revoke_delegation') return ok(await revokeDelegation(args as { label: string }, claims));
 
     return err(`Unknown tool: ${name}`);
   } catch (e) {
