@@ -1,5 +1,30 @@
 # Changelog — @opentrust/hands-body-and-feet
 
+## 2.2.0 — 2026-05-29
+
+**Works out of the box against the hosted registry.**
+
+The client always called `POST /api/v1/passports/validate` (HTTP auth) and
+`GET /api/v1/passports/{id}` (task/delegation re-validation), but the registry
+never implemented those routes — so every registry-backed trust check 404'd and
+fail-closed. The persistence epic's tasks/delegations could therefore never fire
+against a real registry.
+
+- **Registry now implements the validation contract** (`api/src/routes/passport_auth.py`):
+  - `POST /api/v1/passports/validate` — verifies the agent passport JWT (HS256,
+    registry `JWT_SECRET`), checks revocation + disputed state, returns claims.
+  - `GET /api/v1/passports/{id}` — stateless revocation oracle (valid unless
+    explicitly revoked) in the exact shape the client's re-validation expects.
+- **Default registry URL is now the hosted official registry**, centralized in
+  one place (`DEFAULT_REGISTRY_URL` in `config.ts`) and overridable via the
+  `OPENTRUST_REGISTRY_URL` env var or a `registryUrl` in config.json. Previously
+  the default was `http://localhost:8000`, which silently required every user to
+  run their own registry. (The hardcoded default is currently the Vercel project
+  URL; swap it for a stable custom domain when one exists.)
+
+Net effect: a fresh install talks to the official registry with no setup, and
+scheduled-task / delegation re-validation actually works against it.
+
 ## 2.1.0 — 2026-05-29
 
 **New: stdio transport — one-line, harness-agnostic setup.**

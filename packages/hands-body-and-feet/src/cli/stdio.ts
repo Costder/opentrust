@@ -1,8 +1,6 @@
 import type { CommandModule } from 'yargs';
-import { configExists, readConfig, ensureConfigDir } from '../config.js';
+import { configExists, readConfig, ensureConfigDir, DEFAULT_REGISTRY_URL } from '../config.js';
 import { startStdioServer } from '../stdio.js';
-
-const DEFAULT_REGISTRY_URL = 'http://localhost:8000';
 
 const stdio: CommandModule = {
   command: 'stdio',

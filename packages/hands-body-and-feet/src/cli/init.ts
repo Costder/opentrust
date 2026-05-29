@@ -1,7 +1,7 @@
 import type { CommandModule } from 'yargs';
 import { input, password, confirm, select } from '@inquirer/prompts';
 import { randomUUID } from 'crypto';
-import { configExists, writeConfig } from '../config.js';
+import { configExists, writeConfig, DEFAULT_REGISTRY_URL } from '../config.js';
 import { hashPassphrase } from '../state.js';
 import type { HandsAndFeetConfig } from '../types.js';
 
@@ -34,7 +34,7 @@ const init: CommandModule = {
 
     const registryUrl = await input({
       message: 'OpenTrust registry URL:',
-      default: 'http://localhost:8000',
+      default: DEFAULT_REGISTRY_URL,
     });
 
     const notifyTopic = await input({

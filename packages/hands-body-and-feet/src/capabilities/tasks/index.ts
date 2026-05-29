@@ -2,7 +2,7 @@ import * as cron from 'node-cron';
 import { randomUUID } from 'crypto';
 import { enforceTrust } from '../../trust.js';
 import { openDb } from '../../spend-tracker.js';
-import { readConfig } from '../../config.js';
+import { readConfig, DEFAULT_REGISTRY_URL } from '../../config.js';
 import type { PassportClaims, ToolDefinition, TrustLevel, TrustStatus } from '../../types.js';
 import { validateTaskPassport } from './revocation.js';
 import type { PermissionSnapshot } from './revocation.js';
@@ -64,7 +64,7 @@ async function fireTask(label: string): Promise<void> {
     config = {};
   }
 
-  const registryUrl = config.registryUrl ?? 'http://localhost:8000';
+  const registryUrl = config.registryUrl ?? DEFAULT_REGISTRY_URL;
   const storedSnapshot = JSON.parse(row.permission_snapshot) as PermissionSnapshot;
 
   const validation = await validateTaskPassport(

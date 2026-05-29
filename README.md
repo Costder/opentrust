@@ -178,9 +178,9 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 | **Registry API** | https://api-kappa-pied-59.vercel.app/api/v1/health |
 | **Web frontend** | https://web-five-psi-74.vercel.app |
 | **Database** | Turso (SQLite-compatible cloud, free tier) |
-| **Tests** | 530 passing (155 core + 375 hands-body-and-feet) |
+| **Tests** | 587 passing (210 core + 377 hands-body-and-feet) |
 | **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
-| **Hands Body and Feet** | `@opentrust/hands-body-and-feet` v2.1.0 — V1/V2/V3 + persistence epic, stdio + HTTP transports, ~60 MCP tools |
+| **Hands Body and Feet** | `@opentrust/hands-body-and-feet` v2.2.0 — V1/V2/V3 + persistence epic, stdio + HTTP transports, registry-backed trust, ~60 MCP tools |
 
 ## Roadmap
 

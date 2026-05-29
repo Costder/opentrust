@@ -1,7 +1,7 @@
 // packages/hands-body-and-feet/src/capabilities/delegations/index.ts
 import { randomUUID } from 'crypto';
 import { openDb } from '../../spend-tracker.js';
-import { readConfig } from '../../config.js';
+import { readConfig, DEFAULT_REGISTRY_URL } from '../../config.js';
 import { isPaused } from '../../state.js';
 import { enforceTrust } from '../../trust.js';
 import { dispatchTool } from '../../dispatch.js';
@@ -127,7 +127,7 @@ export async function executeUnderDelegation(
   // 2. Re-validate passport against live registry
   let config: { registryUrl?: string };
   try { config = readConfig() as { registryUrl?: string }; } catch { config = {}; }
-  const registryUrl = config.registryUrl ?? 'http://localhost:8000';
+  const registryUrl = config.registryUrl ?? DEFAULT_REGISTRY_URL;
 
   const validation = await validateTaskPassport(
     delegation.passport_id,
