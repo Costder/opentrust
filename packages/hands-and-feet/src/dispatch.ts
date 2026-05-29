@@ -21,6 +21,7 @@ import { createFeed, addFeedItem, serveFeed } from './capabilities/rss/index.js'
 import { listMail, forwardMail, shredMail, scanMail } from './capabilities/mail/index.js';
 import { createDelegation, listDelegations, revokeDelegation } from './capabilities/delegations/index.js';
 import { createTrigger, listTriggers, deleteTrigger, pauseTrigger } from './capabilities/triggers/index.js';
+import { getIdentity, setIdentityBinding, getMemory, setMemory, listMemory, deleteMemory } from './capabilities/body/index.js';
 import type { PassportClaims } from './types.js';
 
 export type DispatchResult = {
@@ -114,6 +115,13 @@ export async function dispatchTool(
     if (name === 'list_triggers')  return ok(await listTriggers({}, claims));
     if (name === 'delete_trigger') return ok(await deleteTrigger(args as { label: string }, claims));
     if (name === 'pause_trigger')  return ok(await pauseTrigger(args as { label: string }, claims));
+
+    if (name === 'get_identity')        return ok(await getIdentity({}, claims));
+    if (name === 'set_identity_binding') return ok(await setIdentityBinding(args as { field: 'primary_wallet'|'email'|'phone'; value: string }, claims));
+    if (name === 'get_memory')          return ok(await getMemory(args as { key: string }, claims));
+    if (name === 'set_memory')          return ok(await setMemory(args as { key: string; value: unknown }, claims));
+    if (name === 'list_memory')         return ok(await listMemory({}, claims));
+    if (name === 'delete_memory')       return ok(await deleteMemory(args as { key: string }, claims));
 
     return err(`Unknown tool: ${name}`);
   } catch (e) {

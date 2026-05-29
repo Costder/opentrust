@@ -925,6 +925,48 @@ function createMcpServer(claims: PassportClaims): Server {
         description: 'Pauses a trigger without deleting it. Requires L3 trust.',
         inputSchema: { type: 'object' as const, properties: { label: { type: 'string' } }, required: ['label'] },
       },
+      // Body tools
+      {
+        name: 'get_identity',
+        description: 'Returns the agent\'s stored identity bindings (wallet, email, phone). Requires L2 trust.',
+        inputSchema: { type: 'object' as const, properties: {} },
+      },
+      {
+        name: 'set_identity_binding',
+        description: 'Sets one field of the agent\'s identity (primary_wallet, email, or phone). Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['field', 'value'],
+          properties: {
+            field: { type: 'string', enum: ['primary_wallet', 'email', 'phone'] },
+            value: { type: 'string' },
+          },
+        },
+      },
+      {
+        name: 'get_memory',
+        description: 'Reads a durable memory value by key. Requires L2 trust.',
+        inputSchema: { type: 'object' as const, required: ['key'], properties: { key: { type: 'string' } } },
+      },
+      {
+        name: 'set_memory',
+        description: 'Writes a durable memory value. Survives restarts. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['key', 'value'],
+          properties: { key: { type: 'string' }, value: { description: 'Any JSON-serializable value' } },
+        },
+      },
+      {
+        name: 'list_memory',
+        description: 'Lists all memory keys, newest first. Requires L2 trust.',
+        inputSchema: { type: 'object' as const, properties: {} },
+      },
+      {
+        name: 'delete_memory',
+        description: 'Deletes a memory key. Requires L2 trust.',
+        inputSchema: { type: 'object' as const, required: ['key'], properties: { key: { type: 'string' } } },
+      },
     ],
   }));
 
