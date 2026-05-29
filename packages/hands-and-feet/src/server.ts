@@ -39,6 +39,7 @@ import {
   RSS_TOOLS,
 } from './capabilities/rss/index.js';
 import { MAIL_TOOLS } from './capabilities/mail/index.js';
+import { loadActiveTriggers } from './capabilities/triggers/index.js';
 import type { PassportClaims } from './types.js';
 import { dispatchTool } from './dispatch.js';
 
@@ -893,6 +894,37 @@ function createMcpServer(claims: PassportClaims): Server {
           required: ['label'],
         },
       },
+      // Trigger tools
+      {
+        name: 'create_trigger',
+        description: 'Creates an event trigger (cron/webhook/email/sms/rss) that fires a tool under a delegation. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['source', 'match', 'action', 'delegation_label'],
+          properties: {
+            label: { type: 'string' },
+            source: { type: 'string', enum: ['cron', 'webhook', 'email', 'sms', 'rss'] },
+            match: { type: 'object', description: 'Source-specific predicate: {cron_expression} | {webhook_label} | {from_contains} | {from_number} | {feed_label, keyword?}' },
+            action: { type: 'object', required: ['tool_name', 'tool_args_template'], properties: { tool_name: { type: 'string' }, tool_args_template: { type: 'object' } } },
+            delegation_label: { type: ['string', 'null'], description: 'Delegation label to execute under (required for any tool other than notify_human)' },
+          },
+        },
+      },
+      {
+        name: 'list_triggers',
+        description: 'Lists all triggers. Requires L2 trust.',
+        inputSchema: { type: 'object' as const, properties: {} },
+      },
+      {
+        name: 'delete_trigger',
+        description: 'Deletes a trigger. Requires L3 trust.',
+        inputSchema: { type: 'object' as const, properties: { label: { type: 'string' } }, required: ['label'] },
+      },
+      {
+        name: 'pause_trigger',
+        description: 'Pauses a trigger without deleting it. Requires L3 trust.',
+        inputSchema: { type: 'object' as const, properties: { label: { type: 'string' } }, required: ['label'] },
+      },
     ],
   }));
 
@@ -986,8 +1018,9 @@ export function startServer(options: ServerOptions): Promise<import('http').Serv
       // Plan F: load scheduled tasks, start webhook purge job, optionally start XMPP
       try {
         loadActiveTasks();
+        loadActiveTriggers();
       } catch (err: unknown) {
-        console.error('Failed to load active tasks:', err instanceof Error ? err.message : String(err));
+        console.error('Failed to load active tasks/triggers:', err instanceof Error ? err.message : String(err));
       }
       startPurgeJob();
       startXmppIfConfigured().catch((err: unknown) => {

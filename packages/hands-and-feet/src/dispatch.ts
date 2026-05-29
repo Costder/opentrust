@@ -20,6 +20,7 @@ import { publishContent, getIpfsContent, pinContent } from './capabilities/ipfs/
 import { createFeed, addFeedItem, serveFeed } from './capabilities/rss/index.js';
 import { listMail, forwardMail, shredMail, scanMail } from './capabilities/mail/index.js';
 import { createDelegation, listDelegations, revokeDelegation } from './capabilities/delegations/index.js';
+import { createTrigger, listTriggers, deleteTrigger, pauseTrigger } from './capabilities/triggers/index.js';
 import type { PassportClaims } from './types.js';
 
 export type DispatchResult = {
@@ -109,6 +110,10 @@ export async function dispatchTool(
     if (name === 'create_delegation') return ok(await createDelegation(args as { label?: string; tool_allowlist: string[]; spend_caps: { maxPerCallUsdc?: number; dailyCapUsdc?: number }; action_budgets: Record<string, number> }, claims));
     if (name === 'list_delegations')  return ok(await listDelegations({}, claims));
     if (name === 'revoke_delegation') return ok(await revokeDelegation(args as { label: string }, claims));
+    if (name === 'create_trigger') return ok(await createTrigger(args as { label?: string; source: 'cron'|'webhook'|'email'|'sms'|'rss'; match: Record<string, unknown>; action: { tool_name: string; tool_args_template: Record<string, unknown> }; delegation_label: string|null }, claims));
+    if (name === 'list_triggers')  return ok(await listTriggers({}, claims));
+    if (name === 'delete_trigger') return ok(await deleteTrigger(args as { label: string }, claims));
+    if (name === 'pause_trigger')  return ok(await pauseTrigger(args as { label: string }, claims));
 
     return err(`Unknown tool: ${name}`);
   } catch (e) {
