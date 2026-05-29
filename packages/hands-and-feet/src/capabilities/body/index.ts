@@ -11,6 +11,7 @@ const SET_MEMORY_TOOL: ToolDefinition       = { name: 'set_memory',          min
 const LIST_MEMORY_TOOL: ToolDefinition      = { name: 'list_memory',         minTrustLevel: 2 };
 const DELETE_MEMORY_TOOL: ToolDefinition    = { name: 'delete_memory',       minTrustLevel: 3 };
 
+// Exported for use by tool registry/introspection layers (same pattern as DELEGATION_TOOLS, TRIGGER_TOOLS)
 export const BODY_TOOLS = {
   get_identity: GET_IDENTITY_TOOL,
   set_identity_binding: SET_IDENTITY_TOOL,

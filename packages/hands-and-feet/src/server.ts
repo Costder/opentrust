@@ -964,7 +964,7 @@ function createMcpServer(claims: PassportClaims): Server {
       },
       {
         name: 'delete_memory',
-        description: 'Deletes a memory key. Requires L2 trust.',
+        description: 'Deletes a memory key. Requires L3 trust.',
         inputSchema: { type: 'object' as const, required: ['key'], properties: { key: { type: 'string' } } },
       },
     ],
