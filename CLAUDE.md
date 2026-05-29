@@ -19,6 +19,7 @@ OpenTrust is a monorepo implementing an open standard for AI agent tool trust. I
 | `badge-generator/` | SVG badge generation script |
 | `manifest-validator/` | Standalone passport validator |
 | `passport-generator/` | Passport creation helper |
+| `packages/hands-body-and-feet/` | TypeScript MCP server — gives agents real-world capabilities; the persistent body |
 
 ---
 
@@ -169,10 +170,12 @@ After deploying the API, set `INTERNAL_API_URL` in the frontend project's Vercel
 ## CI
 
 The GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
-1. Python install + pytest (API, CLI, payment-contracts tests)
+1. Python install + pytest (API, CLI, payment-contracts, and SDK tests)
 2. npm lockfile registry check (blocks non-npmjs.org deps)
 3. npm audit signatures (verifies package integrity)
 4. Next.js lint + build
+5. `sdk-ts` typecheck + tests
+6. `packages/hands-body-and-feet` typecheck + tests
 
 All steps must pass before merge.
 

@@ -29,3 +29,4 @@ jobs:
         run: cd web && npm audit signatures
       - run: cd web && npm ci --ignore-scripts && npm run lint && npm run build
       - run: cd sdk-ts && npm ci && npm run typecheck && npm test
+      - run: cd packages/hands-body-and-feet && npm ci && npm run typecheck && npm test

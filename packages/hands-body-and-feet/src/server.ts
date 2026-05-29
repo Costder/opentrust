@@ -54,7 +54,7 @@ interface AuthedRequest extends Request {
 
 function createMcpServer(claims: PassportClaims): Server {
   const server = new Server(
-    { name: 'hands-and-feet', version: '0.1.0' },
+    { name: 'hands-body-and-feet', version: '2.0.0' },
     { capabilities: { tools: {} } },
   );
 
