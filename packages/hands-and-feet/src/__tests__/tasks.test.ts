@@ -5,10 +5,13 @@ import type { PassportClaims } from '../types.js';
 // ────────────────────────────────────────────────────────────
 // Hoisted mocks
 // ────────────────────────────────────────────────────────────
-const { mockCronSchedule, mockCronValidate } = vi.hoisted(() => ({
+const { mockCronSchedule, mockCronValidate, mockDispatchTool } = vi.hoisted(() => ({
   mockCronSchedule: vi.fn(),
   mockCronValidate: vi.fn().mockReturnValue(true),
+  mockDispatchTool: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: '{}' }] }),
 }));
+
+vi.mock('../dispatch.js', () => ({ dispatchTool: mockDispatchTool }));
 
 vi.mock('node-cron', () => ({
   schedule: mockCronSchedule,
@@ -337,5 +340,76 @@ describe('validateTaskPassport', () => {
     expect(result.decision).toBe('allow');
     expect(result.effectiveSnapshot.spendCaps?.maxPerCallUsdc).toBe(5);
     expect(result.effectiveSnapshot.spendCaps?.dailyCapUsdc).toBe(50);
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+// fireTask (real execution)
+// ────────────────────────────────────────────────────────────
+describe('fireTask (real execution)', () => {
+  it('calls dispatchTool with the task tool and args when passport is allowed', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'p1', version: '1', status: 'active' }),
+    });
+
+    // Create a task — this schedules a cron job
+    let cronCallback: (() => void) | undefined;
+    mockCronSchedule.mockImplementation((_expr: string, cb: () => void) => {
+      cronCallback = cb;
+      return makeFakeJob();
+    });
+
+    await createTask(
+      {
+        label: 'fire-test',
+        cron_expression: '* * * * *',
+        tool_name: 'notify_human',
+        tool_args: { message: 'ping' },
+        passport_id: 'p1',
+        passport_version: '1',
+        permission_snapshot: FAKE_SNAPSHOT,
+      },
+      makeL3Claims(),
+    );
+
+    // Trigger the cron callback
+    await cronCallback!();
+
+    expect(mockDispatchTool).toHaveBeenCalledWith(
+      'notify_human',
+      { message: 'ping' },
+      expect.objectContaining({ passportId: 'p1' }),
+    );
+  });
+
+  it('skips dispatchTool when passport is revoked', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'p1', version: '1', status: 'revoked' }),
+    });
+
+    let cronCallback: (() => void) | undefined;
+    mockCronSchedule.mockImplementation((_expr: string, cb: () => void) => {
+      cronCallback = cb;
+      return makeFakeJob();
+    });
+
+    await createTask(
+      {
+        label: 'revoked-test',
+        cron_expression: '* * * * *',
+        tool_name: 'notify_human',
+        tool_args: {},
+        passport_id: 'p1',
+        passport_version: '1',
+        permission_snapshot: FAKE_SNAPSHOT,
+      },
+      makeL3Claims(),
+    );
+
+    mockDispatchTool.mockClear();
+    await cronCallback!();
+    expect(mockDispatchTool).not.toHaveBeenCalled();
   });
 });

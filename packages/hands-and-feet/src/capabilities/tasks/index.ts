@@ -3,9 +3,10 @@ import { randomUUID } from 'crypto';
 import { enforceTrust } from '../../trust.js';
 import { openDb } from '../../spend-tracker.js';
 import { readConfig } from '../../config.js';
-import type { PassportClaims, ToolDefinition } from '../../types.js';
+import type { PassportClaims, ToolDefinition, TrustLevel, TrustStatus } from '../../types.js';
 import { validateTaskPassport } from './revocation.js';
 import type { PermissionSnapshot } from './revocation.js';
+import { dispatchTool } from '../../dispatch.js';
 
 // ────────────────────────────────────────────────────────────
 // Tool definitions
@@ -81,8 +82,24 @@ async function fireTask(label: string): Promise<void> {
     return;
   }
 
-  // Fire the tool — in a real system this would dispatch through the MCP server.
-  // Here we log the intent and update status.
+  // Reconstruct claims from stored passport snapshot
+  const effectiveCaps = validation.effectiveSnapshot.spendCaps;
+  const reconstructedClaims = {
+    passportId: row.passport_id,
+    agentId: row.passport_id,
+    trustLevel: 3 as TrustLevel,
+    trustStatus: 'seller_confirmed' as TrustStatus,
+    flags: [] as string[],
+    spendCaps: effectiveCaps
+      ? { maxPerCallUsdc: effectiveCaps.maxPerCallUsdc ?? Infinity, dailyCapUsdc: effectiveCaps.dailyCapUsdc ?? Infinity }
+      : undefined,
+    isDisputed: false,
+    version: row.passport_version,
+  };
+
+  const toolArgs = JSON.parse(row.tool_args) as Record<string, unknown>;
+  await dispatchTool(row.tool_name, toolArgs, reconstructedClaims);
+
   db.prepare(
     'UPDATE scheduled_tasks SET last_fired_at = ?, last_fire_status = ? WHERE label = ?',
   ).run(new Date().toISOString(), 'success', label);
@@ -102,14 +119,14 @@ export function loadActiveTasks(): void {
       console.warn(`[tasks] invalid cron expression for task '${row.label}': ${row.cron_expression}`);
       continue;
     }
-    const job = cron.schedule(row.cron_expression, () => {
+    const job = cron.schedule(row.cron_expression, () =>
       fireTask(row.label).catch((err: unknown) => {
         console.error(
           `[tasks] error firing task '${row.label}':`,
           err instanceof Error ? err.message : String(err),
         );
-      });
-    });
+      }),
+    );
     activeJobs.set(row.label, job);
   }
 }
@@ -154,14 +171,14 @@ export async function createTask(
     new Date().toISOString(),
   );
 
-  const job = cron.schedule(params.cron_expression, () => {
+  const job = cron.schedule(params.cron_expression, () =>
     fireTask(label).catch((err: unknown) => {
       console.error(
         `[tasks] error firing task '${label}':`,
         err instanceof Error ? err.message : String(err),
       );
-    });
-  });
+    }),
+  );
   activeJobs.set(label, job);
 
   return { label, cron_expression: params.cron_expression, status: 'active' };
