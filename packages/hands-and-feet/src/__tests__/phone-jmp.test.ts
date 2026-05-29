@@ -4,6 +4,14 @@ import { SecretsError } from '../secrets.js';
 import type { PassportClaims } from '../types.js';
 
 // ────────────────────────────────────────────────────────────
+// Module mocks
+// ────────────────────────────────────────────────────────────
+vi.mock('../capabilities/triggers/index.js', () => ({
+  matchAndFire: vi.fn().mockResolvedValue(undefined),
+  loadActiveTriggers: vi.fn(),
+}));
+
+// ────────────────────────────────────────────────────────────
 // Hoisted mocks
 // ────────────────────────────────────────────────────────────
 const { mockXmppClient, mockXmppXml } = vi.hoisted(() => {
@@ -43,6 +51,7 @@ import {
   _resetXmppConn,
   _getInboundMessages,
 } from '../capabilities/phone-jmp/index.js';
+import { matchAndFire } from '../capabilities/triggers/index.js';
 
 // ────────────────────────────────────────────────────────────
 // Helpers
@@ -227,6 +236,36 @@ describe('read_sms_jmp', () => {
     const result = await readSmsJmp({ number: '+15559876543' }, makeL2Claims());
     expect(result.count).toBe(1);
     expect(result.messages[0].body).toBe('inbound test');
+  });
+
+  it('calls matchAndFire with sms source and payload when stanza arrives', async () => {
+    // Connect the XMPP client so the stanza handler is registered
+    await readSmsJmp({}, makeL2Claims());
+
+    // Find the xmpp instance that was created and extract the stanza handler
+    const xmppInstance = mockXmppClient.mock.results[mockXmppClient.mock.results.length - 1]?.value as {
+      on: ReturnType<typeof vi.fn>;
+    };
+    const onCalls: Array<[string, (...args: unknown[]) => void]> = xmppInstance.on.mock.calls as Array<[string, (...args: unknown[]) => void]>;
+    const stanzaEntry = onCalls.find(([event]) => event === 'stanza');
+    expect(stanzaEntry).toBeDefined();
+    const stanzaHandler = stanzaEntry![1];
+
+    // Simulate an inbound JMP stanza
+    const fakeStanza = {
+      is: (tag: string) => tag === 'message',
+      attrs: { from: '+15550001111@jmp.chat' },
+      getChildText: (tag: string) => tag === 'body' ? 'hello from test' : null,
+    };
+    stanzaHandler(fakeStanza);
+
+    // Allow the microtask queue to flush
+    await Promise.resolve();
+
+    expect(matchAndFire).toHaveBeenCalledWith('sms', expect.objectContaining({
+      from_number: expect.any(String),
+      body: expect.any(String),
+    }));
   });
 });
 

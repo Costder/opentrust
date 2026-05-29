@@ -28,6 +28,7 @@ export class LocalTransport {
           stream.on('data', (chunk: Buffer) => chunks.push(chunk));
           stream.on('end', () => {
             simpleParser(Buffer.concat(chunks)).then((parsed) => {
+              const matchAndFireCalls: Array<() => void> = [];
               try {
                 const db = openDb();
                 const toField = parsed.to;
@@ -63,17 +64,27 @@ export class LocalTransport {
                       parsed.html || null,
                       new Date().toISOString(),
                     );
-                    matchAndFire('email', {
-                      mailbox_address: addr,
-                      from: fromText,
-                      subject: parsed.subject ?? '',
-                      body: parsed.text ?? '',
-                    }).catch((e: unknown) => console.error('[triggers] email matchAndFire error:', e instanceof Error ? e.message : String(e)));
+                    const capturedAddr = addr;
+                    const capturedFrom = fromText;
+                    const capturedSubject = parsed.subject ?? '';
+                    const capturedBody = parsed.text ?? '';
+                    matchAndFireCalls.push(() => {
+                      matchAndFire('email', {
+                        mailbox_address: capturedAddr,
+                        from: capturedFrom,
+                        subject: capturedSubject,
+                        body: capturedBody,
+                      }).catch((e: unknown) => console.error('[triggers] email matchAndFire error:', e instanceof Error ? e.message : String(e)));
+                    });
                   }
                 }
                 callback();
               } catch (err) {
                 callback(err as Error);
+                return;
+              }
+              for (const fire of matchAndFireCalls) {
+                fire();
               }
             }).catch((err: Error) => callback(err));
           });

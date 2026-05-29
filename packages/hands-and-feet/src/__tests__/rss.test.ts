@@ -5,6 +5,11 @@ import type { PassportClaims } from '../types.js';
 // ────────────────────────────────────────────────────────────
 // Module mocks
 // ────────────────────────────────────────────────────────────
+vi.mock('../capabilities/triggers/index.js', () => ({
+  matchAndFire: vi.fn().mockResolvedValue(undefined),
+  loadActiveTriggers: vi.fn(),
+}));
+
 vi.mock('../config.js', () => ({
   readConfig: vi.fn(),
   CONFIG_DIR: '/tmp/test-haf-rss',
@@ -27,6 +32,7 @@ vi.mock('better-sqlite3', () => {
 
 import Database from 'better-sqlite3';
 import { createFeed, addFeedItem, serveFeed, registerRssRoutes } from '../capabilities/rss/index.js';
+import { matchAndFire } from '../capabilities/triggers/index.js';
 import { _resetDb } from '../spend-tracker.js';
 
 const MockDatabase = Database as unknown as { resetDb: () => void };
@@ -115,6 +121,14 @@ describe('add_feed_item', () => {
     expect(result.feed_label).toBe('items-feed');
     expect(result.title).toBe('New Item');
     expect(result.date).toBeTruthy();
+
+    // Verify matchAndFire was called with correct source and payload
+    expect(matchAndFire).toHaveBeenCalledWith('rss', expect.objectContaining({
+      feed_label: expect.any(String),
+      title: expect.any(String),
+      description: expect.any(String),
+      url: expect.any(String),
+    }));
   });
 });
 

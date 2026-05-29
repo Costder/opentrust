@@ -6,6 +6,11 @@ import type { PassportClaims } from '../types.js';
 // ────────────────────────────────────────────────────────────
 // Module mocks
 // ────────────────────────────────────────────────────────────
+vi.mock('../capabilities/triggers/index.js', () => ({
+  matchAndFire: vi.fn().mockResolvedValue(undefined),
+  loadActiveTriggers: vi.fn(),
+}));
+
 vi.mock('../config.js', () => ({
   readConfig: vi.fn(() => ({
     version: 1,
@@ -41,6 +46,7 @@ import {
   deleteWebhook,
   webhookReceiver,
 } from '../capabilities/webhook/index.js';
+import { matchAndFire } from '../capabilities/triggers/index.js';
 import { _resetDb } from '../spend-tracker.js';
 
 const MockDatabase = Database as unknown as { resetDb: () => void };
@@ -136,6 +142,13 @@ describe('webhookReceiver', () => {
 
     await webhookReceiver(req, res);
     expect((res.status as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(200);
+
+    // Verify matchAndFire was called with correct source and payload
+    expect(matchAndFire).toHaveBeenCalledWith('webhook', expect.objectContaining({
+      webhook_label: expect.any(String),
+      body: expect.any(String),
+      headers: expect.any(String),
+    }));
 
     // Verify event was stored
     const events = await readWebhookEvents({ label: 'recv-wh' }, makeL2Claims());
