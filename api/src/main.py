@@ -7,7 +7,7 @@ from .config import run_config_validation, settings
 from .database import db
 from .middleware.rate_limit import RateLimitMiddleware
 from .middleware.security_headers import SecurityHeadersMiddleware
-from .routes import auth, badges, github_app, marketplace, passports, payments, search
+from .routes import auth, badges, github_app, marketplace, passport_auth, passports, payments, search
 from .routes.well_known import registry_router, well_known_router
 
 
@@ -32,6 +32,7 @@ app.add_middleware(
 
 api = APIRouter(prefix="/api/v1")
 api.include_router(passports.router)
+api.include_router(passport_auth.router)
 api.include_router(search.router)
 api.include_router(auth.router)
 api.include_router(badges.router)
