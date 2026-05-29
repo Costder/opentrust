@@ -3,6 +3,7 @@ import type { Application, Request, Response } from 'express';
 import { openDb } from '../../spend-tracker.js';
 import { enforceTrust } from '../../trust.js';
 import type { PassportClaims, ToolDefinition } from '../../types.js';
+import { matchAndFire } from '../triggers/index.js';
 
 // ────────────────────────────────────────────────────────────
 // Tool definitions
@@ -126,6 +127,13 @@ export async function addFeedItem(
     params.guid ?? null,
     now,
   );
+
+  matchAndFire('rss', {
+    feed_label: params.feed_label,
+    title: params.title,
+    description: params.description,
+    url: params.url ?? '',
+  }).catch((e: unknown) => console.error('[triggers] rss matchAndFire error:', e instanceof Error ? e.message : String(e)));
 
   return {
     feed_label: params.feed_label,

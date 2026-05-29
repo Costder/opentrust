@@ -1,6 +1,7 @@
 import { enforceTrust } from '../../trust.js';
 import { SecretsError } from '../../secrets.js';
 import type { PassportClaims, ToolDefinition } from '../../types.js';
+import { matchAndFire } from '../triggers/index.js';
 
 // ────────────────────────────────────────────────────────────
 // Tool definitions
@@ -78,6 +79,11 @@ async function getXmppClient(): Promise<unknown> {
     const msgs = inboundMessages.get(bareFrom) ?? [];
     msgs.push({ from: bareFrom, body, received_at: new Date().toISOString() });
     inboundMessages.set(bareFrom, msgs);
+
+    matchAndFire('sms', {
+      from_number: bareFrom,
+      body,
+    }).catch((e: unknown) => console.error('[triggers] sms matchAndFire error:', e instanceof Error ? e.message : String(e)));
   });
 
   await xmpp.start();

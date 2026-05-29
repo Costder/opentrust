@@ -2,6 +2,7 @@ import { SMTPServer } from 'smtp-server';
 import { simpleParser } from 'mailparser';
 import nodemailer from 'nodemailer';
 import { openDb } from '../../spend-tracker.js';
+import { matchAndFire } from '../triggers/index.js';
 
 export interface SendEmailOpts {
   from: string;
@@ -47,6 +48,9 @@ export class LocalTransport {
                     .prepare('SELECT address FROM mailboxes WHERE address = ?')
                     .get(addr);
                   if (mailbox) {
+                    const fromText = typeof parsed.from === 'object' && parsed.from
+                      ? (parsed.from as { text: string }).text
+                      : '';
                     db.prepare(`
                       INSERT OR IGNORE INTO emails (mailbox_address, message_id, subject, from_address, body_text, body_html, received_at)
                       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -54,13 +58,17 @@ export class LocalTransport {
                       addr,
                       parsed.messageId ?? `msg-${Date.now()}`,
                       parsed.subject ?? '(no subject)',
-                      typeof parsed.from === 'object' && parsed.from
-                        ? (parsed.from as { text: string }).text
-                        : '',
+                      fromText,
                       parsed.text ?? '',
                       parsed.html || null,
                       new Date().toISOString(),
                     );
+                    matchAndFire('email', {
+                      mailbox_address: addr,
+                      from: fromText,
+                      subject: parsed.subject ?? '',
+                      body: parsed.text ?? '',
+                    }).catch((e: unknown) => console.error('[triggers] email matchAndFire error:', e instanceof Error ? e.message : String(e)));
                   }
                 }
                 callback();

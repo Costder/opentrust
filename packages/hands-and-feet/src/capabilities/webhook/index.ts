@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { enforceTrust } from '../../trust.js';
 import { openDb } from '../../spend-tracker.js';
 import type { PassportClaims, ToolDefinition } from '../../types.js';
+import { matchAndFire } from '../triggers/index.js';
 
 // ────────────────────────────────────────────────────────────
 // Tool definitions
@@ -102,6 +103,12 @@ export async function webhookReceiver(req: Request, res: Response): Promise<void
   db.prepare(
     'INSERT INTO webhook_events (webhook_label, headers, body, received_at) VALUES (?, ?, ?, ?)',
   ).run(label, headersStr, bodyStr, new Date().toISOString());
+
+  matchAndFire('webhook', {
+    webhook_label: label,
+    body: bodyStr,
+    headers: headersStr,
+  }).catch((e: unknown) => console.error('[triggers] webhook matchAndFire error:', e instanceof Error ? e.message : String(e)));
 
   res.status(200).json({ ok: true });
 }
