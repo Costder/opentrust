@@ -130,6 +130,52 @@ export function openDb(): Database.Database {
       date TEXT NOT NULL,
       FOREIGN KEY (feed_label) REFERENCES rss_feeds(label) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS delegations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label TEXT UNIQUE NOT NULL,
+      passport_id TEXT NOT NULL,
+      passport_version TEXT NOT NULL,
+      agent_id TEXT NOT NULL,
+      trust_level INTEGER NOT NULL,
+      trust_status TEXT NOT NULL,
+      tool_allowlist TEXT NOT NULL DEFAULT '[]',
+      spend_caps TEXT NOT NULL DEFAULT '{}',
+      action_budgets TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS delegation_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      delegation_id INTEGER NOT NULL REFERENCES delegations(id) ON DELETE CASCADE,
+      tool TEXT NOT NULL,
+      call_count INTEGER NOT NULL DEFAULT 0,
+      spent_usdc REAL NOT NULL DEFAULT 0,
+      window_start TEXT NOT NULL,
+      UNIQUE(delegation_id, tool)
+    );
+    CREATE TABLE IF NOT EXISTS triggers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label TEXT UNIQUE NOT NULL,
+      source TEXT NOT NULL,
+      match_json TEXT NOT NULL DEFAULT '{}',
+      action_json TEXT NOT NULL,
+      delegation_id INTEGER REFERENCES delegations(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      last_fired_at TEXT,
+      last_fire_status TEXT
+    );
+    CREATE TABLE IF NOT EXISTS agent_identity (
+      agent_id TEXT PRIMARY KEY,
+      primary_wallet TEXT,
+      email TEXT,
+      phone TEXT,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS memory (
+      key TEXT PRIMARY KEY,
+      value_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
   return _db;
 }

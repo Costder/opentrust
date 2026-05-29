@@ -158,3 +158,40 @@ describe('spend-tracker', () => {
     expect(() => checkSpendAllowed('test-wallet', entry, 50)).toThrow(TrustError);
   });
 });
+
+describe('new tables exist after openDb()', () => {
+  it('delegations table exists', () => {
+    const db = openDb();
+    expect(() =>
+      db.prepare('SELECT id, label, passport_id, passport_version, agent_id, trust_level, trust_status, tool_allowlist, spend_caps, action_budgets, status, created_at FROM delegations LIMIT 1').all()
+    ).not.toThrow();
+  });
+
+  it('delegation_usage table exists', () => {
+    const db = openDb();
+    expect(() =>
+      db.prepare('SELECT id, delegation_id, tool, call_count, spent_usdc, window_start FROM delegation_usage LIMIT 1').all()
+    ).not.toThrow();
+  });
+
+  it('triggers table exists', () => {
+    const db = openDb();
+    expect(() =>
+      db.prepare('SELECT id, label, source, match_json, action_json, delegation_id, status, last_fired_at, last_fire_status FROM triggers LIMIT 1').all()
+    ).not.toThrow();
+  });
+
+  it('agent_identity table exists', () => {
+    const db = openDb();
+    expect(() =>
+      db.prepare('SELECT agent_id, primary_wallet, email, phone, updated_at FROM agent_identity LIMIT 1').all()
+    ).not.toThrow();
+  });
+
+  it('memory table exists', () => {
+    const db = openDb();
+    expect(() =>
+      db.prepare('SELECT key, value_json, updated_at FROM memory LIMIT 1').all()
+    ).not.toThrow();
+  });
+});
