@@ -57,4 +57,42 @@ paths:
   /api/v1/escrow/create:
     post:
       responses:
-        "501": { description: Escrow is outside the demo flow }
+        "200": { description: Create trust-verified escrow and return deposit instructions }
+        "403": { description: Escrow disabled or seller trust gate failed }
+        "422": { description: Listing is missing delivery proof }
+  /api/v1/escrow/{escrow_id}:
+    get:
+      responses:
+        "200": { description: Return escrow state }
+        "404": { description: Escrow not found }
+  /api/v1/escrow/{escrow_id}/verify-deposit:
+    post:
+      responses:
+        "200": { description: Verify Base USDC deposit and mark escrow funded }
+        "402": { description: On-chain payment verification failed }
+        "404": { description: Escrow or wallet not found }
+        "409": { description: Invalid escrow state transition }
+  /api/v1/escrow/{escrow_id}/deliver:
+    post:
+      responses:
+        "200": { description: Record delivery proof }
+        "404": { description: Escrow not found }
+        "409": { description: Escrow is not funded or proof is incomplete }
+  /api/v1/escrow/{escrow_id}/release:
+    post:
+      responses:
+        "200": { description: Release escrow through the configured provider }
+        "404": { description: Escrow not found }
+        "409": { description: Escrow is not deliverable for release }
+  /api/v1/escrow/{escrow_id}/refund:
+    post:
+      responses:
+        "200": { description: Refund escrow through the configured provider }
+        "404": { description: Escrow not found }
+        "409": { description: Escrow is not refundable }
+  /api/v1/escrow/{escrow_id}/disputes:
+    post:
+      responses:
+        "200": { description: Open a dispute and block release }
+        "404": { description: Escrow not found }
+        "409": { description: Escrow is not disputable }

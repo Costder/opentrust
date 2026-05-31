@@ -7,6 +7,7 @@ from ..schemas.marketplace import (
     CheckoutResponse,
     EvidenceImportRequest,
     EvidenceRun,
+    EscrowStatus,
     MarketplaceListing,
     MarketplaceListingRequest,
     MarketplaceOrder,
@@ -106,11 +107,25 @@ async def create_listing(request: MarketplaceListingRequest):
 
 @router.post("/orders", response_model=MarketplaceOrder)
 async def create_order(request: MarketplaceOrderRequest):
+    if not request.transaction_hash and not request.escrow_id and not (
+        settings.opentrust_custodial_wallets_enabled or settings.opentrust_escrow_enabled
+    ):
+        raise HTTPException(status_code=501, detail="on-chain escrow and custody are not enabled")
+    listing = store.listings.get(request.listing_id)
+    if listing is None:
+        raise HTTPException(status_code=404, detail="listing not found")
+    if listing.escrow_required and not request.escrow_id:
+        raise HTTPException(status_code=403, detail="listing requires escrow")
+    if request.escrow_id:
+        escrow = store.escrows.get(request.escrow_id)
+        if escrow is None:
+            raise HTTPException(status_code=404, detail="escrow not found")
+        if escrow.status != EscrowStatus.released:
+            raise HTTPException(status_code=409, detail="escrow must be released before order creation")
+        if escrow.listing_id != request.listing_id or escrow.buyer_wallet_id != request.buyer_wallet_id:
+            raise HTTPException(status_code=409, detail="escrow does not match order")
     if request.transaction_hash:
         # On-chain escrow: verify the USDC transfer before creating the order
-        listing = store.listings.get(request.listing_id)
-        if listing is None:
-            raise HTTPException(status_code=404, detail="listing not found")
         buyer_wallet = store.wallets.get(request.buyer_wallet_id)
         seller_wallet = store.wallets.get(listing.seller_wallet_id)
         if buyer_wallet is None or seller_wallet is None:

@@ -7,6 +7,11 @@ from ..config import settings
 from ..schemas.marketplace import (
     CheckoutRequest,
     CheckoutResponse,
+    EscrowCreateRequest,
+    EscrowDeliveryRequest,
+    EscrowDepositVerificationRequest,
+    EscrowDisputeRequest,
+    EscrowRecord,
     PaymentStatus,
     PaymentVerificationRequest,
     PaymentVerificationResponse,
@@ -79,9 +84,99 @@ async def create_subscription(repo_id: str | None = None):
     return store.create_checkout(CheckoutRequest(product_code=ProductCode.monitoring_monthly, repo_id=repo_id))
 
 
-@escrow_router.post("/create")
-async def create_escrow():
-    raise HTTPException(status_code=501, detail="escrow is outside the open-source demo payment flow")
+def _map_escrow_store_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, KeyError):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, PermissionError):
+        return HTTPException(status_code=403, detail=str(exc))
+    if isinstance(exc, ValueError):
+        return HTTPException(status_code=409, detail=str(exc))
+    return HTTPException(status_code=500, detail="unexpected escrow error")
+
+
+@escrow_router.post("/create", response_model=EscrowRecord)
+async def create_escrow(request: EscrowCreateRequest):
+    if not settings.opentrust_escrow_enabled:
+        raise HTTPException(status_code=403, detail="escrow is disabled")
+    try:
+        return store.create_escrow(
+            request,
+            token_contract=settings.base_usdc_contract,
+        )
+    except ValueError as exc:
+        if "delivery proof" in str(exc):
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise _map_escrow_store_error(exc) from exc
+    except (KeyError, PermissionError) as exc:
+        raise _map_escrow_store_error(exc) from exc
+
+
+@escrow_router.get("/{escrow_id}", response_model=EscrowRecord)
+async def get_escrow(escrow_id: str):
+    escrow = store.escrows.get(escrow_id)
+    if escrow is None:
+        raise HTTPException(status_code=404, detail="escrow does not exist")
+    return escrow
+
+
+@escrow_router.post("/{escrow_id}/verify-deposit", response_model=EscrowRecord)
+async def verify_escrow_deposit(escrow_id: str, request: EscrowDepositVerificationRequest):
+    escrow = store.escrows.get(escrow_id)
+    if escrow is None:
+        raise HTTPException(status_code=404, detail="escrow does not exist")
+    buyer_wallet = store.wallets.get(escrow.buyer_wallet_id)
+    if buyer_wallet is None:
+        raise HTTPException(status_code=404, detail="buyer wallet is not connected")
+    try:
+        verify_usdc_transfer(
+            tx_hash=request.tx_hash,
+            expected_sender=buyer_wallet.address,
+            expected_recipient=escrow.deposit.recipient_address,
+            expected_amount_usdc=escrow.amount_usdc,
+            rpc_url=settings.base_rpc_url,
+            usdc_contract=settings.base_usdc_contract,
+        )
+        return store.verify_escrow_deposit(escrow_id, request.tx_hash)
+    except OnchainVerificationError as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+    except (KeyError, PermissionError, ValueError) as exc:
+        raise _map_escrow_store_error(exc) from exc
+
+
+@escrow_router.post("/{escrow_id}/deliver", response_model=EscrowRecord)
+async def deliver_escrow(escrow_id: str, request: EscrowDeliveryRequest):
+    try:
+        return store.mark_escrow_delivered(
+            escrow_id,
+            result_hash=request.result_hash,
+            artifact_uri=request.artifact_uri,
+        )
+    except (KeyError, PermissionError, ValueError) as exc:
+        raise _map_escrow_store_error(exc) from exc
+
+
+@escrow_router.post("/{escrow_id}/release", response_model=EscrowRecord)
+async def release_escrow(escrow_id: str):
+    try:
+        return store.release_escrow(escrow_id)
+    except (KeyError, PermissionError, ValueError) as exc:
+        raise _map_escrow_store_error(exc) from exc
+
+
+@escrow_router.post("/{escrow_id}/refund", response_model=EscrowRecord)
+async def refund_escrow(escrow_id: str):
+    try:
+        return store.refund_escrow(escrow_id)
+    except (KeyError, PermissionError, ValueError) as exc:
+        raise _map_escrow_store_error(exc) from exc
+
+
+@escrow_router.post("/{escrow_id}/disputes", response_model=EscrowRecord)
+async def dispute_escrow(escrow_id: str, request: EscrowDisputeRequest):
+    try:
+        return store.mark_escrow_disputed(escrow_id, request.reason)
+    except (KeyError, PermissionError, ValueError) as exc:
+        raise _map_escrow_store_error(exc) from exc
 
 
 @router.post("/verify-onchain", response_model=OnchainVerifyResponse)

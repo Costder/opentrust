@@ -9,7 +9,15 @@ class EscrowProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def deposit_address(self, escrow_id: str) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
     def release_funds(self, escrow_id: str) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def refund_buyer(self, escrow_id: str) -> Resolution:
         raise NotImplementedError
 
     @abstractmethod

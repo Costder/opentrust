@@ -177,6 +177,62 @@ class TestEscrowOrderFlow:
         assert order_resp.status_code == 402
         assert "amount mismatch" in order_resp.json()["detail"]
 
+    async def test_direct_order_rejected_when_listing_requires_escrow(self, client):
+        """Escrow-required listings cannot be bypassed with direct seller payment."""
+        from api.src.schemas.marketplace import DeliveryProofRequirement, MarketplaceListing
+
+        with patch("api.src.routes.marketplace.settings") as mock_settings:
+            mock_settings.opentrust_customer_wallets_enabled = True
+            mock_settings.opentrust_byo_wallet_enabled = True
+            mock_settings.opentrust_embedded_wallet_enabled = False
+            mock_settings.base_rpc_url = "https://mainnet.base.org"
+            mock_settings.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+
+            buyer_resp = await client.post(
+                "/api/v1/wallets/connect",
+                json={"owner": "buyer", "address": "0x" + "b" * 40, "kind": "byo"},
+            )
+            seller_resp = await client.post(
+                "/api/v1/wallets/connect",
+                json={"owner": "seller", "address": "0x" + "c" * 40, "kind": "byo"},
+            )
+            buyer_wallet_id = buyer_resp.json()["wallet_id"]
+            seller_wallet_id = seller_resp.json()["wallet_id"]
+
+            listing = MarketplaceListing(
+                listing_id="listing_requires_escrow",
+                seller_wallet_id=seller_wallet_id,
+                repo_id="repo_test",
+                title="Escrowed Tool",
+                price_usdc=Decimal("19.00"),
+                escrow_required=True,
+                delivery_proof=DeliveryProofRequirement(
+                    type="hash_match",
+                    standard="Deliver a result hash matching the agreed artifact.",
+                    timeout_seconds=900,
+                    result_hash_required=True,
+                ),
+                seller_passport_id="seller-passport",
+                seller_trust_level=3,
+                seller_trust_status="seller_confirmed",
+            )
+            store.listings[listing.listing_id] = listing
+
+            with patch("api.src.routes.marketplace.verify_usdc_transfer") as mock_verify:
+                mock_verify.return_value = MagicMock(verified=True)
+                order_resp = await client.post(
+                    "/api/v1/marketplace/orders",
+                    json={
+                        "listing_id": "listing_requires_escrow",
+                        "buyer_wallet_id": buyer_wallet_id,
+                        "transaction_hash": "0x" + "a" * 64,
+                    },
+                )
+
+        assert order_resp.status_code == 403
+        assert "requires escrow" in order_resp.json()["detail"]
+        mock_verify.assert_not_called()
+
 
 class TestOnchainPaymentVerificationEndpoint:
     async def test_valid_tx_returns_verified_true(self, client):

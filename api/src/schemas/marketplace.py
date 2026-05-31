@@ -22,6 +22,27 @@ class WalletKind(str, Enum):
     embedded = "embedded"
 
 
+class ProviderKind(str, Enum):
+    mcp_server = "mcp_server"
+    skill = "skill"
+    tool = "tool"
+    agent_service = "agent_service"
+    human_service = "human_service"
+
+
+class EscrowStatus(str, Enum):
+    created = "created"
+    funded = "funded"
+    delivered = "delivered"
+    disputed = "disputed"
+    release_pending = "release_pending"
+    released = "released"
+    refund_pending = "refund_pending"
+    refunded = "refunded"
+    expired = "expired"
+    cancelled = "cancelled"
+
+
 class EvidenceSource(str, Enum):
     github_code_scanning = "github_code_scanning"
     github_dependabot = "github_dependabot"
@@ -110,11 +131,25 @@ class WalletAccount(BaseModel):
     custody: str = "customer"
 
 
+class DeliveryProofRequirement(BaseModel):
+    type: str = Field(min_length=1)
+    standard: str = Field(min_length=1)
+    timeout_seconds: int = Field(ge=60)
+    verification_endpoint: str | None = None
+    result_hash_required: bool = False
+
+
 class MarketplaceListingRequest(BaseModel):
     seller_wallet_id: str
     repo_id: str
     title: str = Field(min_length=1)
     price_usdc: Decimal = Field(gt=0)
+    provider_kind: ProviderKind = ProviderKind.tool
+    seller_passport_id: str | None = None
+    seller_trust_level: int | None = Field(default=None, ge=1, le=7)
+    seller_trust_status: str | None = None
+    escrow_required: bool = False
+    delivery_proof: DeliveryProofRequirement | None = None
 
 
 class MarketplaceListing(BaseModel):
@@ -125,11 +160,18 @@ class MarketplaceListing(BaseModel):
     price_usdc: Decimal
     currency: str = "USDC"
     custody: str = "none"
+    provider_kind: ProviderKind = ProviderKind.tool
+    seller_passport_id: str | None = None
+    seller_trust_level: int | None = None
+    seller_trust_status: str | None = None
+    escrow_required: bool = False
+    delivery_proof: DeliveryProofRequirement | None = None
 
 
 class MarketplaceOrderRequest(BaseModel):
     listing_id: str
     buyer_wallet_id: str
+    escrow_id: str | None = None
     transaction_hash: str | None = Field(
         default=None,
         min_length=66,
@@ -146,7 +188,61 @@ class MarketplaceOrder(BaseModel):
     amount_usdc: Decimal
     currency: str = "USDC"
     transaction_hash: str | None = None
+    escrow_id: str | None = None
     custody: str = "none"
+
+
+class EscrowCreateRequest(BaseModel):
+    listing_id: str
+    buyer_wallet_id: str
+    client_reference_id: str | None = None
+    agent_passport_id: str | None = None
+
+
+class EscrowDepositInstructions(BaseModel):
+    network: str = "base"
+    token: str = "USDC"
+    token_contract: str
+    recipient_address: str
+    amount_usdc: Decimal
+    expires_at: str
+
+
+class EscrowRecord(BaseModel):
+    escrow_id: str
+    listing_id: str
+    buyer_wallet_id: str
+    seller_wallet_id: str
+    seller_passport_id: str | None = None
+    amount_usdc: Decimal
+    currency: str = "USDC"
+    status: EscrowStatus
+    deposit: EscrowDepositInstructions
+    funding_tx_hash: str | None = None
+    delivery_proof: DeliveryProofRequirement
+    delivered_at: str | None = None
+    result_hash: str | None = None
+    artifact_uri: str | None = None
+    release_available_at: str | None = None
+    settlement_tx_hash: str | None = None
+    refund_tx_hash: str | None = None
+    dispute_reason: str | None = None
+    client_reference_id: str | None = None
+    agent_passport_id: str | None = None
+
+
+class EscrowDepositVerificationRequest(BaseModel):
+    tx_hash: str = Field(min_length=66, max_length=66, pattern=r"^0x[0-9a-fA-F]{64}$")
+
+
+class EscrowDeliveryRequest(BaseModel):
+    result_hash: str | None = None
+    artifact_uri: str | None = None
+    notes: str | None = None
+
+
+class EscrowDisputeRequest(BaseModel):
+    reason: str = Field(min_length=1)
 
 
 class EvidenceImportRequest(BaseModel):
