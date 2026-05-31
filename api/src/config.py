@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     opentrust_custodial_wallets_enabled: bool = False
     opentrust_escrow_enabled: bool = False
     opentrust_marketplace_fee_enabled: bool = False
+    opentrust_reputation_gate_enabled: bool = True
 
     # Coinbase Commerce
     coinbase_business_api_key_id: str = ""

@@ -229,6 +229,7 @@ class EscrowRecord(BaseModel):
     dispute_reason: str | None = None
     client_reference_id: str | None = None
     agent_passport_id: str | None = None
+    reputation_accrued: bool = False
 
 
 class EscrowDepositVerificationRequest(BaseModel):

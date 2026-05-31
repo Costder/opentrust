@@ -17,6 +17,7 @@ from ..schemas.marketplace import (
     PaymentVerificationResponse,
     ProductCode,
 )
+from ..schemas.reputation import CounterpartyRating, CounterpartyRatingRequest
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
 
@@ -177,6 +178,22 @@ async def dispute_escrow(escrow_id: str, request: EscrowDisputeRequest):
         return store.mark_escrow_disputed(escrow_id, request.reason)
     except (KeyError, PermissionError, ValueError) as exc:
         raise _map_escrow_store_error(exc) from exc
+
+
+@escrow_router.post("/{escrow_id}/ratings", response_model=CounterpartyRating)
+async def rate_escrow(escrow_id: str, request: CounterpartyRatingRequest):
+    """Bidirectional counterparty rating, allowed only after the escrow settles."""
+    try:
+        return store.add_rating(escrow_id, request)
+    except (KeyError, PermissionError, ValueError) as exc:
+        raise _map_escrow_store_error(exc) from exc
+
+
+@escrow_router.get("/{escrow_id}/ratings", response_model=list[CounterpartyRating])
+async def list_escrow_ratings(escrow_id: str):
+    if escrow_id not in store.escrows:
+        raise HTTPException(status_code=404, detail="escrow does not exist")
+    return store.list_ratings_for_escrow(escrow_id)
 
 
 @router.post("/verify-onchain", response_model=OnchainVerifyResponse)

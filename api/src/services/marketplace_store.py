@@ -28,6 +28,19 @@ from ..schemas.marketplace import (
     WalletConnectRequest,
     WalletKind,
 )
+from ..schemas.jobs import (
+    JobEngagement,
+    JobEngageRequest,
+    JobPosting,
+    JobPostingRequest,
+    JobStatus,
+)
+from ..schemas.reputation import (
+    CounterpartyRating,
+    CounterpartyRatingRequest,
+    ReputationRecord,
+    SubjectKind,
+)
 from .escrow_provider import MockEscrowProvider, get_escrow_provider
 
 
@@ -50,6 +63,9 @@ class MarketplaceStore:
         self.evidence_runs: dict[str, EvidenceRun] = {}
         self.reports: dict[str, TrustReport] = {}
         self.badges: dict[str, VerifiedBadge] = {}
+        self.reputation: dict[tuple[str, SubjectKind], ReputationRecord] = {}
+        self.ratings: dict[str, CounterpartyRating] = {}
+        self.jobs: dict[str, JobPosting] = {}
 
     def reset(self) -> None:
         self.__init__()
@@ -164,6 +180,11 @@ class MarketplaceStore:
             raise PermissionError("seller passport is disputed")
         if listing.seller_trust_level is None or listing.seller_trust_level < 3:
             raise PermissionError("seller trust level must be 3 or higher")
+        if settings.opentrust_reputation_gate_enabled:
+            seller_subject = listing.seller_passport_id or listing.seller_wallet_id
+            rep = self.reputation.get((seller_subject, SubjectKind.server))
+            if rep is not None and rep.deals_total >= 3 and rep.dispute_rate > 0.5:
+                raise PermissionError("seller reputation indicates elevated dispute risk")
 
         escrow_provider = provider or get_escrow_provider()
         escrow_id = f"escrow_{uuid4().hex}"
@@ -229,6 +250,7 @@ class MarketplaceStore:
             raise ValueError("escrow can only be disputed after funding")
         escrow.status = EscrowStatus.disputed
         escrow.dispute_reason = reason
+        self._accrue_outcome(escrow, "disputed")
         return escrow
 
     def release_escrow(self, escrow_id: str, *, provider: MockEscrowProvider | None = None) -> EscrowRecord:
@@ -241,6 +263,8 @@ class MarketplaceStore:
         result = (provider or get_escrow_provider()).release_funds(escrow_id)
         escrow.status = EscrowStatus.released
         escrow.settlement_tx_hash = result.transaction_hash
+        self._accrue_outcome(escrow, "released")
+        self._complete_linked_job(escrow)
         return escrow
 
     def refund_escrow(self, escrow_id: str, *, provider: MockEscrowProvider | None = None) -> EscrowRecord:
@@ -253,7 +277,211 @@ class MarketplaceStore:
         result = (provider or get_escrow_provider()).refund_buyer(escrow_id)
         escrow.status = EscrowStatus.refunded
         escrow.refund_tx_hash = result.transaction_hash
+        self._accrue_outcome(escrow, "refunded")
         return escrow
+
+    # ── Reputation ────────────────────────────────────────────────────────────
+
+    def _subjects_for(self, escrow: EscrowRecord) -> list[tuple[str, SubjectKind]]:
+        """Identity keys that accrue reputation from this escrow's outcome."""
+        subjects = [
+            (escrow.seller_passport_id or escrow.seller_wallet_id, SubjectKind.server),
+            (escrow.buyer_wallet_id, SubjectKind.client),
+        ]
+        if escrow.agent_passport_id:
+            subjects.append((escrow.agent_passport_id, SubjectKind.agent))
+        return subjects
+
+    def get_or_create_reputation(self, subject_id: str, subject_kind: SubjectKind) -> ReputationRecord:
+        key = (subject_id, subject_kind)
+        rec = self.reputation.get(key)
+        if rec is None:
+            rec = ReputationRecord(subject_id=subject_id, subject_kind=subject_kind)
+            self.reputation[key] = rec
+        return rec
+
+    def get_reputation(
+        self, subject_id: str, subject_kind: SubjectKind | None = None
+    ) -> ReputationRecord | None:
+        if subject_kind is not None:
+            return self.reputation.get((subject_id, subject_kind))
+        candidates = [rec for (sid, _kind), rec in self.reputation.items() if sid == subject_id]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda rec: rec.deals_total)
+
+    def _accrue_outcome(self, escrow: EscrowRecord, outcome: str) -> None:
+        """Accrue an escrow's terminal outcome to every involved party, once.
+
+        The dispute signal takes precedence: an escrow disputed then refunded is
+        counted once, as a dispute, so deals_total reflects the salient outcome.
+        """
+        if escrow.reputation_accrued:
+            return
+        amount = escrow.amount_usdc
+        now = datetime.now(timezone.utc).isoformat()
+        for subject_id, kind in self._subjects_for(escrow):
+            rec = self.get_or_create_reputation(subject_id, kind)
+            rec.deals_total += 1
+            if outcome == "released":
+                rec.deals_released += 1
+                rec.settled_volume_usdc += amount
+            elif outcome == "refunded":
+                rec.deals_refunded += 1
+            elif outcome == "disputed":
+                rec.deals_disputed += 1
+            rec.updated_at = now
+        escrow.reputation_accrued = True
+
+    def add_rating(self, escrow_id: str, request: CounterpartyRatingRequest) -> CounterpartyRating:
+        escrow = self.escrows.get(escrow_id)
+        if escrow is None:
+            raise KeyError("escrow does not exist")
+        if escrow.status not in {EscrowStatus.released, EscrowStatus.refunded}:
+            raise ValueError("ratings are only allowed after the escrow settles")
+        for existing in self.ratings.values():
+            if existing.escrow_id == escrow_id and existing.rater_role == request.rater_role:
+                raise ValueError("this party has already rated this escrow")
+        if request.rater_role == "buyer":
+            rater_id = escrow.buyer_wallet_id
+            subject_id = escrow.seller_passport_id or escrow.seller_wallet_id
+            subject_kind = SubjectKind.server
+        else:  # seller rates the buyer
+            rater_id = escrow.seller_passport_id or escrow.seller_wallet_id
+            subject_id = escrow.buyer_wallet_id
+            subject_kind = SubjectKind.client
+        now = datetime.now(timezone.utc).isoformat()
+        rating = CounterpartyRating(
+            rating_id=f"rating_{uuid4().hex}",
+            escrow_id=escrow_id,
+            rater_role=request.rater_role,
+            rater_id=rater_id,
+            subject_id=subject_id,
+            subject_kind=subject_kind,
+            score=request.score,
+            comment=request.comment,
+            created_at=now,
+        )
+        self.ratings[rating.rating_id] = rating
+        rec = self.get_or_create_reputation(subject_id, subject_kind)
+        rec.rating_sum += request.score
+        rec.rating_count += 1
+        rec.updated_at = now
+        return rating
+
+    def list_ratings_for_escrow(self, escrow_id: str) -> list[CounterpartyRating]:
+        return [r for r in self.ratings.values() if r.escrow_id == escrow_id]
+
+    def list_ratings_for_subject(self, subject_id: str) -> list[CounterpartyRating]:
+        return [r for r in self.ratings.values() if r.subject_id == subject_id]
+
+    # ── Work venue (jobs) ───────────────────────────────────────────────────────
+
+    def create_job(self, request: JobPostingRequest) -> JobPosting:
+        if request.client_wallet_id not in self.wallets:
+            raise KeyError("client wallet is not connected")
+        job = JobPosting(
+            job_id=f"job_{uuid4().hex}",
+            client_wallet_id=request.client_wallet_id,
+            title=request.title,
+            description=request.description,
+            budget_usdc=request.budget_usdc,
+            provider_kind=request.provider_kind,
+            client_passport_id=request.client_passport_id,
+            delivery_proof=request.delivery_proof,
+            min_provider_trust_score=request.min_provider_trust_score,
+            created_at=datetime.now(timezone.utc).isoformat(),
+        )
+        self.jobs[job.job_id] = job
+        return job
+
+    def get_job(self, job_id: str) -> JobPosting | None:
+        return self.jobs.get(job_id)
+
+    def list_jobs(
+        self,
+        *,
+        status: JobStatus | None = None,
+        provider_kind=None,
+        max_budget: Decimal | None = None,
+    ) -> list[JobPosting]:
+        jobs = list(self.jobs.values())
+        if status is not None:
+            jobs = [j for j in jobs if j.status == status]
+        if provider_kind is not None:
+            jobs = [j for j in jobs if j.provider_kind == provider_kind]
+        if max_budget is not None:
+            jobs = [j for j in jobs if j.budget_usdc <= max_budget]
+        return jobs
+
+    def cancel_job(self, job_id: str) -> JobPosting:
+        job = self.jobs.get(job_id)
+        if job is None:
+            raise KeyError("job does not exist")
+        if job.status != JobStatus.open:
+            raise ValueError("only open jobs can be cancelled")
+        job.status = JobStatus.cancelled
+        return job
+
+    def engage_job(
+        self,
+        job_id: str,
+        request: JobEngageRequest,
+        *,
+        provider: MockEscrowProvider | None = None,
+    ) -> JobEngagement:
+        job = self.jobs.get(job_id)
+        if job is None:
+            raise KeyError("job does not exist")
+        if job.status != JobStatus.open:
+            raise ValueError("job is not open for engagement")
+        if request.provider_wallet_id not in self.wallets:
+            raise KeyError("provider wallet is not connected")
+        if job.min_provider_trust_score is not None:
+            subject = request.provider_passport_id or request.provider_wallet_id
+            rep = self.reputation.get((subject, SubjectKind.server))
+            score = rep.trust_score if rep else 0
+            if score < job.min_provider_trust_score:
+                raise PermissionError("provider reputation is below the job's required floor")
+
+        # Reuse the escrow rail: synthesize a listing for this engagement, then
+        # mint an escrow through the same code path marketplace orders use.
+        listing = MarketplaceListing(
+            listing_id=f"joblisting_{uuid4().hex}",
+            seller_wallet_id=request.provider_wallet_id,
+            repo_id=f"job:{job.job_id}",
+            title=job.title,
+            price_usdc=job.budget_usdc,
+            provider_kind=job.provider_kind,
+            seller_passport_id=request.provider_passport_id,
+            seller_trust_level=request.provider_trust_level,
+            seller_trust_status=request.provider_trust_status,
+            escrow_required=True,
+            delivery_proof=job.delivery_proof,
+        )
+        self.listings[listing.listing_id] = listing
+        escrow = self.create_escrow(
+            EscrowCreateRequest(
+                listing_id=listing.listing_id,
+                buyer_wallet_id=job.client_wallet_id,
+                client_reference_id=job.job_id,
+                agent_passport_id=request.agent_passport_id,
+            ),
+            token_contract=settings.base_usdc_contract,
+            provider=provider,
+        )
+        job.status = JobStatus.engaged
+        job.engaged_provider_wallet_id = request.provider_wallet_id
+        job.engaged_provider_passport_id = request.provider_passport_id
+        job.escrow_id = escrow.escrow_id
+        return JobEngagement(job=job, escrow=escrow)
+
+    def _complete_linked_job(self, escrow: EscrowRecord) -> None:
+        ref = escrow.client_reference_id
+        if ref and ref in self.jobs:
+            job = self.jobs[ref]
+            if job.escrow_id == escrow.escrow_id and job.status == JobStatus.engaged:
+                job.status = JobStatus.completed
 
     def import_evidence(self, request: EvidenceImportRequest) -> EvidenceRun:
         if request.repo_id not in self.repos:

@@ -96,3 +96,48 @@ paths:
         "200": { description: Open a dispute and block release }
         "404": { description: Escrow not found }
         "409": { description: Escrow is not disputable }
+  /api/v1/escrow/{escrow_id}/ratings:
+    post:
+      parameters: [{ name: escrow_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Submit a bidirectional counterparty rating after settlement }
+        "409": { description: Escrow not settled or already rated by this party }
+    get:
+      parameters: [{ name: escrow_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: List ratings submitted for this escrow }
+  /api/v1/reputation/{subject_id}:
+    get:
+      parameters: [{ name: subject_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Registry-computed reputation record for a client, server, or agent }
+        "404": { description: No reputation record for this subject }
+  /api/v1/reputation/{subject_id}/ratings:
+    get:
+      parameters: [{ name: subject_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Ratings received by this subject }
+  /api/v1/jobs:
+    post:
+      responses:
+        "200": { description: Client posts work wanted }
+    get:
+      responses:
+        "200": { description: List jobs with optional status/provider_kind/max_budget filters }
+  /api/v1/jobs/{job_id}:
+    get:
+      parameters: [{ name: job_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Read one job posting }
+  /api/v1/jobs/{job_id}/engage:
+    post:
+      parameters: [{ name: job_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Provider engages an open job, minting an escrow }
+        "403": { description: Escrow disabled or provider below reputation floor }
+  /api/v1/jobs/{job_id}/cancel:
+    post:
+      parameters: [{ name: job_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Client cancels an open job }
+        "409": { description: Job is not open }

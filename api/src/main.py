@@ -7,7 +7,18 @@ from .config import run_config_validation, settings
 from .database import db
 from .middleware.rate_limit import RateLimitMiddleware
 from .middleware.security_headers import SecurityHeadersMiddleware
-from .routes import auth, badges, github_app, marketplace, passport_auth, passports, payments, search
+from .routes import (
+    auth,
+    badges,
+    github_app,
+    jobs,
+    marketplace,
+    passport_auth,
+    passports,
+    payments,
+    reputation,
+    search,
+)
 from .routes.well_known import registry_router, well_known_router
 
 
@@ -39,6 +50,8 @@ api.include_router(badges.router)
 api.include_router(payments.router)
 api.include_router(payments.subscriptions_router)
 api.include_router(payments.escrow_router)
+api.include_router(reputation.router)
+api.include_router(jobs.router)
 api.include_router(github_app.router)
 api.include_router(github_app.github_router)
 api.include_router(github_app.repos_router)
