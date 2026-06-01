@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/jobs",        label: "Jobs" },
   { href: "/marketplace", label: "Marketplace" },
   { href: "/register",    label: "Register" },
+  { href: "/demo",        label: "Demo" },
   { href: "/launch-lab",  label: "Launch Lab" },
 ];
 
@@ -44,7 +45,7 @@ export function Navigation() {
           })}
 
           <a
-            href="/api/v1/docs"
+            href={`${process.env.NEXT_PUBLIC_API_URL || ""}/docs`}
             target="_blank"
             rel="noopener noreferrer"
             className="ml-2 inline-flex items-center gap-1 rounded-md border border-stone-300 bg-white px-3 py-1.5 font-medium text-stone-500 transition hover:bg-stone-50 hover:text-stone-800"

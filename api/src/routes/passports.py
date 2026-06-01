@@ -1,10 +1,13 @@
 import sqlite3
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from ..database import Database, get_db
 from ..schemas.passport import PassportCreate, PassportRead, SecurityEvidenceBlock  # noqa: F401 — type reference
+from .well_known import _require_admin
 
 router = APIRouter(prefix="/tools", tags=["tools"])
+admin_router = APIRouter(prefix="/admin/tools", tags=["admin"])
 
 _HIGH_RISK_PERMISSIONS = frozenset({"file", "network", "terminal", "wallet", "private_data"})
 # "disputed" is intentionally excluded: a disputed passport is under investigation
@@ -48,19 +51,38 @@ def _check_evidence_block(payload: PassportCreate) -> None:
         )
 
 
+def _safe_reads(rows) -> list[PassportRead]:
+    """Serialize rows to PassportRead, skipping any malformed row.
+
+    A single corrupt/legacy row (e.g. a leftover demo passport missing required
+    fields) must not 500 the whole listing — skip it and return the rest.
+    """
+    out: list[PassportRead] = []
+    for row in rows:
+        try:
+            out.append(PassportRead.from_model(row))
+        except Exception:
+            continue
+    return out
+
+
 @router.get("")
 async def list_tools(
     q: str | None = Query(default=None, description="Search query (name, description, capabilities)"),
     trust_status: str | None = Query(default=None, description="Filter by trust_status"),
     page: int = Query(default=1, ge=1, description="Page number"),
     limit: int = Query(default=20, ge=1, le=100, description="Results per page"),
+    include_demo: bool = Query(default=False, description="Include demo/example tools"),
+    demo_only: bool = Query(default=False, description="Return only demo/example tools"),
     db: Database = Depends(get_db),
 ):
+    # demo: False = real only (default), True = demo only, None = both
+    demo: bool | None = True if demo_only else (None if include_demo else False)
     offset = (page - 1) * limit
-    items = await db.list_filtered(q=q, trust_status=trust_status, offset=offset, limit=limit)
-    total = await db.count_filtered(q=q, trust_status=trust_status)
+    items = await db.list_filtered(q=q, trust_status=trust_status, offset=offset, limit=limit, demo=demo)
+    total = await db.count_filtered(q=q, trust_status=trust_status, demo=demo)
     return {
-        "items": [PassportRead.from_model(row) for row in items],
+        "items": _safe_reads(items),
         "total": total,
         "page": page,
         "limit": limit,
@@ -130,4 +152,93 @@ async def badge_redirect(slug: str):
 
 @router.get("/search/local", response_model=list[PassportRead])
 async def search_tools(q: str, db: Database = Depends(get_db)):
-    return [PassportRead.from_model(row) for row in await db.search(q)]
+    return _safe_reads(await db.search(q))
+
+
+# ── Admin: elevated registry management (Bearer REGISTRY_ADMIN_TOKEN) ───────────
+
+
+class AdminCreateTool(PassportCreate):
+    is_demo: bool = False
+
+
+class AdminPatchTool(BaseModel):
+    trust_status: str | None = None
+    is_demo: bool | None = None
+    hidden: bool | None = None
+
+
+@admin_router.post("", response_model=PassportRead, status_code=201)
+async def admin_create_tool(
+    payload: AdminCreateTool,
+    db: Database = Depends(get_db),
+    actor: str | None = Depends(_require_admin),
+):
+    """Operator-vouched passport creation. Sets trust_status directly and may
+    flag the entry as demo. Requires admin auth when REGISTRY_ADMIN_TOKEN is set."""
+    identity = payload.tool_identity
+    try:
+        row = await db.create({
+            "id": str(uuid4()),
+            "slug": identity["slug"],
+            "name": identity["name"],
+            "description": payload.description,
+            "trust_status": payload.trust_status.value,
+            "tool_identity": payload.tool_identity,
+            "creator_identity": payload.creator_identity,
+            "version_hash": payload.version_hash,
+            "capabilities": payload.capabilities,
+            "permission_manifest": payload.permission_manifest,
+            "evidence": payload.evidence,
+            "risk_summary": payload.risk_summary,
+            "review_history": payload.review_history,
+            "commercial_status": payload.commercial_status,
+            "billing_plan": payload.billing_plan,
+            "fee_schedule": payload.fee_schedule,
+            "agent_access": payload.agent_access,
+            "is_demo": 1 if payload.is_demo else 0,
+            "hidden": 0,
+        })
+    except (sqlite3.IntegrityError, RuntimeError) as exc:
+        msg = str(exc)
+        if "UNIQUE" in msg or "unique" in msg.lower():
+            raise HTTPException(status_code=409, detail=f"A passport with slug '{identity['slug']}' already exists.")
+        raise HTTPException(status_code=500, detail="Database error.")
+    return PassportRead.from_model(row)
+
+
+@admin_router.delete("/{slug}")
+async def admin_delete_tool(
+    slug: str,
+    db: Database = Depends(get_db),
+    actor: str | None = Depends(_require_admin),
+):
+    """Soft-delete: hide the passport from all listings (recoverable via PATCH)."""
+    existing = await db.get_by_slug(slug)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Passport not found")
+    await db.update(slug, {"hidden": 1})
+    return {"hidden": slug}
+
+
+@admin_router.patch("/{slug}", response_model=PassportRead)
+async def admin_patch_tool(
+    slug: str,
+    payload: AdminPatchTool,
+    db: Database = Depends(get_db),
+    actor: str | None = Depends(_require_admin),
+):
+    """Edit trust_status, demo flag, or restore a soft-deleted passport."""
+    existing = await db.get_by_slug(slug)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Passport not found")
+    updates: dict = {}
+    if payload.trust_status is not None:
+        updates["trust_status"] = payload.trust_status
+    if payload.is_demo is not None:
+        updates["is_demo"] = 1 if payload.is_demo else 0
+    if payload.hidden is not None:
+        updates["hidden"] = 1 if payload.hidden else 0
+    if updates:
+        await db.update(slug, updates)
+    return PassportRead.from_model(await db.get_by_slug(slug))

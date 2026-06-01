@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS passports (
     billing_plan TEXT,
     fee_schedule TEXT,
     agent_access TEXT NOT NULL,
+    is_demo INTEGER NOT NULL DEFAULT 0,
+    hidden INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
@@ -55,6 +57,7 @@ _COLUMNS = [
     "tool_identity", "creator_identity", "version_hash", "capabilities",
     "permission_manifest", "evidence", "risk_summary", "review_history",
     "commercial_status", "billing_plan", "fee_schedule", "agent_access",
+    "is_demo", "hidden",
     "created_at", "updated_at",
 ]
 
@@ -184,6 +187,8 @@ class Database:
         # SQLite and Turso both ignore errors for existing columns.
         for migration in [
             "ALTER TABLE passports ADD COLUMN evidence TEXT",
+            "ALTER TABLE passports ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE passports ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0",
         ]:
             try:
                 await self._execute(migration)
@@ -287,7 +292,15 @@ class Database:
         trust_status: str | None = None,
         offset: int = 0,
         limit: int = 20,
+        *,
+        demo: bool | None = False,
+        include_hidden: bool = False,
     ) -> list[PassportRow]:
+        """List passports.
+
+        demo: False = exclude demo (default), True = only demo, None = both.
+        include_hidden: soft-deleted (hidden) rows are excluded unless True.
+        """
         cols = ", ".join(_COLUMNS)
         conditions: list[str] = []
         args: list[Any] = []
@@ -298,6 +311,12 @@ class Database:
         if trust_status:
             conditions.append("trust_status = ?")
             args.append(trust_status)
+        if demo is True:
+            conditions.append("is_demo = 1")
+        elif demo is False:
+            conditions.append("(is_demo = 0 OR is_demo IS NULL)")
+        if not include_hidden:
+            conditions.append("(hidden = 0 OR hidden IS NULL)")
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         args.extend([limit, offset])
         return await self._execute(
@@ -309,9 +328,14 @@ class Database:
         self,
         q: str | None = None,
         trust_status: str | None = None,
+        *,
+        demo: bool | None = False,
+        include_hidden: bool = False,
     ) -> int:
         """Return total row count matching filters (fetches all matching rows)."""
-        rows = await self.list_filtered(q, trust_status, offset=0, limit=99999)
+        rows = await self.list_filtered(
+            q, trust_status, offset=0, limit=99999, demo=demo, include_hidden=include_hidden
+        )
         return len(rows)
 
     async def get_by_slug(self, slug: str) -> PassportRow | None:

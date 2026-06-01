@@ -30,7 +30,30 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="OpenTrust API", version="0.1.0", lifespan=lifespan)
+_API_DESCRIPTION = """
+The **OpenTrust** registry API — verifiable identity, earned reputation, and
+agent-native payments for AI agent tools.
+
+### What you can do
+- **Tools / passports** — register and look up tool passports with trust levels
+- **Verification** — advance trust via wallet signature (L2), GitHub owner-claim
+  (L3), or an on-chain USDC fee (L4)
+- **Marketplace** — list and buy tools/services, paid in real USDC on Base L2
+- **Jobs** — post work, engage providers (mints escrow), build two-way reputation
+- **Reputation** — registry-computed trust earned from settled deals
+
+Most read endpoints are public. State-changing registry actions (revoke, admin)
+require an `Authorization: Bearer <token>` header.
+"""
+
+app = FastAPI(
+    title="OpenTrust API",
+    version="1.0.0",
+    description=_API_DESCRIPTION,
+    contact={"name": "OpenTrust", "url": "https://github.com/Costder/opentrust"},
+    license_info={"name": "MIT", "url": "https://github.com/Costder/opentrust/blob/main/LICENSE"},
+    lifespan=lifespan,
+)
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
@@ -44,6 +67,7 @@ app.add_middleware(
 
 api = APIRouter(prefix="/api/v1")
 api.include_router(passports.router)
+api.include_router(passports.admin_router)
 api.include_router(passport_auth.router)
 api.include_router(passport_verify.router)
 api.include_router(search.router)

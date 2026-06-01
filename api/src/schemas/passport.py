@@ -87,6 +87,7 @@ class PassportRead(PassportBase):
     slug: str
     name: str
     warning: str | None = None
+    is_demo: bool = False
 
     @classmethod
     def from_model(cls, model):
@@ -110,4 +111,5 @@ class PassportRead(PassportBase):
             fee_schedule=model.fee_schedule,
             agent_access=model.agent_access,
             warning=warning,
+            is_demo=bool(getattr(model, "is_demo", 0)),
         )
