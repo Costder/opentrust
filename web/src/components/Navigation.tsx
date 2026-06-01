@@ -11,7 +11,6 @@ const NAV_LINKS = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/register",    label: "Register" },
   { href: "/demo",        label: "Demo" },
-  { href: "/launch-lab",  label: "Launch Lab" },
 ];
 
 export function Navigation() {

@@ -150,11 +150,6 @@ const launchGates = [
     detail: "Security headers, rate limiting, and non-root containers are all on.",
     status: "ready",
   },
-  {
-    label: "Real keys, domain, and SSL needed",
-    detail: "Before going public: generate real secret keys, add a real domain, and get an SSL certificate.",
-    status: "operator",
-  },
 ];
 
 // ── Permission labels ─────────────────────────────────────────────────────────
@@ -387,10 +382,12 @@ export function LaunchLab() {
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
             {readyCount} of {launchGates.length} checks ready
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800">
-            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-            {operatorCount} setup step still needed
-          </span>
+          {operatorCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              {operatorCount} setup step still needed
+            </span>
+          )}
         </div>
       </header>
 
