@@ -242,6 +242,45 @@ class TestMiddlewareIntegration:
             assert resp.headers.get("referrer-policy") == "strict-origin-when-cross-origin"
 
     @pytest.mark.asyncio
+    async def test_docs_csp_allows_swagger_cdn(self):
+        """The docs UI loads Swagger assets from jsdelivr — CSP must allow it."""
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/docs")
+            assert resp.status_code == 200
+            csp = resp.headers.get("content-security-policy", "")
+            assert "cdn.jsdelivr.net" in csp
+            # Swagger injects an inline init script, so inline must be permitted on docs
+            assert "'unsafe-inline'" in csp
+
+    @pytest.mark.asyncio
+    async def test_non_docs_csp_stays_strict(self):
+        """Only docs routes get the relaxed CSP; everything else stays locked down.
+
+        Asserted at the middleware level to avoid interference from the rate
+        limiter (which can 429 a hammered /health and drop headers).
+        """
+        captured: dict = {}
+
+        async def app_stub(scope, receive, send):
+            # The downstream app just emits a response start; the middleware's
+            # wrapped send injects the security headers we want to inspect.
+            await send({"type": "http.response.start", "status": 200, "headers": []})
+
+        async def recv():
+            return {"type": "http.request"}
+
+        async def outer_send(message):
+            if message["type"] == "http.response.start":
+                captured["headers"] = dict(message["headers"])
+
+        mw = SecurityHeadersMiddleware(app_stub)
+        await mw({"type": "http", "path": "/api/v1/health"}, recv, outer_send)
+        csp = captured["headers"].get(b"content-security-policy", b"").decode()
+        assert "cdn.jsdelivr.net" not in csp
+        assert "default-src 'self'" in csp
+
+    @pytest.mark.asyncio
     async def test_rate_limit_429_response_format(self):
         """429 responses should include proper headers and JSON body."""
         # Build a special-limited middleware for testing
