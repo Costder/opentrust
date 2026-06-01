@@ -104,13 +104,17 @@ const init: CommandModule = {
       const transport = await select({
         message: 'Email transport:',
         choices: [
+          { value: 'agentmail', name: 'agentmail — hosted inbox, send + receive, easiest setup (set AGENTMAIL_API_KEY)' },
           { value: 'local', name: 'local — self-hosted SMTP, no external account needed' },
-          { value: 'postmark', name: 'postmark — set POSTMARK_SERVER_TOKEN env var' },
-          { value: 'resend', name: 'resend — set RESEND_API_KEY env var' },
+          { value: 'postmark', name: 'postmark — send only, set POSTMARK_SERVER_TOKEN env var' },
+          { value: 'resend', name: 'resend — send only, set RESEND_API_KEY env var' },
         ],
       });
-      cfg.capabilities.email = { transport: transport as 'local' | 'postmark' | 'resend' };
-      if (transport === 'postmark') {
+      cfg.capabilities.email = { transport: transport as 'local' | 'postmark' | 'resend' | 'agentmail' };
+      if (transport === 'agentmail') {
+        console.log('   Set AGENTMAIL_API_KEY env var (from agentmail.to) before running serve.');
+        console.log('   AgentMail gives each agent a real hosted inbox — send AND receive, no SMTP server.');
+      } else if (transport === 'postmark') {
         console.log('   Set POSTMARK_SERVER_TOKEN env var before running serve.');
       } else if (transport === 'resend') {
         console.log('   Set RESEND_API_KEY env var before running serve.');

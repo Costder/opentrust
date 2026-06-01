@@ -65,7 +65,7 @@ export interface HandsAndFeetConfig {
       provider: 'twilio' | 'signalwire';
     };
     email?: {
-      transport: 'local' | 'postmark' | 'resend';
+      transport: 'local' | 'postmark' | 'resend' | 'agentmail';
       localPort?: number;
     };
     github?: {

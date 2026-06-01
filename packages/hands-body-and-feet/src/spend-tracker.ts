@@ -58,6 +58,7 @@ export function openDb(): Database.Database {
     CREATE TABLE IF NOT EXISTS mailboxes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       address TEXT UNIQUE NOT NULL,
+      inbox_id TEXT,
       created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS emails (
@@ -177,6 +178,17 @@ export function openDb(): Database.Database {
       updated_at TEXT NOT NULL
     );
   `);
+  // Additive migrations for columns introduced after the initial schema.
+  // SQLite has no "ADD COLUMN IF NOT EXISTS", so we attempt and ignore dup errors.
+  for (const migration of [
+    'ALTER TABLE mailboxes ADD COLUMN inbox_id TEXT',
+  ]) {
+    try {
+      _db.exec(migration);
+    } catch {
+      // column already exists — fine
+    }
+  }
   return _db;
 }
 

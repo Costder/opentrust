@@ -1,7 +1,7 @@
 {
   "name": "@infinitestudios/hands-body-and-feet",
   "version": "2.2.0",
-  "description": "Give AI agents real-world capabilities via MCP \u2014 email, phone, wallet, payments, virtual cards, and more",
+  "description": "Give AI agents real-world capabilities via MCP — email, phone, wallet, payments, virtual cards, and more",
   "type": "module",
   "bin": {
     "hands-body-and-feet": "bin/hands-body-and-feet.js"
@@ -30,6 +30,7 @@
     "@ngrok/ngrok": "^1.7.0",
     "@octokit/rest": "^22.0.1",
     "@xmpp/client": "^0.14.0",
+    "agentmail": "^0.5.8",
     "better-sqlite3": "^11.0.0",
     "cloudflared": "^0.7.1",
     "dockerode": "^5.0.0",
