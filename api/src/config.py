@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     opentrust_marketplace_fee_enabled: bool = False
     opentrust_reputation_gate_enabled: bool = True
 
+    # Verification
+    opentrust_registry_treasury_address: str = ""  # USDC recipient for $10 verification fees
+    opentrust_verification_fee_usdc: str = "10.00"
+
     # Coinbase Commerce
     coinbase_business_api_key_id: str = ""
     coinbase_business_api_key_secret: str = ""

@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Wallet } from "lucide-react";
+import { useWallet, truncateAddress } from "@/lib/useWallet";
 
 const NAV_LINKS = [
   { href: "/tools",       label: "Tools" },
+  { href: "/jobs",        label: "Jobs" },
   { href: "/marketplace", label: "Marketplace" },
+  { href: "/register",    label: "Register" },
   { href: "/launch-lab",  label: "Launch Lab" },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
+  const { wallet } = useWallet();
 
   return (
     <nav className="border-b border-stone-300 bg-paper/90 backdrop-blur-sm sticky top-0 z-50">
@@ -49,6 +53,16 @@ export function Navigation() {
             API docs
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </a>
+
+          {wallet && (
+            <span
+              className="ml-2 inline-flex items-center gap-1.5 rounded-md border border-moss/30 bg-green-50 px-3 py-1.5 font-mono text-xs font-medium text-green-800"
+              title={`Connected: ${wallet.address}`}
+            >
+              <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+              {truncateAddress(wallet.address)}
+            </span>
+          )}
         </div>
       </div>
     </nav>

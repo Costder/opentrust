@@ -14,6 +14,7 @@ from .routes import (
     jobs,
     marketplace,
     passport_auth,
+    passport_verify,
     passports,
     payments,
     reputation,
@@ -44,6 +45,7 @@ app.add_middleware(
 api = APIRouter(prefix="/api/v1")
 api.include_router(passports.router)
 api.include_router(passport_auth.router)
+api.include_router(passport_verify.router)
 api.include_router(search.router)
 api.include_router(auth.router)
 api.include_router(badges.router)

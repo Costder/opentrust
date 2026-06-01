@@ -10,3 +10,4 @@ pytest
 pytest-asyncio
 cryptography
 web3>=7.0,<8.0
+eth-account>=0.13,<0.14
