@@ -82,6 +82,42 @@ async def test_get_wallet_404_for_unknown(client):
     assert resp.status_code == 404
 
 
+async def test_seller_can_delete_own_listing(client):
+    c, test_db = client
+    seller = await _connect_seller(c)
+    created = (await c.post("/api/v1/marketplace/listings", json={
+        "seller_wallet_id": seller, "title": "Temp", "price_usdc": "2.00",
+    })).json()
+    lid = created["listing_id"]
+    resp = await c.request("DELETE", f"/api/v1/marketplace/listings/{lid}",
+                           json={"seller_wallet_id": seller})
+    assert resp.status_code == 200, resp.text
+    assert await test_db.get_object("listing", lid) is None
+    listings = (await c.get("/api/v1/marketplace/listings")).json()
+    assert all(l["listing_id"] != lid for l in listings)
+
+
+async def test_cannot_delete_another_sellers_listing(client):
+    c, _ = client
+    seller = await _connect_seller(c)
+    created = (await c.post("/api/v1/marketplace/listings", json={
+        "seller_wallet_id": seller, "title": "Owned", "price_usdc": "2.00",
+    })).json()
+    other = (await c.post("/api/v1/wallets/connect", json={
+        "owner": "mallory", "address": "0x" + "d" * 40, "kind": "byo"})).json()["wallet_id"]
+    resp = await c.request("DELETE", f"/api/v1/marketplace/listings/{created['listing_id']}",
+                           json={"seller_wallet_id": other})
+    assert resp.status_code == 403
+
+
+async def test_delete_unknown_listing_404(client):
+    c, _ = client
+    seller = await _connect_seller(c)
+    resp = await c.request("DELETE", "/api/v1/marketplace/listings/listing_nope",
+                           json={"seller_wallet_id": seller})
+    assert resp.status_code == 404
+
+
 async def test_listings_served_from_db_after_store_reset(client):
     """Simulates a cold start: clear the in-memory store, listings still appear."""
     c, _ = client

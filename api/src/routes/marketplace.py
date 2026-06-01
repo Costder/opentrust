@@ -152,6 +152,24 @@ async def create_listing(request: MarketplaceListingRequest, db: Database = Depe
     return listing
 
 
+class _DeleteListingRequest(BaseModel):
+    seller_wallet_id: str
+
+
+@router.delete("/listings/{listing_id}")
+async def delete_listing(listing_id: str, request: _DeleteListingRequest, db: Database = Depends(get_db)):
+    """Remove a listing. Only the seller who owns it may delete it."""
+    await _hydrate_listings(db)
+    listing = store.listings.get(listing_id)
+    if listing is None:
+        raise HTTPException(status_code=404, detail="listing not found")
+    if listing.seller_wallet_id != request.seller_wallet_id:
+        raise HTTPException(status_code=403, detail="only the seller can delete this listing")
+    store.listings.pop(listing_id, None)
+    await db.delete_object("listing", listing_id)
+    return {"deleted": listing_id}
+
+
 @router.post("/orders", response_model=MarketplaceOrder)
 async def create_order(request: MarketplaceOrderRequest, db: Database = Depends(get_db)):
     if not request.transaction_hash and not request.escrow_id and not (

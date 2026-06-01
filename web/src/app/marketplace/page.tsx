@@ -12,6 +12,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Store,
+  Trash2,
 } from "lucide-react";
 import { useWallet, truncateAddress } from "@/lib/useWallet";
 import { sendUsdc } from "@/lib/browserWallet";
@@ -98,6 +99,22 @@ export default function MarketplacePage() {
 
   const myOrders = wallet ? orders.filter((o) => o.buyer_wallet_id === wallet.wallet_id) : [];
   const boughtIds = new Set(myOrders.map((o) => o.listing_id));
+
+  async function handleDelete(listing: Listing) {
+    if (!wallet) return;
+    setErrors({});
+    try {
+      const res = await fetch(`/api/v1/marketplace/listings/${listing.listing_id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seller_wallet_id: wallet.wallet_id }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || "Delete failed");
+      await load();
+    } catch (err) {
+      setErrors({ buy: err instanceof Error ? err.message : "Delete failed" });
+    }
+  }
 
   async function handleBuy(listing: Listing) {
     if (!wallet) { setErrors({ buy: "Connect a wallet first." }); return; }
@@ -193,7 +210,15 @@ export default function MarketplacePage() {
                       <Coins className="h-3.5 w-3.5 text-stone-400" aria-hidden="true" />
                       {Number(listing.price_usdc).toFixed(2)} USDC
                     </span>
-                    {boughtIds.has(listing.listing_id) ? (
+                    {wallet && listing.seller_wallet_id === wallet.wallet_id ? (
+                      <button
+                        onClick={() => handleDelete(listing)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                        aria-label="Delete your listing"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Your listing
+                      </button>
+                    ) : boughtIds.has(listing.listing_id) ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Purchased
                       </span>
