@@ -5,8 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "opentrust-cli"
 version = "1.0.0"
+description = "Command-line tools for inspecting, validating, and working with OpenTrust passports"
+readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Novel Hut Studios", email = "founder@novelhut.net" }]
+keywords = ["opentrust", "cli", "ai-agents", "trust-registry", "tool-passports"]
 dependencies = ["typer>=0.25.1", "rich>=15.0.0", "httpx>=0.28.1", "jsonschema>=4.26.0", "cryptography>=42", "ecdsa>=0.19"]
+
+[project.urls]
+Homepage = "https://github.com/Costder/opentrust"
+Repository = "https://github.com/Costder/opentrust"
+Issues = "https://github.com/Costder/opentrust/issues"
 
 [project.scripts]
 opentrust = "opentrust_cli.main:app"

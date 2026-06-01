@@ -6,8 +6,17 @@ build-backend = "setuptools.build_meta"
 name = "opentrust-payment-contracts"
 version = "1.0.0"
 description = "Abstract payment contracts for OpenTrust payment providers"
+readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Novel Hut Studios", email = "founder@novelhut.net" }]
+keywords = ["opentrust", "payments", "escrow", "ai-agents", "tool-marketplace"]
 dependencies = ["pydantic>=2.7", "cryptography>=42"]
+
+[project.urls]
+Homepage = "https://github.com/Costder/opentrust"
+Repository = "https://github.com/Costder/opentrust"
+Issues = "https://github.com/Costder/opentrust/issues"
 
 [tool.setuptools]
 packages = ["payment_contracts", "payment_contracts.interfaces"]
