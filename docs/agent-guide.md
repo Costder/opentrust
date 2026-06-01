@@ -783,4 +783,4 @@ refunded         [terminal — reputation accrues, ratings open]
 - `docs/security.md` — 7-layer security model
 - `passport-schema/` — JSON Schema definitions for passports, escrow, spend policy
 - `sdk/` — Python SDK (`pip install opentrust-sdk`)
-- `sdk-ts/` — TypeScript SDK (`npm install @opentrust/client`)
+- `sdk-ts/` — TypeScript SDK (`npm install @infinitestudios/opentrust-client`)

@@ -12,7 +12,7 @@ OpenTrust is a monorepo implementing an open standard for AI agent tool trust. I
 | `web/` | Next.js 16 frontend — tool browser, claim flow, launch lab |
 | `cli/` | Python/Typer CLI — `opentrust inspect`, `validate`, `status`, `badge`, etc. |
 | `sdk/` | Python SDK — `pip install opentrust-sdk`, imports as `opentrust`; MCP server via `opentrust-mcp` entry point |
-| `sdk-ts/` | TypeScript SDK — `npm install @opentrust/client`, `OpenTrust` class for JS/TS agent code |
+| `sdk-ts/` | TypeScript SDK — `npm install @infinitestudios/opentrust-client`, `OpenTrust` class for JS/TS agent code |
 | `passport-schema/` | JSON Schema definitions and examples for the passport format |
 | `payment-contracts/` | Abstract payment interfaces (installable Python package) |
 | `docs/` | Protocol documentation — architecture, security, API spec, governance |

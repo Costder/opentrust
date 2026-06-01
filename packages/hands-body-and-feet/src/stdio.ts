@@ -9,7 +9,7 @@
 // the server a single line in any MCP client (Claude Code, Claude Desktop,
 // Cursor, etc.):
 //
-//   { "command": "npx", "args": ["-y", "@opentrust/hands-body-and-feet", "stdio"] }
+//   { "command": "npx", "args": ["-y", "@infinitestudios/hands-body-and-feet", "stdio"] }
 //
 // Trust is still enforced per tool call (claims carry trustLevel + spend caps);
 // the difference is the identity is established at startup, not re-injected on
