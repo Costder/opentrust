@@ -20,7 +20,7 @@ export default function HomePage() {
           <p className="mt-4 max-w-2xl text-lg text-stone-700">The trust registry for AI agent tools — signed passports, local policy, revocation checks, and payment safety that agents can verify themselves.</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <SearchBar />
-            <Link className="inline-flex rounded bg-ink px-4 py-2 text-white" href="/launch-lab">Open Launch Lab</Link>
+            <Link className="inline-flex rounded bg-ink px-4 py-2 text-white" href="/register">Register an agent</Link>
           </div>
         </div>
         <DemoCheck />
