@@ -25,14 +25,14 @@ A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an
 Add it like any other MCP server. Claude Code:
 
 ```bash
-claude mcp add hands-body-and-feet -- npx -y @opentrust/hands-body-and-feet stdio
+claude mcp add hands-body-and-feet -- npx -y @infinitestudios/hands-body-and-feet stdio
 ```
 
 Claude Desktop / Cursor / any MCP client (`claude_desktop_config.json` etc.):
 
 ```jsonc
 { "mcpServers": { "hands-body-and-feet": {
-  "command": "npx", "args": ["-y", "@opentrust/hands-body-and-feet", "stdio"]
+  "command": "npx", "args": ["-y", "@infinitestudios/hands-body-and-feet", "stdio"]
 }}}
 ```
 
@@ -44,9 +44,9 @@ switch are still enforced per tool call.
 **Advanced — HTTP (multi-tenant, per-request passport auth):**
 
 ```bash
-npx @opentrust/hands-body-and-feet init    # interactive config
-npx @opentrust/hands-body-and-feet serve   # http://localhost:3847/mcp
-# Then POST /mcp with: Authorization: Bearer <OpenTrust-signed passport token>
+npx @infinitestudios/hands-body-and-feet init    # interactive config
+npx @infinitestudios/hands-body-and-feet serve   # http://localhost:3847/mcp
+# Then POST /mcp with: Authorization: Bearer <agent passport token>
 ```
 
 ### V1 — Foundation & Core Capabilities
@@ -178,9 +178,11 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 | **Registry API** | https://api-kappa-pied-59.vercel.app/api/v1/health |
 | **Web frontend** | https://web-five-psi-74.vercel.app |
 | **Database** | Turso (SQLite-compatible cloud, free tier) |
-| **Tests** | 587 passing (210 core + 377 hands-body-and-feet) |
+| **Tests** | 694 passing (210 core + 377 hands-body-and-feet + 107 Python package tests) |
 | **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
-| **Hands Body and Feet** | `@opentrust/hands-body-and-feet` v2.2.0 — V1/V2/V3 + persistence epic, stdio + HTTP transports, registry-backed trust, ~60 MCP tools |
+| **npm packages** | `@infinitestudios/hands-body-and-feet` v2.2.0 · `@infinitestudios/opentrust-client` v1.0.0 |
+| **PyPI packages** | `opentrust-sdk` v1.0.0 · `opentrust-cli` v1.0.0 · `opentrust-payment-contracts` v1.0.0 |
+| **Hands Body and Feet** | `@infinitestudios/hands-body-and-feet` v2.2.0 — V1/V2/V3 + persistence epic, stdio + HTTP transports, registry-backed trust, ~60 MCP tools |
 
 ## Roadmap
 
@@ -193,7 +195,8 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 - ✅ **v0.2 — Granular permission scopes.** Path-level and domain-level scoping — `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. Machine-enforceable manifests, not just declarative. Enforced at `reviewer_signed+` in API and CLI.
 - ✅ **v0.3 — Evidence requirements per trust level.** Structured `SecurityEvidenceBlock` on passports: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation. Required at `security_checked`.
 - ✅ **v0.6 — Real marketplace flows.** On-chain USDC verification via web3.py on Base L2, embedded wallet custody (AES-256-GCM), escrow order flow with `verify_usdc_transfer` gating, `/payments/verify-onchain` endpoint.
-- ✅ **Hands Body and Feet v1.0.** Full V1–V3 MCP capability layer shipped as `@opentrust/hands-body-and-feet`. ~50 tools: notify, wallet (Base + Polygon), USDC payments, Across Protocol bridge, Moon virtual cards, phone (Twilio/SignalWire/JMP), email (local SMTP + Postmark/Resend), tunnel, webhooks, scheduled tasks, Docker, GitHub, IPFS, RSS, PostScan Mail. Trust enforcement matrix, spend caps, kill switch, EIP-712 guard, fail-closed secrets, scheduled task credential lifecycle. 333 tests.
+- ✅ **Hands Body and Feet v1.0.** Full V1–V3 MCP capability layer shipped as `@infinitestudios/hands-body-and-feet`. ~50 tools: notify, wallet (Base + Polygon), USDC payments, Across Protocol bridge, Moon virtual cards, phone (Twilio/SignalWire/JMP), email (local SMTP + Postmark/Resend), tunnel, webhooks, scheduled tasks, Docker, GitHub, IPFS, RSS, PostScan Mail. Trust enforcement matrix, spend caps, kill switch, EIP-712 guard, fail-closed secrets, scheduled task credential lifecycle. 333 tests.
+- ✅ **Hands Body and Feet v2.2.0 package release.** Published to npm as `@infinitestudios/hands-body-and-feet`; TypeScript client published as `@infinitestudios/opentrust-client`; Python packages published to PyPI as `opentrust-sdk`, `opentrust-cli`, and `opentrust-payment-contracts`.
 - ✅ **Hands Body and Feet v1.x — `prepare_payment` composite helper.** Detects chain balances, bridges Polygon→Base if needed, polls bridge status, then executes `pay_with_usdc` — internalizes the multi-step bridge-then-pay workflow into one tool call. Bridge fees surface in the receipt.
 - ✅ **v1.0 — Stable spec + governance transfer.** Passport schema frozen at `spec_version: 1.0.0`. All packages at 1.0.0. Governance transfer and RFC process documented in `docs/governance.md`.
 
@@ -210,6 +213,22 @@ OpenTrust is live. The reference registry and frontend are deployed and backed b
 ```
 API:  https://api-kappa-pied-59.vercel.app/api/v1/health
 Web:  https://web-five-psi-74.vercel.app
+```
+
+### Published packages
+
+```bash
+# Python SDK, CLI, and payment contract interfaces
+pip install opentrust-sdk opentrust-cli opentrust-payment-contracts
+
+# Optional MCP bridge for the Python SDK
+pip install "opentrust-sdk[mcp]"
+
+# JavaScript/TypeScript client
+npm install @infinitestudios/opentrust-client
+
+# Hands Body and Feet MCP server
+npm install -g @infinitestudios/hands-body-and-feet
 ```
 
 ### Local dev
@@ -241,7 +260,7 @@ make docker-up
 ### CLI
 
 ```bash
-pip install -e cli
+pip install opentrust-cli
 
 opentrust inspect github/file-search-mcp
 opentrust validate my-tool-manifest.json
@@ -253,10 +272,10 @@ opentrust badge my-tool
 
 ```bash
 # Install and run interactive setup
-npx @opentrust/hands-body-and-feet init
+npx @infinitestudios/hands-body-and-feet init
 
 # Start the MCP server (localhost:3847 by default)
-npx @opentrust/hands-body-and-feet serve
+npx @infinitestudios/hands-body-and-feet serve
 
 # Or with Docker Compose
 cd packages/hands-body-and-feet
@@ -303,12 +322,15 @@ OpenTrust passports understand every major AI tool format. A single passport can
 ```
 passport-schema/         JSON Schema — the canonical spec (single source of truth)
 api/                     FastAPI registry — CRUD, search, GitHub OAuth, badges
-cli/                     opentrust CLI — inspect, validate, search, claim, badge
 web/                     Next.js frontend — directory, passport pages, claim flow
 packages/
-  hands-body-and-feet/   @opentrust/hands-body-and-feet — MCP server giving agents
+  hands-body-and-feet/   @infinitestudios/hands-body-and-feet — MCP server giving agents
                          real-world capabilities (email, phone, wallet, cards,
                          tunnel, docker, GitHub, IPFS, and more)
+sdk-ts/                  @infinitestudios/opentrust-client — TypeScript SDK
+sdk/                     opentrust-sdk — Python SDK + optional MCP bridge
+cli/                     opentrust-cli — inspect, validate, search, claim, badge
+payment-contracts/       opentrust-payment-contracts — payment interfaces
 badge-generator/         SVG badge generator for all 8 trust levels
 manifest-validator/      Permission manifest validator with risk flagging
 passport-generator/      Auto-draft passports from GitHub metadata
