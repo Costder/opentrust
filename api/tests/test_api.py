@@ -133,13 +133,15 @@ async def test_marketplace_order_uses_customer_wallets_without_custody():
     buyer = await connect_wallet(
         WalletConnectRequest(owner="buyer", address="0x2222222222222222222222222222222222222222")
     )
+    from api.src.database import db as _db
     listing = await create_listing(
         MarketplaceListingRequest(
             seller_wallet_id=seller.wallet_id,
             repo_id=repo.repo_id,
             title="Verified automation package",
             price_usdc="12.50",
-        )
+        ),
+        db=_db,
     )
     from decimal import Decimal
     with patch("api.src.routes.marketplace.verify_usdc_transfer") as mock_verify:
@@ -152,7 +154,8 @@ async def test_marketplace_order_uses_customer_wallets_without_custody():
                     listing_id=listing.listing_id,
                     buyer_wallet_id=buyer.wallet_id,
                     transaction_hash="0x" + "a" * 64,
-                )
+                ),
+                db=_db,
             )
     assert order.seller_wallet_id == seller.wallet_id
     assert order.custody == "none"

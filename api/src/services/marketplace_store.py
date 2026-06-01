@@ -123,7 +123,9 @@ class MarketplaceStore:
     def create_listing(self, request: MarketplaceListingRequest) -> MarketplaceListing:
         if request.seller_wallet_id not in self.wallets:
             raise KeyError("seller wallet is not connected")
-        if request.repo_id not in self.repos:
+        # repo_id is optional: a listing may be backed by a verified repo, but a
+        # general tool/service catalog does not require GitHub repo verification.
+        if request.repo_id is not None and request.repo_id not in self.repos:
             raise KeyError("repo has not been verified")
         listing = MarketplaceListing(
             listing_id=f"listing_{uuid4().hex}",

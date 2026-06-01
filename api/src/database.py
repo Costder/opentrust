@@ -40,6 +40,16 @@ CREATE TABLE IF NOT EXISTS passports (
 );
 """
 
+_OBJECTS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS marketplace_objects (
+    kind TEXT NOT NULL,
+    obj_id TEXT NOT NULL,
+    data TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    PRIMARY KEY (kind, obj_id)
+);
+"""
+
 _COLUMNS = [
     "id", "slug", "name", "description", "trust_status",
     "tool_identity", "creator_identity", "version_hash", "capabilities",
@@ -169,6 +179,7 @@ class Database:
 
     async def init(self) -> None:
         await self._execute(_SCHEMA_SQL)
+        await self._execute(_OBJECTS_SCHEMA_SQL)
         # Additive migrations: add columns introduced after v0.1 if missing.
         # SQLite and Turso both ignore errors for existing columns.
         for migration in [
@@ -178,6 +189,91 @@ class Database:
                 await self._execute(migration)
             except Exception:
                 pass  # Column already exists — that's fine.
+
+    # ── Generic object persistence ─────────────────────────────────────────────
+    # A small key/value-by-kind table backs durable marketplace state (listings,
+    # orders, …) so the catalog survives process restarts / serverless cold
+    # starts. Values are JSON blobs; the in-memory store remains the working set.
+
+    async def _execute_raw(self, sql: str, args: list[Any] | None = None) -> list[dict]:
+        """Execute returning raw column->value dicts (not PassportRow-shaped)."""
+        if self._use_turso:
+            return await self._turso_execute_raw(sql, args)
+        return await self._sqlite_execute_raw(sql, args)
+
+    async def _sqlite_execute_raw(self, sql: str, args: list[Any] | None) -> list[dict]:
+        async with aiosqlite.connect(self._sqlite_path) as conn:
+            conn.row_factory = aiosqlite.Row
+            cur = await conn.execute(sql, args or [])
+            await conn.commit()
+            if cur.description is None:
+                return []
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+    async def _turso_execute_raw(self, sql: str, args: list[Any] | None) -> list[dict]:
+        stmt: dict = {"sql": sql}
+        if args:
+            stmt["args"] = [_turso_arg(a) for a in args]
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{self._turso_url}/v2/pipeline",
+                headers={
+                    "Authorization": f"Bearer {self._turso_token}",
+                    "Content-Type": "application/json",
+                },
+                json={"requests": [{"type": "execute", "stmt": stmt}, {"type": "close"}]},
+            )
+            resp.raise_for_status()
+        result = resp.json()["results"][0]
+        if result.get("type") != "ok":
+            raise RuntimeError(f"Turso error: {result}")
+        execute_result = result["response"]["result"]
+        if not execute_result.get("cols"):
+            return []
+        col_names = [c["name"] for c in execute_result["cols"]]
+        out = []
+        for raw_row in execute_result["rows"]:
+            values = [_turso_cell(cell) for cell in raw_row]
+            out.append(dict(zip(col_names, values)))
+        return out
+
+    async def _ensure_objects_table(self) -> None:
+        """Create the objects table if a pre-existing DB predates it (migration-safe)."""
+        await self._execute_raw(_OBJECTS_SCHEMA_SQL)
+
+    async def save_object(self, kind: str, obj_id: str, data: dict) -> None:
+        """Insert-or-replace a JSON object under (kind, obj_id)."""
+        await self._ensure_objects_table()
+        await self._execute_raw(
+            "INSERT INTO marketplace_objects (kind, obj_id, data, updated_at) "
+            "VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now')) "
+            "ON CONFLICT(kind, obj_id) DO UPDATE SET data=excluded.data, "
+            "updated_at=excluded.updated_at",
+            [kind, obj_id, json.dumps(data)],
+        )
+
+    async def load_objects(self, kind: str) -> list[dict]:
+        """Return all stored objects of a kind, newest first."""
+        await self._ensure_objects_table()
+        rows = await self._execute_raw(
+            "SELECT data FROM marketplace_objects WHERE kind = ? ORDER BY updated_at DESC, obj_id",
+            [kind],
+        )
+        return [json.loads(r["data"]) for r in rows]
+
+    async def get_object(self, kind: str, obj_id: str) -> dict | None:
+        rows = await self._execute_raw(
+            "SELECT data FROM marketplace_objects WHERE kind = ? AND obj_id = ?",
+            [kind, obj_id],
+        )
+        return json.loads(rows[0]["data"]) if rows else None
+
+    async def delete_object(self, kind: str, obj_id: str) -> None:
+        await self._execute_raw(
+            "DELETE FROM marketplace_objects WHERE kind = ? AND obj_id = ?",
+            [kind, obj_id],
+        )
 
     # ── Query methods ─────────────────────────────────────────────────────────
 

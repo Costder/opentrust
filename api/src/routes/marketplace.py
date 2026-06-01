@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException
+import json
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from ..config import settings
+from ..database import Database, get_db
 from ..schemas.marketplace import (
     CheckoutRequest,
     CheckoutResponse,
@@ -21,6 +24,11 @@ from ..schemas.marketplace import (
 )
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
+
+
+def _jsonable(model) -> dict:
+    """Pydantic model -> plain JSON-safe dict (Decimals become strings)."""
+    return json.loads(model.model_dump_json())
 
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
 evidence_router = APIRouter(prefix="/evidence", tags=["evidence"])
@@ -85,28 +93,53 @@ async def generate_embedded_wallet(request: _GenerateWalletRequest):
     return account
 
 
+async def _hydrate_listings(db: Database) -> None:
+    """Load any DB-persisted listings missing from the in-memory working set.
+
+    Makes the catalog correct after a cold start without a full reload on every
+    request: anything already in memory is authoritative; the rest comes from DB.
+    """
+    for data in await db.load_objects("listing"):
+        lid = data.get("listing_id")
+        if lid and lid not in store.listings:
+            try:
+                store.listings[lid] = MarketplaceListing(**data)
+            except Exception:
+                continue  # skip malformed rows rather than 500 the whole list
+
+
 @router.get("/listings", response_model=list[MarketplaceListing])
-async def list_listings():
+async def list_listings(db: Database = Depends(get_db)):
+    await _hydrate_listings(db)
     return list(store.listings.values())
 
 
 @router.get("/orders", response_model=list[MarketplaceOrder])
-async def list_orders():
+async def list_orders(db: Database = Depends(get_db)):
+    for data in await db.load_objects("order"):
+        oid = data.get("order_id")
+        if oid and oid not in store.orders:
+            try:
+                store.orders[oid] = MarketplaceOrder(**data)
+            except Exception:
+                continue
     return list(store.orders.values())
 
 
 @router.post("/listings", response_model=MarketplaceListing)
-async def create_listing(request: MarketplaceListingRequest):
+async def create_listing(request: MarketplaceListingRequest, db: Database = Depends(get_db)):
     if not settings.opentrust_marketplace_enabled:
         raise HTTPException(status_code=403, detail="marketplace is disabled")
     try:
-        return store.create_listing(request)
+        listing = store.create_listing(request)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await db.save_object("listing", listing.listing_id, _jsonable(listing))
+    return listing
 
 
 @router.post("/orders", response_model=MarketplaceOrder)
-async def create_order(request: MarketplaceOrderRequest):
+async def create_order(request: MarketplaceOrderRequest, db: Database = Depends(get_db)):
     if not request.transaction_hash and not request.escrow_id and not (
         settings.opentrust_custodial_wallets_enabled or settings.opentrust_escrow_enabled
     ):
@@ -144,9 +177,11 @@ async def create_order(request: MarketplaceOrderRequest):
     elif not (settings.opentrust_custodial_wallets_enabled or settings.opentrust_escrow_enabled):
         raise HTTPException(status_code=501, detail="on-chain escrow and custody are not enabled")
     try:
-        return store.create_order(request)
+        order = store.create_order(request)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await db.save_object("order", order.order_id, _jsonable(order))
+    return order
 
 
 @evidence_router.post("/import", response_model=EvidenceRun)

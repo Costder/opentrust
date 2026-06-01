@@ -141,7 +141,7 @@ class DeliveryProofRequirement(BaseModel):
 
 class MarketplaceListingRequest(BaseModel):
     seller_wallet_id: str
-    repo_id: str
+    repo_id: str | None = None
     title: str = Field(min_length=1)
     price_usdc: Decimal = Field(gt=0)
     provider_kind: ProviderKind = ProviderKind.tool
@@ -155,7 +155,7 @@ class MarketplaceListingRequest(BaseModel):
 class MarketplaceListing(BaseModel):
     listing_id: str
     seller_wallet_id: str
-    repo_id: str
+    repo_id: str | None = None
     title: str
     price_usdc: Decimal
     currency: str = "USDC"
