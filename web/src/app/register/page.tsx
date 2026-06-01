@@ -205,6 +205,22 @@ export default function RegisterPage() {
     return passport.trust_status as string;
   }
 
+  /**
+   * Kick off the GitHub OAuth redirect. We persist the slug so the callback
+   * page (/register/github) can complete the claim after GitHub redirects back.
+   */
+  async function startGithubClaim(createdSlugVal: string) {
+    const redirectUri = `${window.location.origin}/register/github`;
+    const res = await fetch(
+      `/api/v1/passports/${createdSlugVal}/claim-github/start?redirect_uri=${encodeURIComponent(redirectUri)}`,
+    );
+    if (res.status === 503) throw new Error("GitHub OAuth isn't configured on this registry yet — pick another path.");
+    if (!res.ok) throw new Error("Could not start GitHub authorization");
+    const { auth_url } = await res.json();
+    sessionStorage.setItem("opentrust.claimSlug", createdSlugVal);
+    window.location.href = auth_url; // leave the SPA for GitHub
+  }
+
   async function handleSubmit() {
     setError("");
     setSubmitting(true);
@@ -214,9 +230,12 @@ export default function RegisterPage() {
 
       if (verifyPath === "wallet_signed") {
         status = await runWalletVerification(createdSlugVal);
+      } else if (verifyPath === "human_claimed") {
+        // Redirects away to GitHub; the callback page finishes the claim.
+        await startGithubClaim(createdSlugVal);
+        return;
       }
-      // human_claimed and fee_verified are completed on dedicated follow-up
-      // screens (OAuth redirect / on-chain payment), surfaced after creation.
+      // fee_verified completes on its own follow-up (on-chain payment).
 
       setCreatedSlug(createdSlugVal);
       setFinalStatus(

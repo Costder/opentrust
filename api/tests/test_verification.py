@@ -180,6 +180,57 @@ async def test_owner_claim_rejects_invalid_token(client):
     assert resp.status_code == 401
 
 
+# ── GitHub OAuth redirect flow -> L3 ────────────────────────────────────────────
+
+async def test_github_oauth_start_returns_authorize_url(client):
+    await _create_passport(client)
+    with patch("api.src.routes.passport_verify.settings") as mock_settings:
+        mock_settings.github_client_id = "Iv1.testclientid"
+        resp = await client.get(
+            "/api/v1/passports/verify-agent/claim-github/start",
+            params={"redirect_uri": "https://app.test/register/github"},
+        )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "github.com/login/oauth/authorize" in body["auth_url"]
+    assert "Iv1.testclientid" in body["auth_url"]
+    # state must encode the slug so the callback knows what to claim
+    assert body["state"]
+    assert "verify-agent" in body["state"]
+
+
+async def test_github_oauth_start_requires_client_id(client):
+    await _create_passport(client)
+    with patch("api.src.routes.passport_verify.settings") as mock_settings:
+        mock_settings.github_client_id = ""
+        resp = await client.get("/api/v1/passports/verify-agent/claim-github/start")
+    assert resp.status_code == 503
+
+
+async def test_github_oauth_callback_claims_ownership(client):
+    await _create_passport(client)
+    with patch("api.src.routes.passport_verify.exchange_code_for_login", return_value="octocat"):
+        resp = await client.post(
+            "/api/v1/passports/verify-agent/claim-github",
+            json={"code": "gh_oauth_code", "redirect_uri": "https://app.test/register/github"},
+        )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["trust_status"] == "seller_confirmed"
+    assert body["creator_identity"]["owner_github"] == "octocat"
+    assert body["creator_identity"]["verification_path"] == "human_claimed"
+
+
+async def test_github_oauth_callback_rejects_bad_code(client):
+    await _create_passport(client)
+    with patch("api.src.routes.passport_verify.exchange_code_for_login", return_value=None):
+        resp = await client.post(
+            "/api/v1/passports/verify-agent/claim-github",
+            json={"code": "bad_code", "redirect_uri": "https://app.test/register/github"},
+        )
+    assert resp.status_code == 401
+
+
 # ── Fee verification -> L4 ──────────────────────────────────────────────────────
 
 async def test_fee_verification_advances_to_l4(client):

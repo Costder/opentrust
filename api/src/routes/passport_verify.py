@@ -63,9 +63,19 @@ class FeeVerifyRequest(BaseModel):
     tx_hash: str = Field(min_length=66, max_length=66, pattern=r"^0x[0-9a-fA-F]{64}$")
 
 
+class GithubClaimRequest(BaseModel):
+    code: str = Field(min_length=1)
+    redirect_uri: str = Field(min_length=1)
+
+
 class ChallengeResponse(BaseModel):
     challenge: str
     expires_at: str
+
+
+class GithubStartResponse(BaseModel):
+    auth_url: str
+    state: str
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -114,6 +124,35 @@ def validate_github_token(oauth_token: str) -> str | None:
     if resp.status_code != 200:
         return None
     return resp.json().get("login")
+
+
+def exchange_code_for_login(code: str, redirect_uri: str) -> str | None:
+    """Exchange a GitHub OAuth ``code`` for the authenticated user's login.
+
+    Performs the server-side code->token exchange (the client secret never
+    leaves the backend), then resolves the token to a GitHub login. Returns
+    None on any failure. Isolated so tests can patch it.
+    """
+    try:
+        token_resp = httpx.post(
+            "https://github.com/login/oauth/access_token",
+            headers={"Accept": "application/json"},
+            data={
+                "client_id": settings.github_client_id,
+                "client_secret": settings.github_client_secret,
+                "code": code,
+                "redirect_uri": redirect_uri,
+            },
+            timeout=10.0,
+        )
+    except httpx.HTTPError:
+        return None
+    if token_resp.status_code != 200:
+        return None
+    access_token = token_resp.json().get("access_token")
+    if not access_token:
+        return None
+    return validate_github_token(access_token)
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -177,6 +216,57 @@ async def claim_owner(slug: str, request: OwnerClaimRequest, db: Database = Depe
             status_code=403,
             detail=f"token belongs to '{login}', not '{request.github_handle}'",
         )
+
+    return await _set_trust(
+        slug,
+        db,
+        trust_status="seller_confirmed",
+        verification_path="human_claimed",
+        owner_github=login,
+    )
+
+
+@router.get("/{slug}/claim-github/start", response_model=GithubStartResponse)
+async def claim_github_start(
+    slug: str,
+    redirect_uri: str = "http://localhost:3000/register/github",
+    db: Database = Depends(get_db),
+):
+    """Begin the GitHub OAuth redirect flow for owner-claim.
+
+    Returns the GitHub authorize URL the browser should redirect to, plus an
+    opaque ``state`` that encodes the slug so the callback knows what to claim.
+    The client secret is never exposed — only the public client_id.
+    """
+    await _load_passport(slug, db)
+    if not settings.github_client_id:
+        raise HTTPException(status_code=503, detail="GitHub OAuth is not configured")
+
+    nonce = secrets.token_urlsafe(12)
+    state = f"{slug}:{nonce}"
+    auth_url = (
+        "https://github.com/login/oauth/authorize"
+        f"?client_id={settings.github_client_id}"
+        f"&redirect_uri={redirect_uri}"
+        "&scope=read:user"
+        f"&state={state}"
+    )
+    return GithubStartResponse(auth_url=auth_url, state=state)
+
+
+@router.post("/{slug}/claim-github", response_model=PassportRead)
+async def claim_github(slug: str, request: GithubClaimRequest, db: Database = Depends(get_db)):
+    """Complete the GitHub OAuth redirect flow -> L3.
+
+    The browser sends the ``code`` GitHub returned to the callback page. The
+    backend exchanges it for a token (server-side, secret never exposed),
+    resolves the login, and stakes it on the passport publicly.
+    """
+    await _load_passport(slug, db)
+
+    login = exchange_code_for_login(request.code, request.redirect_uri)
+    if login is None:
+        raise HTTPException(status_code=401, detail="GitHub authorization failed")
 
     return await _set_trust(
         slug,
