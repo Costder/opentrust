@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Wallet,
   Bot,
@@ -17,6 +17,7 @@ import {
   Check,
 } from "lucide-react";
 import { useWallet, connectWallet, truncateAddress } from "@/lib/useWallet";
+import { hasBrowserWallet, requestBrowserAccount, personalSign } from "@/lib/browserWallet";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
   const [finalStatus, setFinalStatus] = useState<string>("");
+  const [browserWallet, setBrowserWallet] = useState(false);
+
+  useEffect(() => { setBrowserWallet(hasBrowserWallet()); }, []);
 
   const slug = slugify(details.name);
 
@@ -126,6 +130,22 @@ export default function RegisterPage() {
       setStep(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection failed");
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function handleBrowserConnect() {
+    setError("");
+    setConnecting(true);
+    try {
+      const address = await requestBrowserAccount();
+      const w = await connectWallet(walletForm.owner || slug || "owner", address);
+      setWallet(w);
+      setWalletForm((f) => ({ ...f, address }));
+      setStep(2);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Browser wallet connection failed");
     } finally {
       setConnecting(false);
     }
@@ -159,14 +179,30 @@ export default function RegisterPage() {
     return created.slug;
   }
 
+  /**
+   * Full in-browser wallet verification: request a challenge, sign it with the
+   * connected wallet via personal_sign, submit the signature. Returns the new
+   * trust_status the backend recorded.
+   */
   async function runWalletVerification(createdSlugVal: string): Promise<string> {
-    // Issue challenge, sign with a browser-side message prompt is out of scope;
-    // here we surface the challenge so the operator signs it with their wallet
-    // tool and submits the signature. For the wizard MVP we just request the
-    // challenge and mark the path — full browser signing is a later enhancement.
-    const res = await fetch(`/api/v1/passports/${createdSlugVal}/challenge`, { method: "POST" });
-    if (!res.ok) throw new Error("Could not issue wallet challenge");
-    return "creator_claimed";
+    if (!wallet) throw new Error("Connect a wallet first.");
+    if (!hasBrowserWallet()) {
+      throw new Error("No browser wallet detected. Sign the challenge via /verify-wallet, or pick a different path.");
+    }
+    const challengeRes = await fetch(`/api/v1/passports/${createdSlugVal}/challenge`, { method: "POST" });
+    if (!challengeRes.ok) throw new Error("Could not issue wallet challenge");
+    const { challenge } = await challengeRes.json();
+
+    const signature = await personalSign(challenge, wallet.address);
+
+    const verifyRes = await fetch(`/api/v1/passports/${createdSlugVal}/verify-wallet`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet_id: wallet.wallet_id, signature }),
+    });
+    if (!verifyRes.ok) throw new Error((await verifyRes.text()) || "Signature verification failed");
+    const passport = await verifyRes.json();
+    return passport.trust_status as string;
   }
 
   async function handleSubmit() {
@@ -183,8 +219,11 @@ export default function RegisterPage() {
       // screens (OAuth redirect / on-chain payment), surfaced after creation.
 
       setCreatedSlug(createdSlugVal);
-      setFinalStatus(verifyPath === "unverified" ? "auto_generated_draft" : TRUST_BY_PATH[verifyPath].status);
-      void status;
+      setFinalStatus(
+        verifyPath === "unverified" ? "auto_generated_draft"
+        : verifyPath === "wallet_signed" ? status
+        : TRUST_BY_PATH[verifyPath].status,
+      );
       setStep(4);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -253,8 +292,28 @@ export default function RegisterPage() {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleConnect} className="space-y-3">
+              <div className="space-y-3">
                 <p className="text-sm text-stone-500">Your wallet is your payment identity. USDC on Base L2. No private key leaves your control.</p>
+
+                {browserWallet && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleBrowserConnect}
+                      disabled={connecting}
+                      aria-busy={connecting}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-moss px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition disabled:opacity-60"
+                    >
+                      {connecting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Wallet className="h-4 w-4" aria-hidden="true" />}
+                      Connect browser wallet (MetaMask)
+                    </button>
+                    <div className="flex items-center gap-3 text-xs text-stone-400">
+                      <span className="h-px flex-1 bg-stone-200" /> or enter manually <span className="h-px flex-1 bg-stone-200" />
+                    </div>
+                  </>
+                )}
+
+                <form onSubmit={handleConnect} className="space-y-3">
                 <div>
                   <label htmlFor="w-owner" className="block text-xs font-medium text-stone-600">Name / handle</label>
                   <input id="w-owner" value={walletForm.owner} onChange={(e) => setWalletForm((f) => ({ ...f, owner: e.target.value }))} placeholder="my-agent" required className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm focus:border-moss focus:outline-none focus:ring-2 focus:ring-moss/30" />
@@ -268,7 +327,8 @@ export default function RegisterPage() {
                   {connecting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Wallet className="h-4 w-4" aria-hidden="true" />}
                   {connecting ? "Connecting…" : "Connect wallet"}
                 </button>
-              </form>
+                </form>
+              </div>
             )}
           </div>
         )}
@@ -397,7 +457,7 @@ function PostCreateNext({ path, slug }: { path: VerifyPath; slug: string }) {
     return <p className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">You're at L1. Complete jobs to build reputation, or come back to verify for escrow access.</p>;
   }
   if (path === "wallet_signed") {
-    return <p className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-left text-sm text-blue-900">A wallet challenge was issued. Sign it with your wallet and submit the signature to <span className="font-mono">/api/v1/passports/{slug}/verify-wallet</span> to reach L2.</p>;
+    return <p className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-left text-sm text-blue-900">Wallet signature verified — you're at L2 (<span className="font-mono">creator_claimed</span>). Claim ownership with GitHub or pay the fee to reach escrow-eligible trust.</p>;
   }
   if (path === "human_claimed") {
     return <p className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-left text-sm text-violet-900">Complete GitHub owner claim: authorize OpenTrust and submit your handle + token to <span className="font-mono">/api/v1/passports/{slug}/claim-owner</span> to reach L3 and unlock escrow.</p>;
