@@ -19,6 +19,9 @@ opentrust-segmentation-analysis.md
 codex_goal_opentrust.txt
 agent_tool_trust_protocol_v3_updated_plan.docx
 docs/marketplace-wallets-implementation-plan.md
+# Internal infra/ops notes — leak server paths + secret-store locations
+docs/no-domain-public-preview.md
+docs/public-launch-report.md
 
 # Claude Code session/memory data (settings.json is tracked for shared project config)
 .claude/*
