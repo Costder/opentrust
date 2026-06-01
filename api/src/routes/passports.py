@@ -80,7 +80,10 @@ async def list_tools(
     demo: bool | None = True if demo_only else (None if include_demo else False)
     offset = (page - 1) * limit
     items = await db.list_filtered(q=q, trust_status=trust_status, offset=offset, limit=limit, demo=demo)
-    total = await db.count_filtered(q=q, trust_status=trust_status, demo=demo)
+    # Count only rows that actually serialize, so totals match what's shown
+    # (legacy/corrupt rows are skipped by _safe_reads and must not inflate the count).
+    all_matches = await db.list_filtered(q=q, trust_status=trust_status, offset=0, limit=99999, demo=demo)
+    total = len(_safe_reads(all_matches))
     return {
         "items": _safe_reads(items),
         "total": total,
