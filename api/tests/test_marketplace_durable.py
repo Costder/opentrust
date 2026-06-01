@@ -66,6 +66,22 @@ async def test_listing_persists_to_db(client):
     assert stored["title"] == "Durable Tool"
 
 
+async def test_get_wallet_returns_public_address(client):
+    c, _ = client
+    seller = await _connect_seller(c)
+    resp = await c.get(f"/api/v1/wallets/{seller}")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["wallet_id"] == seller
+    assert body["address"] == "0x" + "c" * 40
+
+
+async def test_get_wallet_404_for_unknown(client):
+    c, _ = client
+    resp = await c.get("/api/v1/wallets/wallet_nope")
+    assert resp.status_code == 404
+
+
 async def test_listings_served_from_db_after_store_reset(client):
     """Simulates a cold start: clear the in-memory store, listings still appear."""
     c, _ = client

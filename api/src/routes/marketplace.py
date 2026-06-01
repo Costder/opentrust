@@ -66,6 +66,20 @@ async def connect_wallet(request: WalletConnectRequest):
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
+@wallets_router.get("/{wallet_id}", response_model=WalletAccount)
+async def get_wallet(wallet_id: str):
+    """Resolve a wallet's public on-chain address.
+
+    Buyers need the seller's address to send a direct USDC payment. The address
+    is public on-chain data, so this is safe to expose; private keys are never
+    returned.
+    """
+    wallet = store.wallets.get(wallet_id)
+    if wallet is None:
+        raise HTTPException(status_code=404, detail="wallet not found")
+    return wallet
+
+
 class _GenerateWalletRequest(BaseModel):
     owner: str = Field(min_length=1)
 
