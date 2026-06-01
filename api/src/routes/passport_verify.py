@@ -78,6 +78,14 @@ class GithubStartResponse(BaseModel):
     state: str
 
 
+class FeeInfoResponse(BaseModel):
+    treasury_address: str
+    amount_usdc: str
+    usdc_contract: str
+    chain_id: int
+    chain: str = "base"
+
+
 # ── Helpers ─────────────────────────────────────────────────────────────────────
 
 async def _load_passport(slug: str, db: Database):
@@ -274,6 +282,25 @@ async def claim_github(slug: str, request: GithubClaimRequest, db: Database = De
         trust_status="seller_confirmed",
         verification_path="human_claimed",
         owner_github=login,
+    )
+
+
+@router.get("/{slug}/fee-info", response_model=FeeInfoResponse)
+async def fee_info(slug: str, db: Database = Depends(get_db)):
+    """Public payment details for the $10 verification fee.
+
+    Lets the browser build a USDC transfer (treasury address, amount, token
+    contract, chain) without hardcoding any of it client-side.
+    """
+    await _load_passport(slug, db)
+    treasury = settings.opentrust_registry_treasury_address
+    if not treasury:
+        raise HTTPException(status_code=503, detail="registry treasury address not configured")
+    return FeeInfoResponse(
+        treasury_address=treasury,
+        amount_usdc=settings.opentrust_verification_fee_usdc,
+        usdc_contract=settings.base_usdc_contract,
+        chain_id=8453,  # Base mainnet
     )
 
 

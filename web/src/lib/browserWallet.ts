@@ -49,3 +49,55 @@ export async function personalSign(message: string, address: string): Promise<st
   })) as string;
   return signature;
 }
+
+const USDC_DECIMALS = 6;
+
+/** Left-pad a hex string (no 0x) to 64 chars for ABI encoding. */
+function pad32(hex: string): string {
+  return hex.replace(/^0x/, "").toLowerCase().padStart(64, "0");
+}
+
+/** Encode an erc-20 transfer(address,uint256) call as 0x-prefixed calldata. */
+export function encodeUsdcTransfer(to: string, amountUsdc: string): string {
+  // function selector for transfer(address,uint256) = 0xa9059cbb
+  const selector = "a9059cbb";
+  // amount in base units (USDC has 6 decimals) — parse decimal string safely
+  const [whole, frac = ""] = amountUsdc.split(".");
+  const fracPadded = (frac + "0".repeat(USDC_DECIMALS)).slice(0, USDC_DECIMALS);
+  const baseUnits = BigInt(whole + fracPadded);
+  return "0x" + selector + pad32(to) + pad32(baseUnits.toString(16));
+}
+
+/** Ensure the wallet is on the given chainId; request a switch if not. */
+export async function ensureChain(chainId: number): Promise<void> {
+  if (!window.ethereum) throw new Error("No browser wallet detected.");
+  const hexChain = "0x" + chainId.toString(16);
+  const current = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+  if (current?.toLowerCase() === hexChain) return;
+  try {
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hexChain }] });
+  } catch (err) {
+    throw new Error(`Please switch your wallet to chain ${chainId} (Base) and try again.`);
+  }
+}
+
+/**
+ * Send a USDC transfer on Base from `from` to `to`. Returns the tx hash.
+ * The wallet prompts the user to confirm; we never hold the key.
+ */
+export async function sendUsdc(params: {
+  from: string;
+  to: string;
+  amountUsdc: string;
+  usdcContract: string;
+  chainId: number;
+}): Promise<string> {
+  if (!window.ethereum) throw new Error("No browser wallet detected.");
+  await ensureChain(params.chainId);
+  const data = encodeUsdcTransfer(params.to, params.amountUsdc);
+  const txHash = (await window.ethereum.request({
+    method: "eth_sendTransaction",
+    params: [{ from: params.from, to: params.usdcContract, data, value: "0x0" }],
+  })) as string;
+  return txHash;
+}

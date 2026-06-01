@@ -231,6 +231,31 @@ async def test_github_oauth_callback_rejects_bad_code(client):
     assert resp.status_code == 401
 
 
+# ── Fee info (public payment details) ───────────────────────────────────────────
+
+async def test_fee_info_returns_public_payment_details(client):
+    await _create_passport(client)
+    with patch("api.src.routes.passport_verify.settings") as mock_settings:
+        mock_settings.opentrust_registry_treasury_address = TREASURY
+        mock_settings.opentrust_verification_fee_usdc = "10.00"
+        mock_settings.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+        resp = await client.get("/api/v1/passports/verify-agent/fee-info")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["treasury_address"] == TREASURY
+    assert body["amount_usdc"] == "10.00"
+    assert body["usdc_contract"] == "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    assert body["chain_id"] == 8453  # Base mainnet
+
+
+async def test_fee_info_503_when_treasury_unset(client):
+    await _create_passport(client)
+    with patch("api.src.routes.passport_verify.settings") as mock_settings:
+        mock_settings.opentrust_registry_treasury_address = ""
+        resp = await client.get("/api/v1/passports/verify-agent/fee-info")
+    assert resp.status_code == 503
+
+
 # ── Fee verification -> L4 ──────────────────────────────────────────────────────
 
 async def test_fee_verification_advances_to_l4(client):

@@ -13,11 +13,10 @@ import {
   Coins,
   GitBranch,
   ArrowRight,
-  Copy,
   Check,
 } from "lucide-react";
 import { useWallet, connectWallet, truncateAddress } from "@/lib/useWallet";
-import { hasBrowserWallet, requestBrowserAccount, personalSign } from "@/lib/browserWallet";
+import { hasBrowserWallet, requestBrowserAccount, personalSign, sendUsdc } from "@/lib/browserWallet";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -46,13 +45,6 @@ function slugify(s: string): string {
 }
 
 // ── Verification trust map (display only; backend is source of truth) ─────────
-
-const TRUST_BY_PATH: Record<VerifyPath, { level: number; status: string }> = {
-  unverified: { level: 1, status: "auto_generated_draft" },
-  wallet_signed: { level: 2, status: "creator_claimed" },
-  human_claimed: { level: 3, status: "seller_confirmed" },
-  fee_verified: { level: 4, status: "community_reviewed" },
-};
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
@@ -206,6 +198,39 @@ export default function RegisterPage() {
   }
 
   /**
+   * Full in-browser fee payment: fetch the public fee details, send USDC on
+   * Base via the wallet, then submit the tx hash to fee-verify. Returns the new
+   * trust_status. Requires a browser wallet.
+   */
+  async function runFeeVerification(createdSlugVal: string): Promise<string> {
+    if (!wallet) throw new Error("Connect a wallet first.");
+    if (!hasBrowserWallet()) {
+      throw new Error("No browser wallet detected. Pay the fee and submit the tx via /fee-verify, or pick another path.");
+    }
+    const infoRes = await fetch(`/api/v1/passports/${createdSlugVal}/fee-info`);
+    if (infoRes.status === 503) throw new Error("Fee verification isn't configured on this registry yet — pick another path.");
+    if (!infoRes.ok) throw new Error("Could not load fee details");
+    const info = await infoRes.json();
+
+    const txHash = await sendUsdc({
+      from: wallet.address,
+      to: info.treasury_address,
+      amountUsdc: info.amount_usdc,
+      usdcContract: info.usdc_contract,
+      chainId: info.chain_id,
+    });
+
+    const verifyRes = await fetch(`/api/v1/passports/${createdSlugVal}/fee-verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet_id: wallet.wallet_id, tx_hash: txHash }),
+    });
+    if (!verifyRes.ok) throw new Error((await verifyRes.text()) || "Fee verification failed");
+    const passport = await verifyRes.json();
+    return passport.trust_status as string;
+  }
+
+  /**
    * Kick off the GitHub OAuth redirect. We persist the slug so the callback
    * page (/register/github) can complete the claim after GitHub redirects back.
    */
@@ -234,15 +259,14 @@ export default function RegisterPage() {
         // Redirects away to GitHub; the callback page finishes the claim.
         await startGithubClaim(createdSlugVal);
         return;
+      } else if (verifyPath === "fee_verified") {
+        status = await runFeeVerification(createdSlugVal);
       }
-      // fee_verified completes on its own follow-up (on-chain payment).
 
+      // status holds the backend-confirmed trust_status for verified paths,
+      // and the auto_generated_draft default for the unverified path.
       setCreatedSlug(createdSlugVal);
-      setFinalStatus(
-        verifyPath === "unverified" ? "auto_generated_draft"
-        : verifyPath === "wallet_signed" ? status
-        : TRUST_BY_PATH[verifyPath].status,
-      );
+      setFinalStatus(status);
       setStep(4);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -468,25 +492,13 @@ function VerifyOption({ selected, onClick, icon: Icon, title, level, blurb }: {
   );
 }
 
-function PostCreateNext({ path, slug }: { path: VerifyPath; slug: string }) {
-  const [copied, setCopied] = useState(false);
-  const treasuryNote = "Send exactly 10.00 USDC on Base to the registry treasury, then submit the tx hash via POST /api/v1/passports/" + slug + "/fee-verify.";
-
+function PostCreateNext({ path }: { path: VerifyPath; slug: string }) {
   if (path === "unverified") {
     return <p className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">You're at L1. Complete jobs to build reputation, or come back to verify for escrow access.</p>;
   }
   if (path === "wallet_signed") {
     return <p className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-left text-sm text-blue-900">Wallet signature verified — you're at L2 (<span className="font-mono">creator_claimed</span>). Claim ownership with GitHub or pay the fee to reach escrow-eligible trust.</p>;
   }
-  if (path === "human_claimed") {
-    return <p className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-left text-sm text-violet-900">Complete GitHub owner claim: authorize OpenTrust and submit your handle + token to <span className="font-mono">/api/v1/passports/{slug}/claim-owner</span> to reach L3 and unlock escrow.</p>;
-  }
-  return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-900">
-      <p>{treasuryNote}</p>
-      <button onClick={() => { navigator.clipboard.writeText(`/api/v1/passports/${slug}/fee-verify`); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold underline">
-        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} copy endpoint
-      </button>
-    </div>
-  );
+  // fee_verified — the USDC payment + verification completed in-flow.
+  return <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-left text-sm text-green-900">$10 USDC fee verified on-chain — you're at L4 (<span className="font-mono">community_reviewed</span>), the highest starting trust. Escrow unlocked.</p>;
 }
