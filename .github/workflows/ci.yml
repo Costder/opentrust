@@ -23,11 +23,13 @@ jobs:
       # different registry silently.
       - name: Lockfile registry check
         run: npx lockfile-lint --path web/package-lock.json --type npm --allowed-hosts npm --validate-https
+      - run: cd web && npm ci --ignore-scripts
       # Verify that every installed package has a valid Sigstore or registry signature.
-      # Catches tampered packages that don't match what npm published.
+      # Catches tampered packages that don't match what npm published. Run after npm ci
+      # because npm audit signatures checks the installed dependency tree.
       - name: Verify package signatures
         run: cd web && npm audit signatures
-      - run: cd web && npm ci --ignore-scripts && npm run lint && npm run build
+      - run: cd web && npm run lint && npm run build
       - run: cd sdk-ts && npm ci && npm run typecheck && npm test
       # hands-body-and-feet has native deps (better-sqlite3), so install WITH scripts.
       # Tests are self-contained (no network/secrets) via msw/supertest mocks.

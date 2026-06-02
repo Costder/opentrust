@@ -11,7 +11,7 @@ describe('DEFAULT_REGISTRY_URL', () => {
     vi.resetModules();
     vi.unstubAllEnvs();
     const { DEFAULT_REGISTRY_URL } = await import('../config.js');
-    expect(DEFAULT_REGISTRY_URL).toContain('vercel.app');
+    expect(DEFAULT_REGISTRY_URL).toBe('https://api.opentrust.infiniterealms.io');
     expect(DEFAULT_REGISTRY_URL.startsWith('https://')).toBe(true);
   });
 
