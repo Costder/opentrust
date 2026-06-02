@@ -33,7 +33,9 @@ function GithubCallback() {
       return;
     }
 
-    const redirectUri = `${window.location.origin}/register/github`;
+    // Must match the redirect_uri used in the OAuth start (the canonical origin).
+    const canonicalOrigin = process.env.NEXT_PUBLIC_WEB_URL || window.location.origin;
+    const redirectUri = `${canonicalOrigin}/register/github`;
 
     fetch(`/api/v1/passports/${slug}/claim-github`, {
       method: "POST",

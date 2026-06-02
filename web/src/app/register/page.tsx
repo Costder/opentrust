@@ -235,7 +235,10 @@ export default function RegisterPage() {
    * page (/register/github) can complete the claim after GitHub redirects back.
    */
   async function startGithubClaim(createdSlugVal: string) {
-    const redirectUri = `${window.location.origin}/register/github`;
+    // Pin the callback to the canonical web origin so GitHub only needs ONE
+    // registered callback URL even when the app is reachable on multiple domains.
+    const canonicalOrigin = process.env.NEXT_PUBLIC_WEB_URL || window.location.origin;
+    const redirectUri = `${canonicalOrigin}/register/github`;
     const res = await fetch(
       `/api/v1/passports/${createdSlugVal}/claim-github/start?redirect_uri=${encodeURIComponent(redirectUri)}`,
     );
