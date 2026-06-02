@@ -13,7 +13,11 @@ build
 .pytest_cache
 .mypy_cache
 
-# Internal planning and analysis docs — not for public repo
+# Internal planning, outreach, and analysis docs — not for public repo
+outreach/
+outreach-*.md
+outreach-*.html
+outreach-contact-ledger.json
 feasibility-analysis.md
 opentrust-segmentation-analysis.md
 codex_goal_opentrust.txt

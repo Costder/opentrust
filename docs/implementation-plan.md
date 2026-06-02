@@ -32,7 +32,7 @@ All security gates from the original production track checklist are done.
 | Security headers | ✅ Done | CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
 | Rate limiting | ✅ Done | Sliding window, per-IP, configurable via `RATE_LIMIT` env var |
 | Cloud database | ✅ Done | Turso (SQLite-compatible), automatic failover to local aiosqlite in dev |
-| Vercel deployment | ✅ Done | API at `api-kappa-pied-59.vercel.app`, web at `web-five-psi-74.vercel.app` |
+| Vercel deployment | ✅ Done | API at `api.opentrust.infiniterealms.io`, web at `opentrust.infiniterealms.io` |
 | 155-test suite | ✅ Done | API, CLI, payment-contracts, passport CRUD, crypto, hardening, registry contract |
 | CI | ✅ Done | GitHub Actions: Python tests, npm lockfile check, npm audit signatures, Next.js build |
 | Claude Code compatibility | ✅ Done | `CLAUDE.md`, `pytest.ini`, `.claude/settings.json` |

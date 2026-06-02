@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-_DEFAULT_URL = "https://api-kappa-pied-59.vercel.app"
+_DEFAULT_URL = "https://api.opentrust.infiniterealms.io"
 
 
 class _Client:

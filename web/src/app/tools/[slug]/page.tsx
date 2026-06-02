@@ -75,7 +75,7 @@ export default async function ToolPage({ params }: { params: Promise<{ slug: str
   const pricing = (tool.commercial_status as { pricing?: { amount: number; currency: string } })?.pricing;
   const paymentConfig = (tool.commercial_status as { payment_config?: { network: string; wallet_address: string } })?.payment_config;
 
-  const badgeMarkdown = `![OpenTrust](https://api-kappa-pied-59.vercel.app/api/v1/badge/${slug}.svg)`;
+  const badgeMarkdown = `![OpenTrust](https://api.opentrust.infiniterealms.io/api/v1/badge/${slug}.svg)`;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

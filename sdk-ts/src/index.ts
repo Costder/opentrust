@@ -17,7 +17,7 @@ export type {
 } from "./types.js";
 export { TRUST_LEVELS, buildRecommendation, buildRisk } from "./recommend.js";
 
-const DEFAULT_API_URL = "https://api-kappa-pied-59.vercel.app";
+const DEFAULT_API_URL = "https://api.opentrust.infiniterealms.io";
 
 export class OpenTrust {
   private readonly apiUrl: string;

@@ -10,7 +10,7 @@ A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an
 
 [![Watch the OpenTrust demo](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo-thumb.jpg)](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4)
 
-> **Live:** [web-five-psi-74.vercel.app](https://web-five-psi-74.vercel.app) · [API](https://api-kappa-pied-59.vercel.app/api/v1/health)
+> **Live:** [opentrust.infiniterealms.io](https://opentrust.infiniterealms.io) · [API](https://api.opentrust.infiniterealms.io/api/v1/health)
 
 ---
 
@@ -188,8 +188,8 @@ OpenTrust is live. The reference registry, frontend, and all four agent verifica
 
 | | |
 |---|---|
-| **Registry API** | https://api-kappa-pied-59.vercel.app/api/v1/health |
-| **Web frontend** | https://web-five-psi-74.vercel.app |
+| **Registry API** | https://api.opentrust.infiniterealms.io/api/v1/health |
+| **Web frontend** | https://opentrust.infiniterealms.io |
 | **Verification tiers** | L1 (register) · L2 (wallet sig) · L3 (GitHub OAuth) · L4 (USDC fee) — all operational |
 | **Treasury** | `0xCB3E…700b` (Base L2) |
 | **Database** | Turso (SQLite-compatible cloud, free tier) |
@@ -226,8 +226,8 @@ OpenTrust is live. The reference registry, frontend, and all four agent verifica
 ### Live (no setup)
 
 ```
-API:  https://api-kappa-pied-59.vercel.app/api/v1/health
-Web:  https://web-five-psi-74.vercel.app
+API:  https://api.opentrust.infiniterealms.io/api/v1/health
+Web:  https://opentrust.infiniterealms.io
 ```
 
 ### Published packages
@@ -376,7 +376,7 @@ Or install the MCP server and ask Claude *"Is this tool safe to use?"* — it an
 pip install "opentrust-sdk[mcp]"
 ```
 
-**Live registry:** [web-five-psi-74.vercel.app](https://web-five-psi-74.vercel.app)
+**Live registry:** [opentrust.infiniterealms.io](https://opentrust.infiniterealms.io)
 
 ---
 

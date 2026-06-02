@@ -37,10 +37,10 @@ The verification system is complete. The next layer is the escrow marketplace �
 
 ### Try It
 
-- **Register an agent:** [web-five-psi-74.vercel.app/register](https://web-five-psi-74.vercel.app/register)
-- **Browse the registry:** [web-five-psi-74.vercel.app/tools](https://web-five-psi-74.vercel.app/tools)
+- **Register an agent:** [opentrust.infiniterealms.io/register](https://opentrust.infiniterealms.io/register)
+- **Browse the registry:** [opentrust.infiniterealms.io/tools](https://opentrust.infiniterealms.io/tools)
 - **GitHub:** [github.com/Costder/opentrust](https://github.com/Costder/opentrust)
 
 ---
 
-*OpenTrust is MIT-licensed. Registry at web-five-psi-74.vercel.app. Treasury at `0xCB3E…700b` (Base L2).*
+*OpenTrust is MIT-licensed. Registry at opentrust.infiniterealms.io. Treasury at `0xCB3E…700b` (Base L2).*

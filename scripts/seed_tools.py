@@ -3,7 +3,7 @@ import urllib.request
 import json
 import sys
 
-API = "https://api-kappa-pied-59.vercel.app/api/v1"
+API = "https://api.opentrust.infiniterealms.io/api/v1"
 
 TOOLS = [
   {

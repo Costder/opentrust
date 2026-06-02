@@ -95,7 +95,7 @@ Extra warning appended if `terminal=true`: `" ⚠ Terminal access active — rev
 
 ### Configuration
 
-- `OPENTRUST_API_URL` env var — defaults to `https://api-kappa-pied-59.vercel.app`
+- `OPENTRUST_API_URL` env var — defaults to `https://api.opentrust.infiniterealms.io`
 - Can also be set per-call: `opentrust.verify("slug", api_url="https://my-registry.example.com")`
 - ⚠ `CLAUDE.md` incorrectly documents this as `OPENTRUST_API_BASE_URL` — the actual CLI code (`cli/src/opentrust_cli/api_client.py`) uses `OPENTRUST_API_URL`. SDK follows the code, not the docs. CLAUDE.md will be corrected.
 

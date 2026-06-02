@@ -18,7 +18,7 @@ export const STATE_PATH = join(CONFIG_DIR, 'state.json');
  * domain (e.g. https://registry.opentrust.dev) is in place, update this default.
  */
 export const DEFAULT_REGISTRY_URL =
-  process.env['OPENTRUST_REGISTRY_URL'] ?? 'https://api-kappa-pied-59.vercel.app';
+  process.env['OPENTRUST_REGISTRY_URL'] ?? 'https://api.opentrust.infiniterealms.io';
 
 export function ensureConfigDir(configDir = CONFIG_DIR): void {
   if (!existsSync(configDir)) {
