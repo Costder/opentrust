@@ -28,6 +28,17 @@ const COMMERCIAL_FILTERS = [
 
 const PAGE_LIMIT = 12;
 
+/**
+ * Resolve a passport's pricing model across the shapes the API actually returns:
+ *  - { "status": "free" | "paid" | ... }   (older / explicit)
+ *  - { "model":  "free" | "paid" | ... }   (seeded tools)
+ *  - missing / empty                        -> treat as "free"
+ */
+function priceModelOf(t: Passport): string {
+  const cs = (t.commercial_status ?? {}) as { status?: string; model?: string };
+  return cs.status || cs.model || "free";
+}
+
 // ── Client component ──────────────────────────────────────────────────────────
 
 export default function ToolsPage() {
@@ -67,26 +78,38 @@ function ToolsInner() {
     return () => clearTimeout(t);
   }, [q]);
 
-  // Fetch whenever filters change
+  // Fetch whenever filters change.
+  // The commercial/pricing filter is applied client-side. Because that means we
+  // must filter the FULL result set (not just one server page) for paging+counts
+  // to be correct, we fetch a large page when a pricing filter is active and
+  // paginate locally. Trust + search stay server-side.
   const fetchTools = useCallback(async () => {
     setLoading(true);
     try {
       const qs = new URLSearchParams();
       if (debouncedQ) qs.set("q", debouncedQ);
       if (trust) qs.set("trust_status", trust);
-      qs.set("page", String(page));
-      qs.set("limit", String(PAGE_LIMIT));
-      // Always fetch via relative URL so the Next.js proxy handles it.
-      // This avoids CORS issues in production and works in local dev too.
+      if (commercial) {
+        // pull everything matching trust/search, filter + paginate locally
+        qs.set("page", "1");
+        qs.set("limit", "100");
+      } else {
+        qs.set("page", String(page));
+        qs.set("limit", String(PAGE_LIMIT));
+      }
       const res = await fetch(`/api/v1/tools?${qs}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
-        let filtered = (data.items ?? []) as Passport[];
+        const all = (data.items ?? []) as Passport[];
         if (commercial) {
-          filtered = filtered.filter((t) => t.commercial_status?.status === commercial);
+          const matches = all.filter((t) => priceModelOf(t) === commercial);
+          setTotal(matches.length);
+          const start = (page - 1) * PAGE_LIMIT;
+          setItems(matches.slice(start, start + PAGE_LIMIT));
+        } else {
+          setItems(all);
+          setTotal(data.total ?? 0);
         }
-        setItems(filtered);
-        setTotal(commercial ? filtered.length : (data.total ?? 0));
       }
     } catch {
       setItems([]);
