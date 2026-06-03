@@ -1,0 +1,175 @@
+================================================================================
+OPENTRUST REGISTRY SEED LIST — 100 VETTED ITEMS
+================================================================================
+Purpose : Seed the OpenTrust registry/marketplace with real, trustworthy tools
+          so it is immediately useful and easy to adopt.
+Vetting : Every item is EITHER (a) maintained by a well-known company, OR
+          (b) an official Anthropic skill / community-vetted skill.
+Mix     : 50 MCP servers (50%) + 50 Agent Skills (50%).
+          (Requirement was >=40% MCP servers — exceeded.)
+Compiled: 2026-06-01  |  Sources: modelcontextprotocol/servers,
+          wong2/awesome-mcp-servers, anthropics/skills, Anthropic Cowork plugins.
+
+Legend  : [MCP] = MCP server   [SKILL] = Agent Skill
+          Format: ## | TYPE | Name | Maintainer/Vendor | What it does
+
+================================================================================
+PART 1 — MCP SERVERS (50)
+================================================================================
+
+--- Official Reference Servers (Anthropic / MCP steering group) ---
+1.  [MCP] Filesystem            | Anthropic (official)   | Secure local file read/write with access controls
+2.  [MCP] Git                   | Anthropic (official)   | Read, search, and manipulate Git repositories
+3.  [MCP] Fetch                 | Anthropic (official)   | Fetch and convert web content for LLM use
+4.  [MCP] Memory                | Anthropic (official)   | Knowledge-graph-based persistent memory
+5.  [MCP] Sequential Thinking   | Anthropic (official)   | Step-by-step reflective problem solving
+6.  [MCP] Time                  | Anthropic (official)   | Time and timezone conversion utilities
+7.  [MCP] Everything            | Anthropic (official)   | Reference/test server (prompts, resources, tools)
+
+--- Developer & DevOps ---
+8.  [MCP] GitHub                | GitHub (official)      | PRs, code search, issues, workflows
+9.  [MCP] GitLab                | GitLab (official)      | Repos, merge requests, issues, CI
+10. [MCP] Azure DevOps          | Microsoft (official)   | Boards, repos, pipelines on Azure DevOps
+11. [MCP] Sentry                | Sentry (official)      | Retrieve and analyze error issues
+12. [MCP] CircleCI              | CircleCI (official)    | Diagnose and fix CI build failures
+13. [MCP] Buildkite             | Buildkite (official)   | Manage pipelines and builds
+14. [MCP] Postman               | Postman (official)     | Connect agents to APIs and collections
+15. [MCP] Cloudflare            | Cloudflare (official)  | Deploy/configure Workers, KV, R2, D1
+16. [MCP] Render                | Render (official)      | Deploy services, run DB queries, metrics
+17. [MCP] E2B                   | E2B (official)         | Run code in secure cloud sandboxes
+
+--- Databases & Data Platforms ---
+18. [MCP] Supabase              | Supabase (official)    | Postgres DB, auth, edge functions
+19. [MCP] Neon                  | Neon (official)        | Serverless Postgres management + branching
+20. [MCP] MotherDuck            | MotherDuck (official)  | Query DuckDB / MotherDuck analytics
+21. [MCP] ClickHouse            | ClickHouse (official)  | Query ClickHouse columnar database
+22. [MCP] Prisma Postgres       | Prisma (official)      | Manage Prisma Postgres + run migrations
+23. [MCP] Neo4j                 | Neo4j (official)       | Graph database schema + Cypher queries
+24. [MCP] Qdrant                | Qdrant (official)      | Vector search / semantic memory layer
+25. [MCP] Chroma                | Chroma (official)      | Embeddings and vector search
+26. [MCP] SingleStore           | SingleStore (official) | Query the SingleStore database platform
+27. [MCP] dbt                   | dbt Labs (official)    | Run and inspect dbt data transformations
+28. [MCP] Tinybird              | Tinybird (official)    | Serverless ClickHouse data pipelines
+29. [MCP] Couchbase             | Couchbase (official)   | Query Couchbase clusters
+30. [MCP] Meilisearch           | Meilisearch (official) | Full-text search index queries
+
+--- Payments & Commerce ---
+31. [MCP] Stripe                | Stripe (official)      | Payments, customers, invoices via Stripe API
+32. [MCP] PayPal                | PayPal (official)      | PayPal payments and orders
+33. [MCP] Square                | Block / Square (off.)  | Square commerce platform operations
+34. [MCP] Chargebee             | Chargebee (official)   | Subscription billing management
+35. [MCP] RevenueCat            | RevenueCat (official)  | Manage in-app purchases / subscriptions
+
+--- Productivity & Communication ---
+36. [MCP] Notion                | Notion (official)      | Read/write Notion pages and databases
+37. [MCP] Slack                 | Slack (official/comm.) | Channel management and messaging
+38. [MCP] Microsoft 365         | Microsoft (official)   | Outlook, Excel, Office via Graph API
+39. [MCP] Linear                | Linear (official)      | Issues, projects, cycles in Linear
+40. [MCP] Atlassian             | Atlassian (official)   | Jira + Confluence operations
+41. [MCP] HubSpot               | HubSpot (official)     | CRM contacts, deals, pipelines
+42. [MCP] Twilio                | Twilio (official)      | SMS, voice, and messaging APIs
+43. [MCP] Asana                 | Asana (official)       | Tasks, projects, and workflows
+
+--- Search & Web ---
+44. [MCP] Exa                   | Exa (official)         | AI-native web search
+45. [MCP] Tavily                | Tavily (official)      | Search + extraction for agents
+46. [MCP] Perplexity            | Perplexity (official)  | Sonar API web answers with citations
+47. [MCP] Kagi Search           | Kagi (official)        | Privacy-first web search
+48. [MCP] Brave Search          | Brave (official)       | Independent web + local search index
+
+--- Browser Automation & Observability ---
+49. [MCP] Playwright            | Microsoft (official)   | Browser automation and testing
+50. [MCP] Grafana               | Grafana Labs (official)| Search dashboards, query datasources
+
+================================================================================
+PART 2 — AGENT SKILLS (50)
+================================================================================
+All skills below are official Anthropic skills (anthropics/skills) or
+Anthropic Cowork plugin skills — vetted and maintained by Anthropic.
+
+--- Anthropic Official Skills (document, design, build) ---
+51. [SKILL] pdf                 | Anthropic (official)   | Read, fill, merge, split, OCR PDFs
+52. [SKILL] docx                | Anthropic (official)   | Create/edit Word documents
+53. [SKILL] pptx                | Anthropic (official)   | Build and edit PowerPoint decks
+54. [SKILL] xlsx                | Anthropic (official)   | Create/analyze Excel spreadsheets
+55. [SKILL] frontend-design     | Anthropic (official)   | Production-grade UI/component generation
+56. [SKILL] mcp-builder         | Anthropic (official)   | Scaffold high-quality MCP servers
+57. [SKILL] skill-creator       | Anthropic (official)   | Create, edit, and eval new skills
+58. [SKILL] theme-factory       | Anthropic (official)   | Apply visual themes to artifacts
+59. [SKILL] web-artifacts-builder| Anthropic (official)  | Multi-component React/Tailwind artifacts
+60. [SKILL] brand-voice         | Anthropic (official)   | Generate brand voice guidelines + enforce
+
+--- Engineering ---
+61. [SKILL] code-review         | Anthropic Cowork       | Review diffs for security/perf/correctness
+62. [SKILL] architecture        | Anthropic Cowork       | Create/evaluate architecture decision records
+63. [SKILL] debug               | Anthropic Cowork       | Structured reproduce-isolate-fix debugging
+64. [SKILL] system-design       | Anthropic Cowork       | Design systems, services, APIs
+65. [SKILL] testing-strategy    | Anthropic Cowork       | Test plans and coverage strategy
+66. [SKILL] incident-response   | Anthropic Cowork       | Triage, communicate, write postmortems
+67. [SKILL] deploy-checklist    | Anthropic Cowork       | Pre-deploy verification checklist
+68. [SKILL] tech-debt           | Anthropic Cowork       | Identify and prioritize technical debt
+
+--- Sales ---
+69. [SKILL] account-research    | Anthropic Cowork       | Research a company/person for sales intel
+70. [SKILL] call-prep           | Anthropic Cowork       | Prepare for a sales call with context
+71. [SKILL] call-summary        | Anthropic Cowork       | Extract action items + follow-ups from calls
+72. [SKILL] competitive-intel   | Anthropic Cowork       | Build competitor battlecards
+73. [SKILL] draft-outreach      | Anthropic Cowork       | Research + draft personalized outreach
+74. [SKILL] forecast            | Anthropic Cowork       | Weighted sales forecast + gap analysis
+75. [SKILL] pipeline-review     | Anthropic Cowork       | Prioritize deals, flag risks
+76. [SKILL] daily-briefing      | Anthropic Cowork       | Prioritized daily sales briefing
+
+--- Finance ---
+77. [SKILL] financial-statements| Anthropic Cowork       | P&L, balance sheet, cash flow + variance
+78. [SKILL] reconciliation      | Anthropic Cowork       | Reconcile GL to subledgers/bank
+79. [SKILL] journal-entry       | Anthropic Cowork       | Prepare debits/credits with support
+80. [SKILL] variance-analysis   | Anthropic Cowork       | Budget vs actuals variance analysis
+81. [SKILL] sox-testing         | Anthropic Cowork       | SOX 404 sample selection + workpapers
+82. [SKILL] close-management    | Anthropic Cowork       | Month-end close sequencing + tracking
+
+--- Marketing ---
+83. [SKILL] campaign-plan       | Anthropic Cowork       | Plan multi-channel marketing campaigns
+84. [SKILL] content-creation    | Anthropic Cowork       | Create on-brand marketing content
+85. [SKILL] seo-audit           | Anthropic Cowork       | Audit a site for SEO issues
+86. [SKILL] email-sequence      | Anthropic Cowork       | Draft multi-step email sequences
+87. [SKILL] performance-report  | Anthropic Cowork       | Marketing performance reporting
+
+--- Product Management ---
+88. [SKILL] write-spec          | Anthropic Cowork       | Turn an idea into a feature spec/PRD
+89. [SKILL] product-brainstorming| Anthropic Cowork      | Brainstorm + stress-test product ideas
+90. [SKILL] roadmap-update      | Anthropic Cowork       | Build/reprioritize a product roadmap
+91. [SKILL] sprint-planning     | Anthropic Cowork       | Scope work + estimate sprint capacity
+92. [SKILL] metrics-review      | Anthropic Cowork       | Analyze product metrics + trends
+93. [SKILL] stakeholder-update  | Anthropic Cowork       | Tailored stakeholder status updates
+
+--- Data ---
+94. [SKILL] analyze-data        | Anthropic Cowork       | Analyze datasets and surface insights
+95. [SKILL] build-dashboard     | Anthropic Cowork       | Build dashboards from data
+96. [SKILL] sql-queries         | Anthropic Cowork       | Write and optimize SQL queries
+97. [SKILL] statistical-analysis| Anthropic Cowork       | Run statistical analysis on data
+
+--- Design / Legal / HR ---
+98. [SKILL] design-system       | Anthropic Cowork       | Define/extend a design system
+99. [SKILL] review-contract     | Anthropic Cowork       | Review contracts for risk + redlines
+100.[SKILL] interview-prep      | Anthropic Cowork       | Prepare structured interview kits
+
+================================================================================
+SUMMARY
+================================================================================
+Total items        : 100
+MCP servers        : 50 (50%)   <- exceeds 40% requirement
+Agent skills       : 50 (50%)
+Vetting guarantee  : 100% are vendor-official or Anthropic-official/community-vetted.
+
+SUGGESTED INTAKE PRIORITY (for filling the registry first):
+  1) The 7 official reference MCP servers  (universal, zero-friction)
+  2) GitHub, Stripe, Slack, Notion, Supabase, Sentry, Cloudflare (top-recognized)
+  3) Anthropic official skills (pdf/docx/pptx/xlsx/frontend-design/mcp-builder)
+  4) The rest, batched by category.
+
+NOTE FOR THE BUILD:
+  When seeding these, set trust_status to "community_reviewed" (L4) for the
+  Anthropic-official + vendor-official entries via the admin endpoint, since the
+  registry operator is vouching for known-good, widely-used tools. Lower-known
+  entries can start at "seller_confirmed" (L3) pending further review.
+================================================================================
