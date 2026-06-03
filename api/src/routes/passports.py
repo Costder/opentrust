@@ -197,6 +197,74 @@ async def get_tool(slug: str, db: Database = Depends(get_db)):
     return PassportRead.from_model(row)
 
 
+def _npx_args_for(slug: str, source_url: str | None) -> list[str]:
+    """Best-effort npx args for an MCP server (community packages vary).
+
+    For the official modelcontextprotocol-* reference servers we know the
+    canonical package; otherwise we point at the source repo via the registry's
+    own naming. Humans can adjust, agents get a sensible default.
+    """
+    if slug.startswith("modelcontextprotocol-"):
+        short = slug.replace("modelcontextprotocol-", "")
+        return ["-y", f"@modelcontextprotocol/server-{short}"]
+    return ["-y", slug]
+
+
+@router.get("/{slug}/install")
+async def install_tool(slug: str, db: Database = Depends(get_db)):
+    """Machine-readable install instructions an agent or human can act on.
+
+    Free tools are directly installable; paid tools include a note that payment
+    must happen first. For MCP servers we return a ready-to-paste client config.
+    """
+    row = await db.get_by_slug(slug)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Passport not found")
+
+    access = getattr(row, "agent_access", None) or {}
+    kind = access.get("kind") if isinstance(access, dict) else None
+    if not kind:
+        kind = "mcp_server" if "mcp" in (getattr(row, "tool_identity", {}) or {}).get("category", "") else "tool"
+
+    commercial = getattr(row, "commercial_status", None) or {}
+    model = commercial.get("status") or commercial.get("model") or ""
+    free = model in ("", "free")
+
+    tool_identity = getattr(row, "tool_identity", {}) or {}
+    source_url = tool_identity.get("source_url")
+
+    result: dict = {
+        "slug": slug,
+        "name": getattr(row, "name", slug),
+        "kind": kind,
+        "free": free,
+        "trust_status": getattr(row, "trust_status", None),
+        "source_url": source_url,
+        "passport_url": f"/api/v1/tools/{slug}",
+        "note": "Free to install and use." if free
+                else "This tool requires payment before use — see the passport's pricing.",
+    }
+
+    if kind == "mcp_server":
+        args = _npx_args_for(slug, source_url)
+        result["install_command"] = "npx " + " ".join(args)
+        result["mcp_config"] = {
+            "mcpServers": {
+                slug: {"command": "npx", "args": args}
+            }
+        }
+        # Deep links where clients support them (claude code / cursor).
+        result["deep_links"] = {
+            "claude_code": f"claude mcp add {slug} -- npx {' '.join(args)}",
+        }
+    elif kind == "skill":
+        result["install_command"] = f"git clone {source_url}" if source_url else None
+        result["note"] = (result["note"] + " Skills are folders — clone the source and "
+                          "drop the skill into your agent's skills directory.")
+
+    return result
+
+
 @router.post("", response_model=PassportRead, status_code=201)
 async def create_tool(payload: PassportCreate, db: Database = Depends(get_db)):
     _check_permission_scope(payload)

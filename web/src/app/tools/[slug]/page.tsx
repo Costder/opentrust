@@ -19,6 +19,15 @@ import {
 } from "lucide-react";
 import type { TrustStatus } from "@/types/passport";
 import { CopyButton } from "@/components/CopyButton";
+import { InstallPanel } from "@/components/InstallPanel";
+import { Server, Sparkles, Wrench, Bot, Download } from "lucide-react";
+
+const KIND_BADGE: Record<string, { label: string; cls: string; Icon: React.ElementType }> = {
+  mcp_server:    { label: "MCP Server", cls: "bg-violet-100 text-violet-800", Icon: Server },
+  skill:         { label: "Skill",      cls: "bg-sky-100 text-sky-800",       Icon: Sparkles },
+  tool:          { label: "Tool",       cls: "bg-teal-100 text-teal-800",     Icon: Wrench },
+  agent_service: { label: "Agent",      cls: "bg-indigo-100 text-indigo-800", Icon: Bot },
+};
 
 // ── Trust ladder ──────────────────────────────────────────────────────────────
 
@@ -77,6 +86,15 @@ export default async function ToolPage({ params }: { params: Promise<{ slug: str
 
   const badgeMarkdown = `![OpenTrust](https://api.opentrust.infiniterealms.io/api/v1/badge/${slug}.svg)`;
 
+  const accessKind = (tool.agent_access as { kind?: string })?.kind;
+  const sourceFormats = (tool as { source_formats?: string[] }).source_formats ?? [];
+  const kindKey = accessKind ?? (sourceFormats.includes("mcp") ? "mcp_server" : sourceFormats.includes("agent") ? "agent_service" : "tool");
+  const kind = KIND_BADGE[kindKey] ?? KIND_BADGE.tool;
+  const KindIcon = kind.Icon;
+  const commercialModel = (tool.commercial_status as { status?: string; model?: string }).status
+    ?? (tool.commercial_status as { model?: string }).model ?? "";
+  const isFree = commercialModel === "" || commercialModel === "free";
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
 
@@ -93,7 +111,16 @@ export default async function ToolPage({ params }: { params: Promise<{ slug: str
       <header className="panel p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-3xl font-bold text-stone-900">{tool.name}</h1>
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${kind.cls}`}>
+                <KindIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                {kind.label}
+              </span>
+              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${isFree ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+                {isFree ? "Free" : "Paid"}
+              </span>
+            </div>
+            <h1 className="mt-2 text-3xl font-bold text-stone-900">{tool.name}</h1>
             <p className="mt-0.5 font-mono text-sm text-stone-400">{tool.slug}</p>
             {tool.description && (
               <p className="mt-3 max-w-2xl text-stone-600">{tool.description}</p>
@@ -132,6 +159,13 @@ export default async function ToolPage({ params }: { params: Promise<{ slug: str
           </div>
         )}
       </header>
+
+      {/* ── Install (prominent for free tools) ──────────────────────────────── */}
+      {!isDisputed && (
+        <Section title="Install" icon={Download}>
+          <InstallPanel slug={tool.slug} />
+        </Section>
+      )}
 
       {/* ── Trust ladder ────────────────────────────────────────────────────── */}
       <Section title="Trust ladder" icon={ShieldCheck}>

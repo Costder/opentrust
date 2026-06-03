@@ -61,4 +61,6 @@ export type Passport = {
   billing_plan?: { tier: string; interval: string; amount_usdc: number } | null;
   fee_schedule?: Record<string, unknown> | null;
   agent_access: Record<string, unknown>;
+  source_formats?: string[];
+  is_demo?: boolean;
 };
