@@ -14,6 +14,8 @@ from ..schemas.marketplace import (
     EscrowStatus,
     GitHubInstallationRequest,
     MarketplaceListing,
+    UsageAccount,
+    UsageEvent,
     MarketplaceListingRequest,
     MarketplaceOrder,
     MarketplaceOrderRequest,
@@ -63,6 +65,8 @@ class MarketplaceStore:
         self.evidence_runs: dict[str, EvidenceRun] = {}
         self.reports: dict[str, TrustReport] = {}
         self.badges: dict[str, VerifiedBadge] = {}
+        self.usage_accounts: dict[str, UsageAccount] = {}
+        self.usage_events: dict[str, UsageEvent] = {}
         self.reputation: dict[tuple[str, SubjectKind], ReputationRecord] = {}
         self.ratings: dict[str, CounterpartyRating] = {}
         self.jobs: dict[str, JobPosting] = {}
@@ -139,9 +143,145 @@ class MarketplaceStore:
             seller_trust_status=request.seller_trust_status,
             escrow_required=request.escrow_required,
             delivery_proof=request.delivery_proof,
+            pricing_model=request.pricing_model,
+            unit_price_usdc=request.unit_price_usdc,
+            unit_label=request.unit_label,
+            min_topup_usdc=request.min_topup_usdc,
         )
         self.listings[listing.listing_id] = listing
         return listing
+
+    # ── Usage-based (metered) billing ───────────────────────────────────────────
+
+    def _unit_price(self, listing: MarketplaceListing) -> Decimal:
+        """Per-unit price for a metered listing; falls back to price_usdc."""
+        return listing.unit_price_usdc if listing.unit_price_usdc is not None else listing.price_usdc
+
+    def fund_usage(self, listing_id: str, buyer_wallet_id: str, amount: Decimal) -> UsageAccount:
+        """Credit a buyer's prepaid balance for a listing (creates account on first fund).
+
+        On-chain verification of the funding transfer happens in the route; this
+        records the credit. Same (buyer, listing) always maps to one account.
+        """
+        listing = self.listings.get(listing_id)
+        if listing is None:
+            raise KeyError("listing does not exist")
+        if buyer_wallet_id not in self.wallets:
+            raise KeyError("buyer wallet is not connected")
+
+        now = datetime.now(timezone.utc).isoformat()
+        existing = self._find_usage_account(listing_id, buyer_wallet_id)
+        if existing is not None:
+            existing.balance_usdc += amount
+            existing.funded_total_usdc += amount
+            existing.status = "active"
+            existing.updated_at = now
+            return existing
+
+        account = UsageAccount(
+            account_id=f"usage_{uuid4().hex}",
+            listing_id=listing_id,
+            buyer_wallet_id=buyer_wallet_id,
+            seller_wallet_id=listing.seller_wallet_id,
+            balance_usdc=amount,
+            funded_total_usdc=amount,
+            created_at=now,
+            updated_at=now,
+        )
+        self.usage_accounts[account.account_id] = account
+        return account
+
+    def _find_usage_account(self, listing_id: str, buyer_wallet_id: str) -> UsageAccount | None:
+        for a in self.usage_accounts.values():
+            if a.listing_id == listing_id and a.buyer_wallet_id == buyer_wallet_id:
+                return a
+        return None
+
+    def get_usage_account(self, account_id: str) -> UsageAccount | None:
+        return self.usage_accounts.get(account_id)
+
+    def find_usage_account(self, listing_id: str, buyer_wallet_id: str) -> UsageAccount | None:
+        return self._find_usage_account(listing_id, buyer_wallet_id)
+
+    def meter_usage(self, account_id: str, *, quantity: int, idempotency_key: str, note: str | None = None) -> dict:
+        """Draw down a prepaid balance by quantity * unit price. Idempotent.
+
+        Returns {allowed, amount_usdc, balance_after_usdc, reason?}. A repeated
+        idempotency_key returns the prior result without charging again.
+        """
+        account = self.usage_accounts.get(account_id)
+        if account is None:
+            raise KeyError("usage account does not exist")
+
+        # Idempotency: replay the prior event's outcome.
+        for e in self.usage_events.values():
+            if e.account_id == account_id and e.idempotency_key == idempotency_key:
+                return {
+                    "allowed": True,
+                    "amount_usdc": e.amount_usdc,
+                    "balance_after_usdc": e.balance_after_usdc,
+                    "event_id": e.event_id,
+                    "replayed": True,
+                }
+
+        listing = self.listings.get(account.listing_id)
+        if listing is None:
+            raise KeyError("listing does not exist")
+        unit = self._unit_price(listing)
+        amount = unit * quantity
+
+        if account.balance_usdc < amount:
+            return {
+                "allowed": False,
+                "reason": "insufficient_balance",
+                "amount_usdc": amount,
+                "balance_after_usdc": account.balance_usdc,
+            }
+
+        now = datetime.now(timezone.utc).isoformat()
+        account.balance_usdc -= amount
+        account.consumed_usdc += amount
+        account.calls_count += 1
+        account.units_count += quantity
+        if account.balance_usdc <= Decimal("0"):
+            account.status = "depleted"
+        account.updated_at = now
+
+        event = UsageEvent(
+            event_id=f"event_{uuid4().hex}",
+            account_id=account_id,
+            listing_id=account.listing_id,
+            quantity=quantity,
+            amount_usdc=amount,
+            balance_after_usdc=account.balance_usdc,
+            idempotency_key=idempotency_key,
+            note=note,
+            created_at=now,
+        )
+        self.usage_events[event.event_id] = event
+        return {
+            "allowed": True,
+            "amount_usdc": amount,
+            "balance_after_usdc": account.balance_usdc,
+            "event_id": event.event_id,
+            "replayed": False,
+        }
+
+    def list_usage_events(self, account_id: str) -> list[UsageEvent]:
+        return sorted(
+            (e for e in self.usage_events.values() if e.account_id == account_id),
+            key=lambda e: e.created_at,
+        )
+
+    def seller_earnings(self, seller_wallet_id: str) -> dict:
+        accts = [a for a in self.usage_accounts.values() if a.seller_wallet_id == seller_wallet_id]
+        return {
+            "seller_wallet_id": seller_wallet_id,
+            "accounts": len(accts),
+            "funded_usdc": sum((a.funded_total_usdc for a in accts), Decimal("0")),
+            "consumed_usdc": sum((a.consumed_usdc for a in accts), Decimal("0")),
+            "outstanding_balance_usdc": sum((a.balance_usdc for a in accts), Decimal("0")),
+        }
 
     def create_order(self, request: MarketplaceOrderRequest) -> MarketplaceOrder:
         listing = self.listings.get(request.listing_id)

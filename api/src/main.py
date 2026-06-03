@@ -19,6 +19,7 @@ from .routes import (
     payments,
     reputation,
     search,
+    usage,
 )
 from .routes.well_known import registry_router, well_known_router
 
@@ -88,6 +89,7 @@ api.include_router(marketplace.router)
 api.include_router(marketplace.evidence_router)
 api.include_router(marketplace.reports_router)
 api.include_router(marketplace.badges_router)
+api.include_router(usage.router)
 
 
 @api.get("/health")

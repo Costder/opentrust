@@ -30,6 +30,14 @@ class ProviderKind(str, Enum):
     human_service = "human_service"
 
 
+class PricingModel(str, Enum):
+    flat = "flat"                # one-time price per purchase (default)
+    per_call = "per_call"        # price per call
+    per_token = "per_token"      # price per 1k tokens
+    per_unit = "per_unit"        # price per seller-defined unit
+    subscription = "subscription"  # price per period
+
+
 class EscrowStatus(str, Enum):
     created = "created"
     funded = "funded"
@@ -150,6 +158,11 @@ class MarketplaceListingRequest(BaseModel):
     seller_trust_status: str | None = None
     escrow_required: bool = False
     delivery_proof: DeliveryProofRequirement | None = None
+    # Metered pricing (optional; defaults to flat = today's behavior)
+    pricing_model: PricingModel = PricingModel.flat
+    unit_price_usdc: Decimal | None = Field(default=None, gt=0)
+    unit_label: str | None = None
+    min_topup_usdc: Decimal = Field(default=Decimal("1.00"), gt=0)
 
 
 class MarketplaceListing(BaseModel):
@@ -166,6 +179,51 @@ class MarketplaceListing(BaseModel):
     seller_trust_status: str | None = None
     escrow_required: bool = False
     delivery_proof: DeliveryProofRequirement | None = None
+    pricing_model: PricingModel = PricingModel.flat
+    unit_price_usdc: Decimal | None = None
+    unit_label: str | None = None
+    min_topup_usdc: Decimal = Decimal("1.00")
+
+
+class UsageAccount(BaseModel):
+    account_id: str
+    listing_id: str
+    buyer_wallet_id: str
+    seller_wallet_id: str
+    balance_usdc: Decimal = Decimal("0")
+    funded_total_usdc: Decimal = Decimal("0")
+    consumed_usdc: Decimal = Decimal("0")
+    calls_count: int = 0
+    units_count: int = 0
+    status: str = "active"  # active | depleted | closed
+    created_at: str
+    updated_at: str
+
+
+class UsageEvent(BaseModel):
+    event_id: str
+    account_id: str
+    listing_id: str
+    quantity: int
+    amount_usdc: Decimal
+    balance_after_usdc: Decimal
+    idempotency_key: str
+    note: str | None = None
+    created_at: str
+
+
+class FundUsageRequest(BaseModel):
+    listing_id: str
+    buyer_wallet_id: str
+    amount_usdc: Decimal = Field(gt=0)
+    transaction_hash: str = Field(min_length=66, max_length=66, pattern=r"^0x[0-9a-fA-F]{64}$")
+
+
+class MeterUsageRequest(BaseModel):
+    account_id: str
+    quantity: int = Field(default=1, ge=1)
+    idempotency_key: str = Field(min_length=1)
+    note: str | None = None
 
 
 class MarketplaceOrderRequest(BaseModel):
