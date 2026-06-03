@@ -1,13 +1,110 @@
+import re
 import sqlite3
 from uuid import uuid4
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from ..database import Database, get_db
 from ..schemas.passport import PassportCreate, PassportRead, SecurityEvidenceBlock  # noqa: F401 — type reference
+from ..services.passport_generator import draft_passport_from_metadata
 from .well_known import _require_admin
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 admin_router = APIRouter(prefix="/admin/tools", tags=["admin"])
+
+
+# ── GitHub submission on-ramp ────────────────────────────────────────────────
+
+
+_GITHUB_URL_RE = re.compile(
+    r"^(?:https?://)?(?:www\.)?github\.com/([^/\s]+)/([^/\s#?]+?)(?:\.git)?/?$"
+)
+_BARE_REPO_RE = re.compile(r"^([^/\s]+)/([^/\s#?]+)$")
+
+
+def parse_github_repo(url: str) -> str | None:
+    """Normalize a GitHub URL or bare owner/repo to 'owner/repo', or None."""
+    url = url.strip()
+    m = _GITHUB_URL_RE.match(url)
+    if m:
+        return f"{m.group(1)}/{m.group(2)}"
+    m = _BARE_REPO_RE.match(url)
+    if m and "." not in m.group(1):  # avoid matching domains like example.com/x
+        return f"{m.group(1)}/{m.group(2)}"
+    return None
+
+
+def fetch_github_repo(full_name: str) -> dict | None:
+    """Fetch public repo metadata from the GitHub API. None if not found.
+
+    Isolated so tests can patch it without network access.
+    """
+    try:
+        resp = httpx.get(
+            f"https://api.github.com/repos/{full_name}",
+            headers={"Accept": "application/vnd.github+json"},
+            timeout=10.0,
+        )
+    except httpx.HTTPError:
+        return None
+    if resp.status_code != 200:
+        return None
+    return resp.json()
+
+
+class SubmitGithubRequest(BaseModel):
+    github_url: str
+
+
+@router.post("/submit", response_model=PassportRead, status_code=201)
+async def submit_github(request: SubmitGithubRequest, db: Database = Depends(get_db)):
+    """Public on-ramp: paste a GitHub repo -> auto-create an L1 draft passport.
+
+    This is how the registry bootstraps. The draft starts at auto_generated_draft
+    (L1) and can later be claimed and advanced by the owner. Re-submitting an
+    existing repo returns the existing passport.
+    """
+    full_name = parse_github_repo(request.github_url)
+    if full_name is None:
+        raise HTTPException(status_code=422, detail="not a valid GitHub repo URL or owner/repo")
+
+    meta = fetch_github_repo(full_name)
+    if meta is None:
+        raise HTTPException(status_code=404, detail=f"GitHub repo '{full_name}' not found")
+
+    name = meta.get("name") or full_name.split("/")[-1]
+    source_url = meta.get("html_url") or f"https://github.com/{full_name}"
+    description = meta.get("description") or ""
+    draft = draft_passport_from_metadata(name=name, source_url=source_url, description=description)
+    slug = draft["tool_identity"]["slug"]
+
+    existing = await db.get_by_slug(slug)
+    if existing is not None:
+        # Idempotent: return the existing passport rather than erroring.
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=200, content=PassportRead.from_model(existing).model_dump())
+
+    row = await db.create({
+        "id": str(uuid4()),
+        "slug": slug,
+        "name": name,
+        "description": description,
+        "trust_status": "auto_generated_draft",
+        "tool_identity": draft["tool_identity"],
+        "creator_identity": None,
+        "version_hash": draft["version_hash"],
+        "capabilities": draft["capabilities"],
+        "permission_manifest": draft["permission_manifest"],
+        "evidence": None,
+        "risk_summary": draft["risk_summary"],
+        "review_history": [],
+        "commercial_status": draft["commercial_status"],
+        "billing_plan": draft.get("billing_plan"),
+        "fee_schedule": draft.get("fee_schedule"),
+        "agent_access": draft["agent_access"],
+    })
+    return PassportRead.from_model(row)
 
 _HIGH_RISK_PERMISSIONS = frozenset({"file", "network", "terminal", "wallet", "private_data"})
 # "disputed" is intentionally excluded: a disputed passport is under investigation

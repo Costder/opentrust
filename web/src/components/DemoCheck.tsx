@@ -20,27 +20,79 @@ const TRUST_COLOR: Record<string, string> = {
   disputed: "text-red-600",
 };
 
+const GITHUB_RE = /github\.com\/[^/\s]+\/[^/\s]+|^[^/\s]+\/[^/\s]+$/;
+
 export function DemoCheck() {
-  const [slug, setSlug] = useState("github-file-search");
+  const [slug, setSlug] = useState("github-mcp-server");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [added, setAdded] = useState<string | null>(null);
 
   async function check() {
-    if (!slug.trim()) return;
+    const q = slug.trim();
+    if (!q) return;
     setLoading(true);
     setResult(null);
     setError(null);
+    setCanSubmit(false);
+    setAdded(null);
     try {
-      const res = await fetch(`/api/tools/${encodeURIComponent(slug.trim())}`);
+      // A GitHub URL / ow+repo is a submission, not a slug lookup.
+      const looksLikeGithub = GITHUB_RE.test(q) && !/^[a-z0-9-]+$/.test(q);
+      if (looksLikeGithub) {
+        await submitRepo(q);
+        return;
+      }
+      const res = await fetch(`/api/tools/${encodeURIComponent(q)}`);
       if (!res.ok) {
-        setError(res.status === 404 ? "Tool not found in registry." : `Error ${res.status}`);
+        if (res.status === 404) {
+          setError("Not in the registry yet.");
+          setCanSubmit(true); // offer to add it
+        } else {
+          setError(`Error ${res.status}`);
+        }
       } else {
         setResult(await res.json());
       }
     } catch {
       setError("Could not reach the registry API. Is it running?");
     } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitRepo(input: string) {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/tools/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ github_url: input }),
+      });
+      if (res.status === 422) {
+        setError("That doesn't look like a GitHub repo. Try a slug or github.com/owner/repo.");
+        return;
+      }
+      if (res.status === 404) {
+        setError("That GitHub repo wasn't found.");
+        return;
+      }
+      if (!res.ok) {
+        setError(`Couldn't add it (error ${res.status}).`);
+        return;
+      }
+      const created = await res.json();
+      setResult(created);
+      setAdded(created.slug);
+      setCanSubmit(false);
+    } catch {
+      setError("Could not reach the registry API.");
+    } finally {
+      setSubmitting(false);
       setLoading(false);
     }
   }
@@ -53,26 +105,42 @@ export function DemoCheck() {
 
   return (
     <div className="panel p-5 space-y-4">
-      <p className="text-sm font-semibold uppercase text-signal">Try it — check any tool</p>
+      <p className="text-sm font-semibold uppercase text-signal">Check a tool — or add one</p>
       <div className="flex gap-2">
         <input
           className="flex-1 rounded border border-stone-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-moss"
           value={slug}
           onChange={e => setSlug(e.target.value)}
           onKeyDown={e => e.key === "Enter" && check()}
-          placeholder="tool-slug"
-          aria-label="Tool slug"
+          placeholder="tool-slug or github.com/owner/repo"
+          aria-label="Tool slug or GitHub repo"
         />
         <button
           onClick={check}
-          disabled={loading}
+          disabled={loading || submitting}
           className="rounded bg-ink px-4 py-2 text-sm text-white disabled:opacity-50"
         >
-          {loading ? "Checking…" : "Check trust"}
+          {loading || submitting ? "…" : "Check"}
         </button>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {canSubmit && (
+        <button
+          onClick={() => submitRepo(slug.trim())}
+          disabled={submitting}
+          className="w-full rounded bg-moss px-4 py-2 text-sm font-semibold text-white hover:bg-green-800 transition disabled:opacity-50"
+        >
+          {submitting ? "Adding…" : "Add it to the registry →"}
+        </button>
+      )}
+
+      {added && (
+        <p className="text-sm text-moss">
+          Added <span className="font-mono font-semibold">{added}</span> as a draft (L1). Claim it to advance its trust.
+        </p>
+      )}
 
       {result && (
         <div className="space-y-2 text-sm">
