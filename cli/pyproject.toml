@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opentrust-cli"
-version = "1.0.0"
+version = "1.0.1"
 description = "Command-line tools for inspecting, validating, and working with OpenTrust passports"
 readme = "README.md"
 requires-python = ">=3.11"

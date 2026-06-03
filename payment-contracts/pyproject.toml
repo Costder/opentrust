@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opentrust-payment-contracts"
-version = "1.0.0"
+version = "1.0.1"
 description = "Abstract payment contracts for OpenTrust payment providers"
 readme = "README.md"
 requires-python = ">=3.11"

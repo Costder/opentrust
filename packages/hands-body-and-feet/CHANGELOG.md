@@ -1,4 +1,17 @@
-# Changelog — @opentrust/hands-body-and-feet
+# Changelog — @infinitestudios/hands-body-and-feet
+
+## 2.3.0 — 2026-06-03
+
+**AgentMail email transport — real hosted inboxes (send + receive).**
+
+- New `agentmail` email transport: each agent gets a hosted inbox via
+  agentmail.to (set `AGENTMAIL_API_KEY`). Unlike postmark/resend (send-only) or
+  self-hosted local SMTP, it does send AND receive with no SMTP server.
+- `create_mailbox` provisions a real inbox; `read_inbox` / `wait_for_email` poll
+  AgentMail; `ingestAgentMailWebhook` handles real-time `message.received` events.
+- `hands-body-and-feet init` offers AgentMail as the easiest email setup.
+- Defaults switched to the branded OpenTrust domain
+  (`api.opentrust.infiniterealms.io`).
 
 ## 2.2.0 — 2026-05-29
 

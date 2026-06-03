@@ -33,3 +33,9 @@ jobs:
       - run: cd sdk-ts && npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # hands-body-and-feet (the MCP server that gives agents real-world capabilities)
+      - run: cd packages/hands-body-and-feet && npm ci && npm run build && npm run typecheck
+      - run: cd packages/hands-body-and-feet && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

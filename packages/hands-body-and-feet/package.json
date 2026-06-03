@@ -1,6 +1,6 @@
 {
   "name": "@infinitestudios/hands-body-and-feet",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Give AI agents real-world capabilities via MCP — email, phone, wallet, payments, virtual cards, and more",
   "type": "module",
   "bin": {
