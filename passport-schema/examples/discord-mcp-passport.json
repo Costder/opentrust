@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0.0",
+  "tool_id": "discord-mcp",
+  "tool_name": "Discord MCP Server",
+  "tool_version": "1.0.0",
+  "tool_description": "MCP server enabling AI agents to interact with Discord",
+  "source_url": "https://github.com/SaseQ/discord-mcp",
+  "publisher": {
+    "name": "SaseQ",
+    "github": "https://github.com/SaseQ",
+    "verified": false
+  },
+  "trust_level": "auto_generated_draft",
+  "trust_level_code": 0,
+  "passport_generated_by": "OpenTrust Scout v0.1",
+  "generated_at": "2026-06-06T00:00:00Z",
+  "permissions": {
+    "network": {
+      "outbound": [
+        "discord.com",
+        "discord.gg",
+        "gateway.discord.gg"
+      ],
+      "scope": "external"
+    },
+    "credentials": {
+      "required": [
+        "DISCORD_TOKEN"
+      ],
+      "storage": "environment_variable"
+    },
+    "filesystem": {
+      "read": false,
+      "write": false
+    },
+    "process_execution": false,
+    "data_persistence": false
+  },
+  "capabilities": [
+    "send_message",
+    "read_messages",
+    "list_channels",
+    "list_guilds",
+    "get_guild_members",
+    "create_channel",
+    "delete_message"
+  ],
+  "risk_surface": {
+    "credential_exposure": "medium",
+    "network_scope": "external",
+    "data_access": "discord_account_full",
+    "reversibility": "low",
+    "note": "Full Discord bot token grants write access to all servers the bot joins."
+  },
+  "opentrust_notes": [
+    "Auto-generated draft not verified by maintainer.",
+    "Token scope risk: DISCORD_TOKEN should use minimal required permissions.",
+    "270+ GitHub stars indicate active community adoption."
+  ]
+}
