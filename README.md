@@ -380,6 +380,28 @@ pip install "opentrust-sdk[mcp]"
 
 ---
 
+## Passport Service — $20 / tool
+
+We generate a production-ready OpenTrust passport for your MCP server: a signed JSON document declaring permissions, network scope, credential handling, and trust level — plus an SVG badge for your README.
+
+**Delivered within 24 hours via a PR or Gist link.**
+
+| What you get | Details |
+|---|---|
+| `your-tool-passport.json` | Validated against OpenTrust schema, signed |
+| SVG trust badge | Embeddable in your README |
+| Registry listing | Listed at opentrust.infiniterealms.io |
+
+**Price:** $20 USDC on Base
+**Payment address:** `0x0FDD9B72Be53D9b9b70C45B45cDADad679362342`
+**To order:** [Open an issue](https://github.com/Costder/opentrust/issues/new?title=Passport+request) with your tool's GitHub/npm URL. Pay after delivery if you're happy.
+
+> **Example:** [`discord-mcp-passport.json`](passport-schema/examples/discord-mcp-passport.json) — auto-generated for [SaseQ/discord-mcp](https://github.com/SaseQ/discord-mcp).
+
+*Disclosed: built and operated with AI assistance (Claude + OpenTrust Scout).*
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The short version: open an RFC for schema changes, open a PR for everything else.
