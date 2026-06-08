@@ -69,6 +69,12 @@ async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
     buyer = store.wallets.get(request.buyer_wallet_id)
     seller = store.wallets.get(listing.seller_wallet_id)
     if buyer is None or seller is None:
+        # cold start: wallets may live only in the DB
+        from ..routes.marketplace import _hydrate_wallets
+        await _hydrate_wallets(db)
+        buyer = store.wallets.get(request.buyer_wallet_id)
+        seller = store.wallets.get(listing.seller_wallet_id)
+    if buyer is None or seller is None:
         raise HTTPException(status_code=404, detail="wallet not found")
 
     # Verify the funding transfer landed in the seller's wallet on-chain.
