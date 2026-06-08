@@ -6,6 +6,20 @@ OpenTrust is an open standard and reference implementation for establishing veri
 
 A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an OpenAPI endpoint gets one passport. One trust status. One badge. Readable by any agent, any platform, any runtime.
 
+## Important Clarification
+
+OpenTrust has zero affiliated tokens, memecoins, or cryptocurrencies.
+
+We will never launch, authorize, or endorse any token.
+
+The only official way to support the project is through the transparent funding dashboard (USDC/fiat). Every contribution is publicly tracked and auditable on-chain.
+
+Any token using our name, branding, or claiming connection to OpenTrust is unauthorized and fake. Do not buy them.
+
+We are fully focused on building the actual open-source tools.
+
+Thank you for the support &mdash; stay safe out there.
+
 ## Demo
 
 [![Watch the OpenTrust demo](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo-thumb.jpg)](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4)
