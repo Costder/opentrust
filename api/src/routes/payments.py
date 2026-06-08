@@ -1,9 +1,10 @@
 from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from ..config import settings
+from ..database import Database, get_db
 from ..schemas.marketplace import (
     CheckoutRequest,
     CheckoutResponse,
@@ -20,6 +21,16 @@ from ..schemas.marketplace import (
 from ..schemas.reputation import CounterpartyRating, CounterpartyRatingRequest
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
+from ._durable import (
+    hydrate_escrow,
+    hydrate_jobs,
+    hydrate_ratings,
+    hydrate_reputation,
+    persist_escrow,
+    persist_rating,
+    persist_reputation_all,
+    persist_settlement,
+)
 
 class OnchainVerifyRequest(BaseModel):
     tx_hash: str = Field(min_length=66, max_length=66, pattern=r"^0x[0-9a-fA-F]{64}$")
@@ -96,11 +107,17 @@ def _map_escrow_store_error(exc: Exception) -> HTTPException:
 
 
 @escrow_router.post("/create", response_model=EscrowRecord)
-async def create_escrow(request: EscrowCreateRequest):
+async def create_escrow(request: EscrowCreateRequest, db: Database = Depends(get_db)):
     if not settings.opentrust_escrow_enabled:
         raise HTTPException(status_code=403, detail="escrow is disabled")
+    # Cold-start safety: the seeded listing and its buyer/seller wallets may live
+    # only in the DB after a serverless recycle. Hydrate before validating them.
+    from ..routes.marketplace import _hydrate_listings, _hydrate_wallets
+    await _hydrate_listings(db)
+    await _hydrate_wallets(db)
+    await hydrate_reputation(db)  # the reputation gate must see prior history
     try:
-        return store.create_escrow(
+        escrow = store.create_escrow(
             request,
             token_contract=settings.base_usdc_contract,
         )
@@ -110,21 +127,25 @@ async def create_escrow(request: EscrowCreateRequest):
         raise _map_escrow_store_error(exc) from exc
     except (KeyError, PermissionError) as exc:
         raise _map_escrow_store_error(exc) from exc
+    await persist_escrow(db, escrow)
+    return escrow
 
 
 @escrow_router.get("/{escrow_id}", response_model=EscrowRecord)
-async def get_escrow(escrow_id: str):
-    escrow = store.escrows.get(escrow_id)
+async def get_escrow(escrow_id: str, db: Database = Depends(get_db)):
+    escrow = await hydrate_escrow(db, escrow_id)
     if escrow is None:
         raise HTTPException(status_code=404, detail="escrow does not exist")
     return escrow
 
 
 @escrow_router.post("/{escrow_id}/verify-deposit", response_model=EscrowRecord)
-async def verify_escrow_deposit(escrow_id: str, request: EscrowDepositVerificationRequest):
-    escrow = store.escrows.get(escrow_id)
+async def verify_escrow_deposit(escrow_id: str, request: EscrowDepositVerificationRequest, db: Database = Depends(get_db)):
+    from ..routes.marketplace import _hydrate_wallets
+    escrow = await hydrate_escrow(db, escrow_id)
     if escrow is None:
         raise HTTPException(status_code=404, detail="escrow does not exist")
+    await _hydrate_wallets(db)
     buyer_wallet = store.wallets.get(escrow.buyer_wallet_id)
     if buyer_wallet is None:
         raise HTTPException(status_code=404, detail="buyer wallet is not connected")
@@ -137,7 +158,9 @@ async def verify_escrow_deposit(escrow_id: str, request: EscrowDepositVerificati
             rpc_url=settings.base_rpc_url,
             usdc_contract=settings.base_usdc_contract,
         )
-        return store.verify_escrow_deposit(escrow_id, request.tx_hash)
+        updated = store.verify_escrow_deposit(escrow_id, request.tx_hash)
+        await persist_escrow(db, updated)
+        return updated
     except OnchainVerificationError as exc:
         raise HTTPException(status_code=402, detail=str(exc)) from exc
     except (KeyError, PermissionError, ValueError) as exc:
@@ -145,54 +168,76 @@ async def verify_escrow_deposit(escrow_id: str, request: EscrowDepositVerificati
 
 
 @escrow_router.post("/{escrow_id}/deliver", response_model=EscrowRecord)
-async def deliver_escrow(escrow_id: str, request: EscrowDeliveryRequest):
+async def deliver_escrow(escrow_id: str, request: EscrowDeliveryRequest, db: Database = Depends(get_db)):
+    await hydrate_escrow(db, escrow_id)
     try:
-        return store.mark_escrow_delivered(
+        escrow = store.mark_escrow_delivered(
             escrow_id,
             result_hash=request.result_hash,
             artifact_uri=request.artifact_uri,
         )
     except (KeyError, PermissionError, ValueError) as exc:
         raise _map_escrow_store_error(exc) from exc
+    await persist_escrow(db, escrow)
+    return escrow
 
 
 @escrow_router.post("/{escrow_id}/release", response_model=EscrowRecord)
-async def release_escrow(escrow_id: str):
+async def release_escrow(escrow_id: str, db: Database = Depends(get_db)):
+    await hydrate_escrow(db, escrow_id)
+    await hydrate_reputation(db)  # accrual must build on existing history
+    await hydrate_jobs(db)        # so a linked job can be completed
     try:
-        return store.release_escrow(escrow_id)
+        escrow = store.release_escrow(escrow_id)
     except (KeyError, PermissionError, ValueError) as exc:
         raise _map_escrow_store_error(exc) from exc
+    await persist_settlement(db, escrow)
+    return escrow
 
 
 @escrow_router.post("/{escrow_id}/refund", response_model=EscrowRecord)
-async def refund_escrow(escrow_id: str):
+async def refund_escrow(escrow_id: str, db: Database = Depends(get_db)):
+    await hydrate_escrow(db, escrow_id)
+    await hydrate_reputation(db)
     try:
-        return store.refund_escrow(escrow_id)
+        escrow = store.refund_escrow(escrow_id)
     except (KeyError, PermissionError, ValueError) as exc:
         raise _map_escrow_store_error(exc) from exc
+    await persist_settlement(db, escrow)
+    return escrow
 
 
 @escrow_router.post("/{escrow_id}/disputes", response_model=EscrowRecord)
-async def dispute_escrow(escrow_id: str, request: EscrowDisputeRequest):
+async def dispute_escrow(escrow_id: str, request: EscrowDisputeRequest, db: Database = Depends(get_db)):
+    await hydrate_escrow(db, escrow_id)
+    await hydrate_reputation(db)
     try:
-        return store.mark_escrow_disputed(escrow_id, request.reason)
+        escrow = store.mark_escrow_disputed(escrow_id, request.reason)
     except (KeyError, PermissionError, ValueError) as exc:
         raise _map_escrow_store_error(exc) from exc
+    await persist_settlement(db, escrow)
+    return escrow
 
 
 @escrow_router.post("/{escrow_id}/ratings", response_model=CounterpartyRating)
-async def rate_escrow(escrow_id: str, request: CounterpartyRatingRequest):
+async def rate_escrow(escrow_id: str, request: CounterpartyRatingRequest, db: Database = Depends(get_db)):
     """Bidirectional counterparty rating, allowed only after the escrow settles."""
+    await hydrate_escrow(db, escrow_id)
+    await hydrate_reputation(db)
     try:
-        return store.add_rating(escrow_id, request)
+        rating = store.add_rating(escrow_id, request)
     except (KeyError, PermissionError, ValueError) as exc:
         raise _map_escrow_store_error(exc) from exc
+    await persist_rating(db, rating)
+    await persist_reputation_all(db)
+    return rating
 
 
 @escrow_router.get("/{escrow_id}/ratings", response_model=list[CounterpartyRating])
-async def list_escrow_ratings(escrow_id: str):
-    if escrow_id not in store.escrows:
+async def list_escrow_ratings(escrow_id: str, db: Database = Depends(get_db)):
+    if await hydrate_escrow(db, escrow_id) is None:
         raise HTTPException(status_code=404, detail="escrow does not exist")
+    await hydrate_ratings(db)
     return store.list_ratings_for_escrow(escrow_id)
 
 

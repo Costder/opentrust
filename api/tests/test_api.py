@@ -127,13 +127,15 @@ async def test_marketplace_order_uses_customer_wallets_without_custody():
     repo = await verify_repo(
         VerifyRepoRequest(installation_id=123, repo_full_name="octo/tool", branch="main", commit_sha="abc1234567")
     )
+    from api.src.database import db as _db
     seller = await connect_wallet(
-        WalletConnectRequest(owner="seller", address="0x1111111111111111111111111111111111111111")
+        WalletConnectRequest(owner="seller", address="0x1111111111111111111111111111111111111111"),
+        db=_db,
     )
     buyer = await connect_wallet(
-        WalletConnectRequest(owner="buyer", address="0x2222222222222222222222222222222222222222")
+        WalletConnectRequest(owner="buyer", address="0x2222222222222222222222222222222222222222"),
+        db=_db,
     )
-    from api.src.database import db as _db
     listing = await create_listing(
         MarketplaceListingRequest(
             seller_wallet_id=seller.wallet_id,

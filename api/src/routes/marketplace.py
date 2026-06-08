@@ -57,23 +57,27 @@ async def coinbase_webhook():
 
 
 @wallets_router.post("/connect", response_model=WalletAccount)
-async def connect_wallet(request: WalletConnectRequest):
+async def connect_wallet(request: WalletConnectRequest, db: Database = Depends(get_db)):
     if not settings.opentrust_customer_wallets_enabled:
         raise HTTPException(status_code=403, detail="customer wallets are disabled")
     try:
-        return store.connect_wallet(request)
+        wallet = store.connect_wallet(request)
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
+    # Persist so the wallet survives a serverless cold start, like listings do.
+    await db.save_object("wallet", wallet.wallet_id, _jsonable(wallet))
+    return wallet
 
 
 @wallets_router.get("/{wallet_id}", response_model=WalletAccount)
-async def get_wallet(wallet_id: str):
+async def get_wallet(wallet_id: str, db: Database = Depends(get_db)):
     """Resolve a wallet's public on-chain address.
 
     Buyers need the seller's address to send a direct USDC payment. The address
     is public on-chain data, so this is safe to expose; private keys are never
     returned.
     """
+    await _hydrate_wallets(db)
     wallet = store.wallets.get(wallet_id)
     if wallet is None:
         raise HTTPException(status_code=404, detail="wallet not found")
@@ -85,7 +89,7 @@ class _GenerateWalletRequest(BaseModel):
 
 
 @wallets_router.post("/generate", response_model=WalletAccount)
-async def generate_embedded_wallet(request: _GenerateWalletRequest):
+async def generate_embedded_wallet(request: _GenerateWalletRequest, db: Database = Depends(get_db)):
     """Generate a new embedded wallet server-side. Requires OPENTRUST_EMBEDDED_WALLET_ENABLED=true."""
     if not settings.opentrust_embedded_wallet_enabled:
         raise HTTPException(status_code=403, detail="embedded wallet generation is disabled")
@@ -104,6 +108,7 @@ async def generate_embedded_wallet(request: _GenerateWalletRequest):
         custody="opentrust_encrypted",
     )
     store.wallets[account.wallet_id] = account
+    await db.save_object("wallet", account.wallet_id, _jsonable(account))
     return account
 
 
@@ -120,6 +125,22 @@ async def _hydrate_listings(db: Database) -> None:
                 store.listings[lid] = MarketplaceListing(**data)
             except Exception:
                 continue  # skip malformed rows rather than 500 the whole list
+
+
+async def _hydrate_wallets(db: Database) -> None:
+    """Load any DB-persisted wallets missing from the in-memory working set.
+
+    Wallet existence gates listing/order/escrow creation; without this a wallet
+    connected on one instance vanishes after a serverless cold start, breaking
+    every flow that references it (e.g. a seeded listing's seller).
+    """
+    for data in await db.load_objects("wallet"):
+        wid = data.get("wallet_id")
+        if wid and wid not in store.wallets:
+            try:
+                store.wallets[wid] = WalletAccount(**data)
+            except Exception:
+                continue  # skip malformed rows rather than 500 the whole flow
 
 
 @router.get("/listings", response_model=list[MarketplaceListing])
@@ -144,6 +165,7 @@ async def list_orders(db: Database = Depends(get_db)):
 async def create_listing(request: MarketplaceListingRequest, db: Database = Depends(get_db)):
     if not settings.opentrust_marketplace_enabled:
         raise HTTPException(status_code=403, detail="marketplace is disabled")
+    await _hydrate_wallets(db)  # seller wallet may live only in the DB after a cold start
     try:
         listing = store.create_listing(request)
     except KeyError as exc:
@@ -176,6 +198,9 @@ async def create_order(request: MarketplaceOrderRequest, db: Database = Depends(
         settings.opentrust_custodial_wallets_enabled or settings.opentrust_escrow_enabled
     ):
         raise HTTPException(status_code=501, detail="on-chain escrow and custody are not enabled")
+    # Cold-start safety: the listing and its wallets may live only in the DB.
+    await _hydrate_listings(db)
+    await _hydrate_wallets(db)
     listing = store.listings.get(request.listing_id)
     if listing is None:
         raise HTTPException(status_code=404, detail="listing not found")
