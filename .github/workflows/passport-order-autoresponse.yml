@@ -1,0 +1,43 @@
+name: Passport Order Auto-Response
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  respond:
+    runs-on: ubuntu-latest
+    if: |
+      contains(toLower(github.event.issue.title), 'passport') ||
+      contains(toLower(github.event.issue.title), 'order') ||
+      contains(toLower(github.event.issue.title), 'request')
+    permissions:
+      issues: write
+    steps:
+      - name: Post auto-response
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              "## Passport Order Received",
+              "",
+              "Thanks for your interest in OpenTrust passports! Your request has been received.",
+              "",
+              "**What happens next:**",
+              "1. We will analyze your MCP server and generate a complete passport JSON within 24 hours",
+              "2. We will reply here with the full passport (permissions, risk surface, capabilities)",
+              "3. After delivery, send **20 USDC** to `0x0FDD9B72Be53D9b9b70C45B45cDADad679362342` on Base network",
+              "4. We will register your passport and elevate trust level to `creator_claimed`",
+              "",
+              "**To speed up delivery**, please confirm the GitHub URL or npm package name of your MCP server in a comment.",
+              "",
+              "See [full service details](https://costder.github.io/opentrust/passport-service.html)",
+            ].join("
+");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
