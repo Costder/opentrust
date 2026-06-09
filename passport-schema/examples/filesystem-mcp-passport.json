@@ -1,0 +1,73 @@
+{
+  "schema": "https://costder.github.io/opentrust/schema/passport-v0.1.json",
+  "opentrust_version": "0.1",
+  "tool": {
+    "id": "modelcontextprotocol/server-filesystem",
+    "name": "@modelcontextprotocol/server-filesystem",
+    "version": "2025.1.14",
+    "description": "Official Anthropic MCP server providing secure filesystem access within configurable allowed directories.",
+    "homepage": "https://github.com/modelcontextprotocol/servers",
+    "registry": "npm",
+    "source_url": "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
+    "author": {
+      "name": "Anthropic",
+      "github": "anthropics",
+      "verified": true
+    }
+  },
+  "trust": {
+    "level": "community_reviewed",
+    "level_number": 4,
+    "reasons": [
+      "Maintained by Anthropic, the MCP protocol authors",
+      "Source code fully auditable and open-source",
+      "Directory sandboxing prevents escape to unauthorized paths",
+      "No network access - file-system only",
+      "Widely deployed and community-vetted"
+    ],
+    "caveats": [
+      "Allowed directories must be configured carefully",
+      "Write operations are irreversible without backup",
+      "Symlinks can escape sandbox if not validated"
+    ],
+    "last_reviewed": "2026-06-09",
+    "reviewer": "opentrust-registry"
+  },
+  "capabilities": {
+    "reads_files": true,
+    "writes_files": true,
+    "deletes_files": true,
+    "network_access": false,
+    "executes_code": false,
+    "accesses_credentials": false,
+    "scope": "local_filesystem",
+    "sandbox": "directory_allowlist",
+    "tools": [
+      "read_file",
+      "read_multiple_files",
+      "write_file",
+      "edit_file",
+      "create_directory",
+      "list_directory",
+      "directory_tree",
+      "move_file",
+      "search_files",
+      "get_file_info",
+      "list_allowed_directories"
+    ]
+  },
+  "cost": {
+    "pricing_model": "free",
+    "base_price_usd": 0
+  },
+  "security": {
+    "path_traversal_protection": true,
+    "symlink_validation": "partial",
+    "data_exfiltration_risk": "low"
+  },
+  "passport": {
+    "issued_by": "opentrust-registry",
+    "issued_at": "2026-06-09T00:00:00Z",
+    "service_url": "https://costder.github.io/opentrust/passport-service.html"
+  }
+}
