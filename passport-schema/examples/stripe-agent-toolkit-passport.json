@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0.0",
+  "tool_id": "stripe-agent-toolkit",
+  "tool_name": "Stripe Agent Toolkit (MCP)",
+  "tool_version": "0.1.x",
+  "tool_description": "Official Stripe MCP server enabling AI agents to create payments, manage customers, and issue invoices via the Stripe API",
+  "source_url": "https://github.com/stripe/agent-toolkit",
+  "publisher": {
+    "name": "Stripe, Inc.",
+    "github": "https://github.com/stripe",
+    "verified": false
+  },
+  "trust_level": "auto_generated_draft",
+  "trust_level_code": 0,
+  "passport_generated_by": "OpenTrust Scout v0.1",
+  "generated_at": "2026-06-08T00:00:00Z",
+  "permissions": {
+    "network": {
+      "outbound": [
+        "api.stripe.com"
+      ],
+      "scope": "external"
+    },
+    "credentials": {
+      "required": [
+        "STRIPE_SECRET_KEY"
+      ],
+      "storage": "environment_variable"
+    },
+    "filesystem": {
+      "read": false,
+      "write": false
+    },
+    "process_execution": false,
+    "data_persistence": false
+  },
+  "capabilities": [
+    "create_payment_intent",
+    "list_customers",
+    "create_customer",
+    "create_invoice",
+    "list_invoices",
+    "create_product",
+    "create_price",
+    "create_checkout_session",
+    "retrieve_balance"
+  ],
+  "risk_surface": {
+    "credential_exposure": "critical",
+    "network_scope": "external",
+    "data_access": "full_stripe_account",
+    "reversibility": "low",
+    "note": "STRIPE_SECRET_KEY grants full account access. Use a Restricted Key scoped to minimum permissions."
+  },
+  "opentrust_notes": [
+    "Auto-generated draft \u2014 not verified by Stripe.",
+    "CRITICAL: Use a Stripe Restricted Key, not the live secret key.",
+    "Trust level should be elevated to seller_confirmed (L3) only after maintainer claim."
+  ]
+}

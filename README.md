@@ -6,6 +6,19 @@ OpenTrust is an open standard and reference implementation for establishing veri
 
 A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an OpenAPI endpoint gets one passport. One trust status. One badge. Readable by any agent, any platform, any runtime.
 
+## Get a Passport for Your MCP Server
+
+**$20 USDC** delivered within 24 hours. Includes: full passport JSON + SVG trust badge + public registry listing.
+
+- **Wallet (Base):** `0x0FDD9B72Be53D9b9b70C45B45cDADad679362342`
+- **To order:** Open a GitHub issue titled "Passport Request: [your tool name]" with your tool's URL.
+
+[See example passports](passport-schema/examples/) &mdash; Stripe, GitHub, Discord, and more.
+
+---
+
+
+
 ## Important Clarification
 
 OpenTrust has zero affiliated tokens, memecoins, or cryptocurrencies.
