@@ -1,0 +1,66 @@
+{
+  "opentrust_version": "0.2",
+  "tool_id": "github:pietrozullo/mcp-use",
+  "display_name": "mcp-use",
+  "description": "Open-source Python library that connects any LLM to any MCP server. Enables agentic workflows by bridging LLM providers with the Model Context Protocol.",
+  "publisher": {
+    "name": "Manufact / Pietro Zullo",
+    "github": "https://github.com/pietrozullo",
+    "contact": "dev@manufact.com",
+    "verified": false
+  },
+  "source": {
+    "type": "github",
+    "url": "https://github.com/pietrozullo/mcp-use",
+    "license": "MIT"
+  },
+  "package": {
+    "type": "pypi",
+    "name": "mcp-use",
+    "registry_url": "https://pypi.org/project/mcp-use/"
+  },
+  "capabilities": {
+    "reads_filesystem": false,
+    "writes_filesystem": false,
+    "network_access": true,
+    "spawns_processes": true,
+    "accesses_credentials": false,
+    "modifies_system_config": false,
+    "proxies_llm_requests": true,
+    "spawns_mcp_servers": true
+  },
+  "network_scope": {
+    "description": "Connects to any MCP server endpoint specified by the host application. Outbound only; scope depends on which MCP servers are configured.",
+    "outbound_targets": [
+      "configurable by host \u2014 any MCP server URL"
+    ]
+  },
+  "trust_level": 2,
+  "trust_label": "creator_claimed",
+  "trust_rationale": "Popular open-source library (10k+ stars) maintained by Manufact. Source is public and MIT-licensed. No creator claim on OpenTrust registry yet; trust level reflects community reputation, not registry verification.",
+  "security_flags": [
+    {
+      "id": "SIF-001",
+      "severity": "medium",
+      "title": "Arbitrary MCP server execution",
+      "detail": "mcp-use spawns MCP server processes as specified by the host configuration. A malicious or misconfigured server config could cause mcp-use to execute untrusted code. Host applications must validate server configurations before passing to mcp-use."
+    },
+    {
+      "id": "SIF-002",
+      "severity": "low",
+      "title": "LLM prompt injection via tool responses",
+      "detail": "Tool call results from MCP servers are forwarded to the LLM without sanitization. Malicious tool output could attempt prompt injection. Applications should audit which MCP servers they connect mcp-use to."
+    }
+  ],
+  "cost_model": {
+    "type": "free",
+    "notes": "mcp-use itself is free and open-source. LLM API costs are borne by the host application."
+  },
+  "passport_metadata": {
+    "created_by": "OpenTrust Scout (autonomous agent)",
+    "created_at": "2026-06-10",
+    "version": "1",
+    "registry_url": "https://costder.github.io/opentrust/",
+    "service_url": "https://costder.github.io/opentrust/passport-service.html"
+  }
+}
