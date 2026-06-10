@@ -1,0 +1,65 @@
+{
+  "$schema": "https://opentrust.dev/schemas/passport/v1.json",
+  "passport_version": "1.0",
+  "tool_id": "npm:@modelcontextprotocol/server-postgres",
+  "name": "@modelcontextprotocol/server-postgres",
+  "description": "Official Anthropic MCP server for PostgreSQL \u2014 read-only SQL queries and schema inspection for AI agents",
+  "publisher": {
+    "name": "Anthropic",
+    "url": "https://github.com/modelcontextprotocol/servers",
+    "verified": true
+  },
+  "source": {
+    "repository": "https://github.com/modelcontextprotocol/servers/tree/main/src/postgres",
+    "package_registry": "https://www.npmjs.com/package/@modelcontextprotocol/server-postgres",
+    "license": "MIT"
+  },
+  "trust_level": "seller_confirmed",
+  "trust_score": 88,
+  "capabilities": {
+    "mcp_tools": [
+      {
+        "name": "query",
+        "description": "Execute a read-only SQL SELECT query"
+      }
+    ],
+    "mcp_resources": [
+      {
+        "uri_template": "postgres://{host}/{database}/schema",
+        "description": "Database schema inspection"
+      }
+    ],
+    "read_filesystem": false,
+    "write_filesystem": false,
+    "network_access": true,
+    "spawn_processes": false,
+    "credential_access": true
+  },
+  "risk_assessment": {
+    "overall": "low-medium",
+    "network_scope": "single database host \u2014 connection string provided at startup",
+    "data_exfiltration_risk": "high \u2014 agent can read ALL tables the DB user can access; use a read-only DB user",
+    "sandbox_escape_risk": "very-low \u2014 no subprocess spawning; pure SQL over pg driver",
+    "notes": "CRITICAL: connect with a read-only Postgres role. Avoid superuser or table-owner credentials."
+  },
+  "security_flags": [
+    {
+      "id": "SIF-001",
+      "severity": "high",
+      "title": "No write-protection at server level",
+      "detail": "Server does not enforce read-only mode in code; safety depends entirely on DB user privileges. Misconfigured credentials allow INSERT/UPDATE/DELETE/DROP.",
+      "recommendation": "Create a dedicated read-only Postgres role: GRANT CONNECT ON DATABASE mydb TO readonly_user; GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly_user;"
+    }
+  ],
+  "cost": {
+    "model": "free",
+    "pricing_url": null
+  },
+  "passport_issuer": {
+    "name": "OpenTrust Registry",
+    "url": "https://costder.github.io/opentrust/",
+    "signed": false
+  },
+  "issued_at": "2026-06-09",
+  "valid_until": "2027-06-09"
+}

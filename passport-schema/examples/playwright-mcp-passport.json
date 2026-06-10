@@ -1,0 +1,79 @@
+{
+  "$schema": "https://opentrust.dev/schemas/passport/v1.json",
+  "passport_version": "1.0",
+  "tool_id": "npm:@playwright/mcp",
+  "name": "@playwright/mcp",
+  "description": "Official Microsoft Playwright MCP server \u2014 browser automation via Chrome/Firefox/WebKit for AI agents",
+  "publisher": {
+    "name": "Microsoft",
+    "url": "https://github.com/microsoft/playwright-mcp",
+    "verified": true
+  },
+  "source": {
+    "repository": "https://github.com/microsoft/playwright-mcp",
+    "package_registry": "https://www.npmjs.com/package/@playwright/mcp",
+    "license": "Apache-2.0"
+  },
+  "trust_level": "seller_confirmed",
+  "trust_score": 82,
+  "capabilities": {
+    "mcp_tools": [
+      {
+        "name": "browser_navigate",
+        "description": "Navigate to a URL"
+      },
+      {
+        "name": "browser_click",
+        "description": "Click a page element"
+      },
+      {
+        "name": "browser_type",
+        "description": "Type text into an input"
+      },
+      {
+        "name": "browser_screenshot",
+        "description": "Capture a screenshot"
+      },
+      {
+        "name": "browser_snapshot",
+        "description": "Capture accessibility snapshot"
+      },
+      {
+        "name": "browser_pdf_save",
+        "description": "Save page as PDF"
+      },
+      {
+        "name": "browser_console_messages",
+        "description": "Read browser console"
+      },
+      {
+        "name": "browser_network_requests",
+        "description": "Inspect network traffic"
+      }
+    ],
+    "read_filesystem": false,
+    "write_filesystem": false,
+    "network_access": true,
+    "spawn_processes": true,
+    "credential_access": false
+  },
+  "risk_assessment": {
+    "overall": "medium",
+    "network_scope": "unrestricted \u2014 agent can visit any URL",
+    "data_exfiltration_risk": "medium \u2014 screenshots and DOM content may contain sensitive data",
+    "sandbox_escape_risk": "low \u2014 browser is isolated; spawns Chromium/Firefox subprocess",
+    "notes": "Disable headed mode in production; restrict allowed URLs via agent prompt if possible"
+  },
+  "security_flags": [],
+  "cost": {
+    "model": "free",
+    "pricing_url": null
+  },
+  "passport_issuer": {
+    "name": "OpenTrust Registry",
+    "url": "https://costder.github.io/opentrust/",
+    "signed": false
+  },
+  "issued_at": "2026-06-09",
+  "valid_until": "2027-06-09"
+}
