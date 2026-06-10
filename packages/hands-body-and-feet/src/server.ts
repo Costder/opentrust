@@ -221,6 +221,42 @@ export function createMcpServer(claims: PassportClaims): Server {
           },
         },
       },
+      // Payment-request (receive-only) tools
+      {
+        name: PAYMENT_TOOLS.payment_request.name,
+        description: 'Creates a uniquified USDC payment request on Base. Returns an EIP-681 URI and human-readable instructions. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['amount_usdc', 'memo'],
+          properties: {
+            amount_usdc: { type: 'number', description: 'Nominal amount in USDC you want to receive' },
+            memo: { type: 'string', description: 'Payment memo / description' },
+            expiry_hours: { type: 'number', description: 'Hours until request expires (default: 72)' },
+            wallet_label: { type: 'string', description: 'Wallet label to receive into (default: primary)' },
+          },
+        },
+      },
+      {
+        name: PAYMENT_TOOLS.payment_status.name,
+        description: 'Checks whether a payment request has been paid by scanning Base USDC Transfer events. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['request_id'],
+          properties: {
+            request_id: { type: 'string', description: '8-char payment request ID returned by payment_request' },
+          },
+        },
+      },
+      {
+        name: PAYMENT_TOOLS.payment_list.name,
+        description: 'Lists payment requests (newest first, max 50). Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            status: { type: 'string', enum: ['pending', 'paid', 'expired'], description: 'Filter by status (omit for all)' },
+          },
+        },
+      },
       // Card tools
       {
         name: CARD_TOOLS.create_virtual_card.name,

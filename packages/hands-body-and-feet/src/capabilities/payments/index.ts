@@ -11,6 +11,9 @@ export const PAYMENT_TOOLS = {
   },
   get_payment_status: { name: 'get_payment_status', minTrustLevel: 2 as const },
   prepare_payment: { name: 'prepare_payment', minTrustLevel: 4 as const },
+  payment_request: { name: 'payment_request', minTrustLevel: 3 as const },
+  payment_status: { name: 'payment_status', minTrustLevel: 2 as const },
+  payment_list: { name: 'payment_list', minTrustLevel: 2 as const },
 } as const;
 
 const BASE_RPC = process.env.BASE_RPC_URL ?? 'https://mainnet.base.org';
@@ -30,6 +33,7 @@ export async function payWithUsdc(
 
 export { preparePayment } from './prepare-payment.js';
 export type { PreparePaymentParams, PreparePaymentReceipt } from './prepare-payment.js';
+export { paymentRequest, paymentStatus, paymentList } from './payment-requests.js';
 
 export async function getPaymentStatus(
   params: { tx_hash: string },

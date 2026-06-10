@@ -4,7 +4,7 @@
 import { notifyHuman } from './capabilities/notify/index.js';
 import { createWallet, getAddress, getBalance, sendUsdc, signMessage, signTypedData } from './capabilities/wallet/index.js';
 import { bridgeToPolygon, bridgeToBase, getBridgeStatus } from './capabilities/bridge/index.js';
-import { payWithUsdc, getPaymentStatus, preparePayment } from './capabilities/payments/index.js';
+import { payWithUsdc, getPaymentStatus, preparePayment, paymentRequest, paymentStatus, paymentList } from './capabilities/payments/index.js';
 import type { PreparePaymentParams, PreparePaymentReceipt } from './capabilities/payments/index.js';
 import { createVirtualCard, getCardDetails, addFundsToCard, topUpMoonCredit, freezeCard, deleteCard, getCardTransactions } from './capabilities/cards/index.js';
 import { provisionPhoneNumber, sendSms, readSms, releasePhoneNumber } from './capabilities/phone/index.js';
@@ -115,6 +115,10 @@ export async function dispatchTool(
     if (name === 'list_triggers')  return ok(await listTriggers({}, claims));
     if (name === 'delete_trigger') return ok(await deleteTrigger(args as { label: string }, claims));
     if (name === 'pause_trigger')  return ok(await pauseTrigger(args as { label: string }, claims));
+
+    if (name === 'payment_request') return ok(await paymentRequest(args as { amount_usdc: number; memo: string; expiry_hours?: number; wallet_label?: string }, claims));
+    if (name === 'payment_status') return ok(await paymentStatus(args as { request_id: string }, claims));
+    if (name === 'payment_list') return ok(await paymentList(args as { status?: 'pending' | 'paid' | 'expired' }, claims));
 
     if (name === 'get_identity')        return ok(await getIdentity({}, claims));
     if (name === 'set_identity_binding') return ok(await setIdentityBinding(args as { field: 'primary_wallet'|'email'|'phone'; value: string }, claims));
