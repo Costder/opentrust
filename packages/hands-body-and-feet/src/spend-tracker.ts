@@ -177,6 +177,14 @@ export function openDb(): Database.Database {
       value_json TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS bus_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      to_agent TEXT NOT NULL,
+      from_agent TEXT,
+      payload TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      claimed_at TEXT
+    );
   `);
   // Additive migrations for columns introduced after the initial schema.
   // SQLite has no "ADD COLUMN IF NOT EXISTS", so we attempt and ignore dup errors.

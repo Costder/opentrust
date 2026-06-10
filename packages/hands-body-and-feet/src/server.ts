@@ -40,6 +40,8 @@ import {
 } from './capabilities/rss/index.js';
 import { MAIL_TOOLS } from './capabilities/mail/index.js';
 import { loadActiveTriggers } from './capabilities/triggers/index.js';
+import { BUS_TOOLS } from './capabilities/bus/index.js';
+import { HELP_TOOLS } from './capabilities/help/index.js';
 import type { PassportClaims } from './types.js';
 import { dispatchTool } from './dispatch.js';
 
@@ -966,6 +968,56 @@ export function createMcpServer(claims: PassportClaims): Server {
         name: 'delete_memory',
         description: 'Deletes a memory key. Requires L3 trust.',
         inputSchema: { type: 'object' as const, required: ['key'], properties: { key: { type: 'string' } } },
+      },
+      // Bus tools
+      {
+        name: BUS_TOOLS.bus_send.name,
+        description: 'Sends a message to another agent\'s queue on this HBF instance. Coordination bus between agents (Claude, Codex, Hermes). Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['to_agent', 'payload'],
+          properties: {
+            to_agent: { type: 'string', description: 'Agent ID to deliver the message to' },
+            payload: { description: 'Any JSON-serializable payload' },
+            from_agent: { type: 'string', description: 'Sender agent ID (optional — defaults to passport agentId)' },
+          },
+        },
+      },
+      {
+        name: BUS_TOOLS.bus_poll.name,
+        description: 'Atomically claims and returns the oldest unclaimed messages addressed to agent_id. Second poll with no new messages returns empty. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['agent_id'],
+          properties: {
+            agent_id: { type: 'string', description: 'Agent ID whose queue to poll' },
+            limit: { type: 'number', description: 'Max messages to claim (default: 10)' },
+          },
+        },
+      },
+      {
+        name: BUS_TOOLS.bus_wait.name,
+        description: 'Long-polls until a message arrives for agent_id or timeout elapses. Returns first batch or { messages: [], timed_out: true }. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['agent_id'],
+          properties: {
+            agent_id: { type: 'string', description: 'Agent ID whose queue to watch' },
+            timeout_ms: { type: 'number', description: 'Max wait time in milliseconds (default: 60000)' },
+            poll_interval_ms: { type: 'number', description: 'Polling interval in milliseconds (default: 2000)' },
+          },
+        },
+      },
+      // Help / catalog
+      {
+        name: HELP_TOOLS.hbf_help.name,
+        description: 'Returns the full tool catalog grouped by domain, with minTrustLevel and spendPolicy per tool. Optionally filter by domain. Requires L1 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            domain: { type: 'string', description: 'Optional domain filter (e.g. "bus", "wallet", "email")' },
+          },
+        },
       },
     ],
   }));

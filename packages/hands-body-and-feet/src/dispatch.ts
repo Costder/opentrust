@@ -22,6 +22,8 @@ import { listMail, forwardMail, shredMail, scanMail } from './capabilities/mail/
 import { createDelegation, listDelegations, revokeDelegation } from './capabilities/delegations/index.js';
 import { createTrigger, listTriggers, deleteTrigger, pauseTrigger } from './capabilities/triggers/index.js';
 import { getIdentity, setIdentityBinding, getMemory, setMemory, listMemory, deleteMemory } from './capabilities/body/index.js';
+import { busSend, busPoll, busWait } from './capabilities/bus/index.js';
+import { hbfHelp } from './capabilities/help/index.js';
 import type { PassportClaims } from './types.js';
 
 export type DispatchResult = {
@@ -122,6 +124,12 @@ export async function dispatchTool(
     if (name === 'set_memory')          return ok(await setMemory(args as { key: string; value: unknown }, claims));
     if (name === 'list_memory')         return ok(await listMemory({}, claims));
     if (name === 'delete_memory')       return ok(await deleteMemory(args as { key: string }, claims));
+
+    if (name === 'bus_send')  return ok(await busSend(args as { to_agent: string; payload: unknown; from_agent?: string }, claims));
+    if (name === 'bus_poll')  return ok(await busPoll(args as { agent_id: string; limit?: number }, claims));
+    if (name === 'bus_wait')  return ok(await busWait(args as { agent_id: string; timeout_ms?: number; poll_interval_ms?: number }, claims));
+
+    if (name === 'hbf_help')  return ok(await hbfHelp(args as { domain?: string }, claims));
 
     return err(`Unknown tool: ${name}`);
   } catch (e) {
