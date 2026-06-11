@@ -7,6 +7,7 @@ export interface CatalogEntry extends ToolDefinition {
   description: string;
   domain: string;
   spendPolicy?: SpendPolicy;
+  alias_of?: string;
 }
 
 export const CATALOG: CatalogEntry[] = [
@@ -15,11 +16,15 @@ export const CATALOG: CatalogEntry[] = [
 
   // wallet
   { domain: 'wallet',      name: 'create_wallet',           minTrustLevel: 2, description: 'Generate a new EVM wallet (Base or Polygon) and store it encrypted.' },
+  { domain: 'wallet',      name: 'wallet_list',             minTrustLevel: 2, description: 'List stored wallets with public addresses only.' },
   { domain: 'wallet',      name: 'get_address',             minTrustLevel: 2, description: 'Return the public address for a stored wallet.' },
   { domain: 'wallet',      name: 'get_balance',             minTrustLevel: 2, description: 'Return native token (ETH/MATIC) and USDC balance for a wallet.' },
   { domain: 'wallet',      name: 'send_usdc',               minTrustLevel: 2, description: 'Transfer USDC on Base or Polygon (subject to spend caps).', spendPolicy: { maxPerCallUsdc: 100 } },
   { domain: 'wallet',      name: 'sign_message',            minTrustLevel: 2, description: 'Sign a plain text message with the wallet private key.' },
   { domain: 'wallet',      name: 'sign_typed_data',         minTrustLevel: 2, description: 'Sign EIP-712 typed data (first-use of any new domain is rejected).' },
+  { domain: 'wallet',      name: 'wallet_create',           minTrustLevel: 2, description: 'Alias for create_wallet.', alias_of: 'create_wallet' },
+  { domain: 'wallet',      name: 'wallet_address',          minTrustLevel: 2, description: 'Alias for get_address.', alias_of: 'get_address' },
+  { domain: 'wallet',      name: 'wallet_balance',          minTrustLevel: 2, description: 'Alias for get_balance.', alias_of: 'get_balance' },
 
   // bridge
   { domain: 'bridge',      name: 'bridge_to_polygon',       minTrustLevel: 2, description: 'Initiate a USDC bridge from Base to Polygon via Across Protocol.' },
@@ -30,6 +35,7 @@ export const CATALOG: CatalogEntry[] = [
   { domain: 'payments',    name: 'pay_with_usdc',           minTrustLevel: 2, description: 'Execute a USDC payment on Base (OpenTrust payments are always on Base).', spendPolicy: { maxPerCallUsdc: 100 } },
   { domain: 'payments',    name: 'get_payment_status',      minTrustLevel: 2, description: 'Return confirmation status of a Base transaction by hash.' },
   { domain: 'payments',    name: 'prepare_payment',         minTrustLevel: 2, description: 'Check balance, bridge from Polygon if needed, then execute a USDC payment in one step.', spendPolicy: { maxPerCallUsdc: 100 } },
+  { domain: 'image',       name: 'generate_image',          minTrustLevel: 2, description: 'Generate an image through the configured Modal image endpoint and save it locally.' },
 
   // cards
   { domain: 'cards',       name: 'create_virtual_card',     minTrustLevel: 4, description: 'Issue a Moon X or Moon 1X virtual Visa card.' },
@@ -58,6 +64,9 @@ export const CATALOG: CatalogEntry[] = [
   { domain: 'email',       name: 'read_inbox',              minTrustLevel: 2, description: 'Return messages in a mailbox.' },
   { domain: 'email',       name: 'wait_for_email',          minTrustLevel: 2, description: 'Long-poll until a matching email arrives or timeout elapses.' },
   { domain: 'email',       name: 'delete_mailbox',          minTrustLevel: 3, description: 'Delete a mailbox and all its messages (CASCADE).' },
+  { domain: 'email',       name: 'mail_send',               minTrustLevel: 2, description: 'Alias for send_email.', alias_of: 'send_email' },
+  { domain: 'email',       name: 'mail_read',               minTrustLevel: 2, description: 'Alias for read_inbox.', alias_of: 'read_inbox' },
+  { domain: 'email',       name: 'mail_wait',               minTrustLevel: 2, description: 'Alias for wait_for_email.', alias_of: 'wait_for_email' },
 
   // tunnel
   { domain: 'tunnel',      name: 'create_tunnel',           minTrustLevel: 3, description: 'Create a public tunnel (cloudflared or ngrok) for a local port.' },
@@ -70,6 +79,8 @@ export const CATALOG: CatalogEntry[] = [
   { domain: 'webhook',     name: 'read_webhook_events',     minTrustLevel: 2, description: 'Return received webhook events.' },
   { domain: 'webhook',     name: 'wait_for_webhook',        minTrustLevel: 2, description: 'Long-poll until a webhook event matching the filter arrives.' },
   { domain: 'webhook',     name: 'delete_webhook',          minTrustLevel: 3, description: 'Delete a webhook and all its events.' },
+  { domain: 'webhook',     name: 'webhook_create',          minTrustLevel: 3, description: 'Alias for create_webhook.', alias_of: 'create_webhook' },
+  { domain: 'webhook',     name: 'webhook_events',          minTrustLevel: 2, description: 'Alias for read_webhook_events.', alias_of: 'read_webhook_events' },
 
   // tasks
   { domain: 'tasks',       name: 'create_task',             minTrustLevel: 3, description: 'Create a scheduled task using a cron expression.' },
@@ -117,6 +128,8 @@ export const CATALOG: CatalogEntry[] = [
   { domain: 'triggers',    name: 'list_triggers',           minTrustLevel: 2, description: 'List all triggers.' },
   { domain: 'triggers',    name: 'delete_trigger',          minTrustLevel: 3, description: 'Delete a trigger.' },
   { domain: 'triggers',    name: 'pause_trigger',           minTrustLevel: 3, description: 'Pause a trigger without deleting it.' },
+  { domain: 'triggers',    name: 'trigger_create',          minTrustLevel: 3, description: 'Alias for create_trigger.', alias_of: 'create_trigger' },
+  { domain: 'triggers',    name: 'trigger_list',            minTrustLevel: 2, description: 'Alias for list_triggers.', alias_of: 'list_triggers' },
 
   // body
   { domain: 'body',        name: 'get_identity',            minTrustLevel: 2, description: 'Return the agent\'s stored identity bindings (wallet, email, phone).' },
@@ -125,6 +138,10 @@ export const CATALOG: CatalogEntry[] = [
   { domain: 'body',        name: 'set_memory',              minTrustLevel: 2, description: 'Write a durable memory value. Survives restarts.' },
   { domain: 'body',        name: 'list_memory',             minTrustLevel: 2, description: 'List all memory keys, newest first.' },
   { domain: 'body',        name: 'delete_memory',           minTrustLevel: 3, description: 'Delete a memory key.' },
+  { domain: 'body',        name: 'memory_get',              minTrustLevel: 2, description: 'Alias for get_memory.', alias_of: 'get_memory' },
+  { domain: 'body',        name: 'memory_set',              minTrustLevel: 2, description: 'Alias for set_memory.', alias_of: 'set_memory' },
+  { domain: 'body',        name: 'memory_list',             minTrustLevel: 2, description: 'Alias for list_memory.', alias_of: 'list_memory' },
+  { domain: 'body',        name: 'memory_delete',           minTrustLevel: 3, description: 'Alias for delete_memory.', alias_of: 'delete_memory' },
 
   // bus
   { domain: 'bus',         name: 'bus_send',                minTrustLevel: 2, description: 'Send a message to another agent\'s queue on this HBF instance.' },

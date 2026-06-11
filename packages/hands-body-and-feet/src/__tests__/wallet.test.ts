@@ -45,6 +45,7 @@ vi.mock('ethers', () => {
 vi.mock('../keystore.js', () => ({
   addWallet: vi.fn(),
   getWallet: vi.fn(),
+  loadKeystore: vi.fn(),
 }));
 
 vi.mock('../spend-tracker.js', () => ({
@@ -77,8 +78,9 @@ import {
   sendUsdc,
   signMessage,
   signTypedData,
+  walletList,
 } from '../capabilities/wallet/index.js';
-import { addWallet, getWallet } from '../keystore.js';
+import { addWallet, getWallet, loadKeystore } from '../keystore.js';
 import { checkSpendAllowed, logSpend } from '../spend-tracker.js';
 
 // ---------------------------------------------------------------------------
@@ -183,6 +185,34 @@ describe('wallet capability', () => {
       await expect(getAddress({ label: 'missing' }, makeL2Claims())).rejects.toThrow(
         'Wallet "missing" not found',
       );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // wallet_list
+  // -------------------------------------------------------------------------
+
+  describe('walletList', () => {
+    it('requires L2 trust - rejects L1', async () => {
+      await expect(
+        walletList({}, makeL2Claims({ trustLevel: 1, trustStatus: 'auto_generated_draft' })),
+      ).rejects.toThrow(TrustError);
+    });
+
+    it('returns labels, addresses, and chains without private keys', async () => {
+      vi.mocked(loadKeystore).mockReturnValue([
+        makeWalletEntry({ label: 'primary', chains: ['base'] }),
+        makeWalletEntry({ label: 'polygon-hot', chains: ['polygon'] }),
+      ]);
+
+      const result = await walletList({}, makeL2Claims());
+
+      expect(result.wallets).toEqual([
+        { label: 'primary', address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', chain: 'base' },
+        { label: 'polygon-hot', address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', chain: 'polygon' },
+      ]);
+      expect(JSON.stringify(result)).not.toContain('privateKey');
+      expect(JSON.stringify(result)).not.toContain('ac0974');
     });
   });
 

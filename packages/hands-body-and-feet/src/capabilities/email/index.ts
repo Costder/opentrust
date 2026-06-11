@@ -6,6 +6,7 @@ import { enforceTrust } from '../../trust.js';
 import { readConfig } from '../../config.js';
 import { SecretsError } from '../../secrets.js';
 import { matchAndFire } from '../triggers/index.js';
+import { readMemoryValue } from '../body/index.js';
 import type { PassportClaims } from '../../types.js';
 
 // Singleton for the running local transport
@@ -56,6 +57,98 @@ function getTransport(): SendTransport {
 
 function isAgentMail(): boolean {
   return readConfig().capabilities.email?.transport === 'agentmail';
+}
+
+interface ExternalInboxBinding {
+  provider: 'agentmail';
+  address: string;
+  api_key_memory_key: string;
+}
+
+interface ExternalAgentMailMessage {
+  id?: string;
+  messageId?: string;
+  message_id?: string;
+  subject?: string;
+  from?: string;
+  from_address?: string;
+  extractedText?: string;
+  text?: string;
+  body_text?: string;
+  html?: string | null;
+  body_html?: string | null;
+  receivedAt?: string;
+  received_at?: string;
+}
+
+function externalInboxFor(address: string): ExternalInboxBinding | null {
+  const binding = readConfig().externalInboxes?.find((entry) =>
+    entry.provider === 'agentmail' && entry.address.toLowerCase() === address.toLowerCase(),
+  );
+  return binding ?? null;
+}
+
+function requireMemoryString(key: string): string {
+  const value = readMemoryValue(key);
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new SecretsError(`Missing AgentMail API key in memory key ${key}`);
+  }
+  return value;
+}
+
+function mapExternalAgentMailMessage(address: string, message: ExternalAgentMailMessage) {
+  return {
+    mailbox_address: address,
+    message_id: message.messageId ?? message.message_id ?? message.id ?? `agentmail-${Date.now()}`,
+    subject: message.subject ?? '(no subject)',
+    from_address: message.from ?? message.from_address ?? '',
+    body_text: message.extractedText ?? message.text ?? message.body_text ?? '',
+    body_html: message.html ?? message.body_html ?? null,
+    received_at: message.receivedAt ?? message.received_at ?? new Date().toISOString(),
+  };
+}
+
+async function syncExternalAgentMailInbox(binding: ExternalInboxBinding, limit: number): Promise<void> {
+  const apiKey = requireMemoryString(binding.api_key_memory_key);
+  const response = await fetch(
+    `https://api.agentmail.to/v0/inboxes/${encodeURIComponent(binding.address)}/messages?limit=${limit}`,
+    { headers: { authorization: `Bearer ${apiKey}` } },
+  );
+  if (!response.ok) {
+    throw new Error(`AgentMail inbox fetch failed: HTTP ${response.status} ${response.statusText}`);
+  }
+  const payload = await response.json() as { messages?: ExternalAgentMailMessage[] };
+  const db = openDb();
+  db.prepare('INSERT OR IGNORE INTO mailboxes (address, created_at) VALUES (?, ?)')
+    .run(binding.address, new Date().toISOString());
+  for (const raw of payload.messages ?? []) {
+    const message = mapExternalAgentMailMessage(binding.address, raw);
+    const existing = db
+      .prepare('SELECT 1 FROM emails WHERE mailbox_address = ? AND message_id = ?')
+      .get(binding.address, message.message_id);
+    if (existing) continue;
+    db.prepare(
+      `INSERT INTO emails
+       (mailbox_address, message_id, subject, from_address, body_text, body_html, received_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      message.mailbox_address,
+      message.message_id,
+      message.subject,
+      message.from_address,
+      message.body_text,
+      message.body_html,
+      message.received_at,
+    );
+    matchAndFire('email', {
+      mailbox_address: binding.address,
+      from: message.from_address,
+      subject: message.subject,
+      body: message.body_text,
+    }).catch((e: unknown) =>
+      console.error('[triggers] external agentmail matchAndFire error:', e instanceof Error ? e.message : String(e)),
+    );
+  }
 }
 
 /** Resolve a mailbox's AgentMail inbox_id from its address. */
@@ -160,7 +253,10 @@ export async function readInbox(
   enforceTrust(claims, EMAIL_TOOLS.read_inbox);
   const db = openDb();
   const limit = params.limit ?? 20;
-  if (isAgentMail()) {
+  const externalInbox = externalInboxFor(params.address);
+  if (externalInbox) {
+    await syncExternalAgentMailInbox(externalInbox, limit);
+  } else if (isAgentMail()) {
     // Pull fresh mail from AgentMail before reading the local cache.
     await syncAgentMailInbox(params.address, limit);
   }
@@ -180,10 +276,13 @@ export async function waitForEmail(
   const db = openDb();
   const deadline = Date.now() + params.timeout_ms;
   const filter = params.filter ?? {};
-  const agentmail = isAgentMail();
+  const externalInbox = externalInboxFor(params.address);
+  const agentmail = !externalInbox && isAgentMail();
 
   while (Date.now() < deadline) {
-    if (agentmail) {
+    if (externalInbox) {
+      await syncExternalAgentMailInbox(externalInbox, 50);
+    } else if (agentmail) {
       await syncAgentMailInbox(params.address, 50);
     }
     const rows = db

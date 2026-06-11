@@ -72,6 +72,12 @@ export interface HandsAndFeetConfig {
       defaultOwner?: string;
     };
   };
+  modalImageEndpoint?: string;
+  externalInboxes?: Array<{
+    provider: 'agentmail';
+    address: string;
+    api_key_memory_key: string;
+  }>;
   allowLocalFallback?: boolean;
 }
 

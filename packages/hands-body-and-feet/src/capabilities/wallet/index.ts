@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { enforceTrust } from '../../trust.js';
-import { addWallet, getWallet } from '../../keystore.js';
+import { addWallet, getWallet, loadKeystore } from '../../keystore.js';
 import { logSpend, checkSpendAllowed } from '../../spend-tracker.js';
 import { notifyHuman } from '../notify/index.js';
 import type { PassportClaims } from '../../types.js';
@@ -51,6 +51,7 @@ function requirePassphrase(): string {
 // Tool definitions for trust enforcement
 export const WALLET_TOOLS = {
   create_wallet: { name: 'create_wallet', minTrustLevel: 3 as const },
+  wallet_list: { name: 'wallet_list', minTrustLevel: 2 as const },
   get_address: { name: 'get_address', minTrustLevel: 2 as const },
   get_balance: { name: 'get_balance', minTrustLevel: 2 as const },
   send_usdc: {
@@ -61,6 +62,22 @@ export const WALLET_TOOLS = {
   sign_message: { name: 'sign_message', minTrustLevel: 3 as const },
   sign_typed_data: { name: 'sign_typed_data', minTrustLevel: 4 as const },
 } as const;
+
+export async function walletList(
+  _params: Record<string, never>,
+  claims: PassportClaims,
+): Promise<{ wallets: Array<{ label: string; address: string; chain: string }> }> {
+  enforceTrust(claims, WALLET_TOOLS.wallet_list);
+  const passphrase = requirePassphrase();
+  const entries = loadKeystore(passphrase);
+  return {
+    wallets: entries.map((entry) => ({
+      label: entry.label,
+      address: new ethers.Wallet(entry.privateKey).address,
+      chain: entry.chains[0] ?? 'base',
+    })),
+  };
+}
 
 export async function createWallet(
   params: { label?: string; chain?: 'base' | 'polygon' },

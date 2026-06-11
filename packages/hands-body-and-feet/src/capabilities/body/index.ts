@@ -70,9 +70,13 @@ export async function getMemory(
   claims: PassportClaims,
 ): Promise<{ key: string; value: unknown }> {
   enforceTrust(claims, GET_MEMORY_TOOL);
+  return { key: params.key, value: readMemoryValue(params.key) };
+}
+
+export function readMemoryValue(key: string): unknown {
   const db = openDb();
-  const row = db.prepare('SELECT value_json FROM memory WHERE key = ?').get(params.key) as { value_json: string } | undefined;
-  return { key: params.key, value: row ? (JSON.parse(row.value_json) as unknown) : null };
+  const row = db.prepare('SELECT value_json FROM memory WHERE key = ?').get(key) as { value_json: string } | undefined;
+  return row ? (JSON.parse(row.value_json) as unknown) : null;
 }
 
 export async function setMemory(

@@ -71,6 +71,15 @@ describe('hbf_help', () => {
     expect(busToolNames).toContain('bus_wait');
   });
 
+  it('shows alias_of metadata for domain-prefix aliases', async () => {
+    const result = await hbfHelp({ domain: 'wallet' }, makeL1Claims());
+    const alias = result.domains[0].tools.find((t) => t.name === 'wallet_address') as
+      | { name: string; alias_of?: string }
+      | undefined;
+    expect(alias).toBeDefined();
+    expect(alias?.alias_of).toBe('get_address');
+  });
+
   it('filters to a single domain when domain arg is provided', async () => {
     const result = await hbfHelp({ domain: 'wallet' }, makeL2Claims());
     expect(result.domains).toHaveLength(1);

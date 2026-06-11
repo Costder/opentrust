@@ -19,6 +19,7 @@ interface DomainCatalog {
     description: string;
     minTrustLevel: number;
     spendPolicy?: SpendPolicy;
+    alias_of?: string;
   }>;
 }
 
@@ -44,6 +45,7 @@ export async function hbfHelp(
       description: entry.description,
       minTrustLevel: entry.minTrustLevel,
       ...(entry.spendPolicy ? { spendPolicy: entry.spendPolicy } : {}),
+      ...(entry.alias_of ? { alias_of: entry.alias_of } : {}),
     });
   }
 

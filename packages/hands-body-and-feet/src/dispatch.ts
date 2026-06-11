@@ -2,7 +2,8 @@
 // Single execution seam for all tool calls.
 // Called by the /mcp handler, fireTask, and executeUnderDelegation.
 import { notifyHuman } from './capabilities/notify/index.js';
-import { createWallet, getAddress, getBalance, sendUsdc, signMessage, signTypedData } from './capabilities/wallet/index.js';
+import { createWallet, walletList, getAddress, getBalance, sendUsdc, signMessage, signTypedData } from './capabilities/wallet/index.js';
+import { generateImage } from './capabilities/image/index.js';
 import { bridgeToPolygon, bridgeToBase, getBridgeStatus } from './capabilities/bridge/index.js';
 import { payWithUsdc, getPaymentStatus, preparePayment, paymentRequest, paymentStatus, paymentList } from './capabilities/payments/index.js';
 import type { PreparePaymentParams, PreparePaymentReceipt } from './capabilities/payments/index.js';
@@ -39,19 +40,39 @@ function err(message: string): DispatchResult {
   return { content: [{ type: 'text', text: message }], isError: true };
 }
 
+const ALIAS_MAP: Record<string, string> = {
+  wallet_create: 'create_wallet',
+  wallet_address: 'get_address',
+  wallet_balance: 'get_balance',
+  mail_send: 'send_email',
+  mail_read: 'read_inbox',
+  mail_wait: 'wait_for_email',
+  memory_get: 'get_memory',
+  memory_set: 'set_memory',
+  memory_list: 'list_memory',
+  memory_delete: 'delete_memory',
+  trigger_create: 'create_trigger',
+  trigger_list: 'list_triggers',
+  webhook_create: 'create_webhook',
+  webhook_events: 'read_webhook_events',
+};
+
 export async function dispatchTool(
   name: string,
   args: unknown,
   claims: PassportClaims,
 ): Promise<DispatchResult> {
   try {
+    name = ALIAS_MAP[name] ?? name;
     if (name === 'notify_human') return ok(await notifyHuman(args as Parameters<typeof notifyHuman>[0], claims));
     if (name === 'create_wallet') return ok(await createWallet(args as { label?: string; chain?: 'base' | 'polygon' }, claims));
+    if (name === 'wallet_list') return ok(await walletList(args as Record<string, never>, claims));
     if (name === 'get_address') return ok(await getAddress(args as { label: string }, claims));
     if (name === 'get_balance') return ok(await getBalance(args as { label: string; token?: 'ETH' | 'MATIC' | 'USDC'; chain?: 'base' | 'polygon' }, claims));
     if (name === 'send_usdc') return ok(await sendUsdc(args as { from_label: string; to_address: string; amount: number; chain?: 'base' | 'polygon' }, claims));
     if (name === 'sign_message') return ok(await signMessage(args as { label: string; text: string }, claims));
     if (name === 'sign_typed_data') return ok(await signTypedData(args as { label: string; domain: Record<string, unknown>; types: Record<string, unknown>; value: Record<string, unknown> }, claims));
+    if (name === 'generate_image') return ok(await generateImage(args as { prompt: string; width?: number; height?: number; output_path?: string }, claims));
     if (name === 'bridge_to_polygon') return ok(await bridgeToPolygon(args as { from_label: string; amount: number }, claims));
     if (name === 'bridge_to_base') return ok(await bridgeToBase(args as { from_label: string; amount: number }, claims));
     if (name === 'get_bridge_status') return ok(await getBridgeStatus(args as { bridge_id: string }, claims));

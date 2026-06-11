@@ -9,14 +9,20 @@ vi.mock('../capabilities/notify/index.js', () => ({
 }));
 vi.mock('../capabilities/wallet/index.js', () => ({
   createWallet: vi.fn().mockResolvedValue({ label: 'w1', address: '0x1' }),
-  getAddress: vi.fn(), getBalance: vi.fn(), sendUsdc: vi.fn(), signMessage: vi.fn(), signTypedData: vi.fn(),
-  WALLET_TOOLS: { create_wallet: { name: 'create_wallet', minTrustLevel: 2 }, get_address: { name: 'get_address', minTrustLevel: 2 }, get_balance: { name: 'get_balance', minTrustLevel: 2 }, send_usdc: { name: 'send_usdc', minTrustLevel: 4 }, sign_message: { name: 'sign_message', minTrustLevel: 3 }, sign_typed_data: { name: 'sign_typed_data', minTrustLevel: 4 } },
+  walletList: vi.fn().mockResolvedValue({ wallets: [] }),
+  getAddress: vi.fn().mockResolvedValue({ address: '0xabc' }), getBalance: vi.fn(), sendUsdc: vi.fn(), signMessage: vi.fn(), signTypedData: vi.fn(),
+  WALLET_TOOLS: { create_wallet: { name: 'create_wallet', minTrustLevel: 2 }, wallet_list: { name: 'wallet_list', minTrustLevel: 2 }, get_address: { name: 'get_address', minTrustLevel: 2 }, get_balance: { name: 'get_balance', minTrustLevel: 2 }, send_usdc: { name: 'send_usdc', minTrustLevel: 4 }, sign_message: { name: 'sign_message', minTrustLevel: 3 }, sign_typed_data: { name: 'sign_typed_data', minTrustLevel: 4 } },
+}));
+vi.mock('../capabilities/image/index.js', () => ({
+  generateImage: vi.fn().mockResolvedValue({ path: '/tmp/image.png', bytes: 1, ms: 1 }),
+  IMAGE_TOOLS: { generate_image: { name: 'generate_image', minTrustLevel: 2 } },
 }));
 vi.mock('../capabilities/bridge/index.js', () => ({
   bridgeToPolygon: vi.fn().mockResolvedValue({}), bridgeToBase: vi.fn().mockResolvedValue({}), getBridgeStatus: vi.fn().mockResolvedValue({}),
 }));
 vi.mock('../capabilities/payments/index.js', () => ({
   payWithUsdc: vi.fn().mockResolvedValue({}), getPaymentStatus: vi.fn().mockResolvedValue({}), preparePayment: vi.fn().mockResolvedValue({}),
+  paymentRequest: vi.fn().mockResolvedValue({}), paymentStatus: vi.fn().mockResolvedValue({}), paymentList: vi.fn().mockResolvedValue({}),
 }));
 vi.mock('../capabilities/cards/index.js', () => ({
   createVirtualCard: vi.fn().mockResolvedValue({}), getCardDetails: vi.fn().mockResolvedValue({}), addFundsToCard: vi.fn().mockResolvedValue({}), topUpMoonCredit: vi.fn().mockResolvedValue({}), freezeCard: vi.fn().mockResolvedValue({}), deleteCard: vi.fn().mockResolvedValue({}), getCardTransactions: vi.fn().mockResolvedValue({}),
@@ -58,9 +64,26 @@ vi.mock('../capabilities/rss/index.js', () => ({
 vi.mock('../capabilities/mail/index.js', () => ({
   listMail: vi.fn().mockResolvedValue({}), forwardMail: vi.fn().mockResolvedValue({}), shredMail: vi.fn().mockResolvedValue({}), scanMail: vi.fn().mockResolvedValue({}),
 }));
+vi.mock('../capabilities/delegations/index.js', () => ({
+  createDelegation: vi.fn().mockResolvedValue({}), listDelegations: vi.fn().mockResolvedValue({}), revokeDelegation: vi.fn().mockResolvedValue({}),
+}));
+vi.mock('../capabilities/triggers/index.js', () => ({
+  createTrigger: vi.fn().mockResolvedValue({}), listTriggers: vi.fn().mockResolvedValue({}), deleteTrigger: vi.fn().mockResolvedValue({}), pauseTrigger: vi.fn().mockResolvedValue({}),
+}));
+vi.mock('../capabilities/body/index.js', () => ({
+  getIdentity: vi.fn().mockResolvedValue({}), setIdentityBinding: vi.fn().mockResolvedValue({}),
+  getMemory: vi.fn().mockResolvedValue({ key: 'k', value: 'v' }), setMemory: vi.fn().mockResolvedValue({}), listMemory: vi.fn().mockResolvedValue({}), deleteMemory: vi.fn().mockResolvedValue({}),
+}));
+vi.mock('../capabilities/bus/index.js', () => ({
+  busSend: vi.fn().mockResolvedValue({}), busPoll: vi.fn().mockResolvedValue({}), busWait: vi.fn().mockResolvedValue({}),
+}));
+vi.mock('../capabilities/help/index.js', () => ({
+  hbfHelp: vi.fn().mockResolvedValue({ domains: [], recipes: [] }),
+}));
 
 import { notifyHuman } from '../capabilities/notify/index.js';
-import { createWallet } from '../capabilities/wallet/index.js';
+import { createWallet, getAddress } from '../capabilities/wallet/index.js';
+import { getMemory } from '../capabilities/body/index.js';
 
 function makeL3Claims(): PassportClaims {
   return { passportId: 'p1', agentId: 'a1', trustLevel: 3, trustStatus: 'seller_confirmed', flags: [], isDisputed: false, version: '1' };
@@ -80,6 +103,19 @@ describe('dispatchTool', () => {
     const result = await dispatchTool('create_wallet', { label: 'w1' }, makeL3Claims());
     expect(createWallet).toHaveBeenCalled();
     expect(result.content[0].text).toContain('w1');
+  });
+
+  it('resolves domain-prefix aliases before routing', async () => {
+    const { dispatchTool } = await import('../dispatch.js');
+    const result = await dispatchTool('wallet_address', { label: 'w1' }, makeL3Claims());
+    expect(getAddress).toHaveBeenCalledWith({ label: 'w1' }, makeL3Claims());
+    expect(result.content[0].text).toContain('0xabc');
+  });
+
+  it('resolves memory aliases before routing', async () => {
+    const { dispatchTool } = await import('../dispatch.js');
+    await dispatchTool('memory_get', { key: 'k' }, makeL3Claims());
+    expect(getMemory).toHaveBeenCalledWith({ key: 'k' }, makeL3Claims());
   });
 
   it('returns isError for unknown tool', async () => {

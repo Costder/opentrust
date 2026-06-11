@@ -9,6 +9,7 @@ import { extractBearerToken, validatePassport, AuthError } from './auth.js';
 import { isPaused } from './state.js';
 import { NOTIFY_TOOL } from './capabilities/notify/index.js';
 import { WALLET_TOOLS } from './capabilities/wallet/index.js';
+import { IMAGE_TOOLS } from './capabilities/image/index.js';
 import { BRIDGE_TOOLS } from './capabilities/bridge/index.js';
 import { PAYMENT_TOOLS } from './capabilities/payments/index.js';
 import { CARD_TOOLS } from './capabilities/cards/index.js';
@@ -81,6 +82,14 @@ export function createMcpServer(claims: PassportClaims): Server {
         },
       },
       {
+        name: WALLET_TOOLS.wallet_list.name,
+        description: 'Lists stored wallets with public addresses only.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {},
+        },
+      },
+      {
         name: WALLET_TOOLS.get_address.name,
         description: 'Returns the public address for a stored wallet.',
         inputSchema: {
@@ -142,6 +151,21 @@ export function createMcpServer(claims: PassportClaims): Server {
             value: { type: 'object', description: 'EIP-712 value object' },
           },
           required: ['label', 'domain', 'types', 'value'],
+        },
+      },
+      // Image tools
+      {
+        name: IMAGE_TOOLS.generate_image.name,
+        description: 'Generates an image through the configured Modal endpoint and saves it locally.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            prompt: { type: 'string', description: 'Image prompt' },
+            width: { type: 'number', description: 'Output width in pixels (default: 1024)' },
+            height: { type: 'number', description: 'Output height in pixels (default: 1024)' },
+            output_path: { type: 'string', description: 'Optional local PNG output path' },
+          },
+          required: ['prompt'],
         },
       },
       // Bridge tools

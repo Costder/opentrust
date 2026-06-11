@@ -1,4 +1,6 @@
-import { vi, describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterAll, afterEach } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
 import { TrustError } from '../trust.js';
 import { SecretsError } from '../secrets.js';
 import type { PassportClaims } from '../types.js';
@@ -89,13 +91,14 @@ import {
   deleteMailbox,
 } from '../capabilities/email/index.js';
 import { PostmarkTransport, ResendTransport } from '../capabilities/email/api-transport.js';
-import { _resetDb } from '../spend-tracker.js';
+import { _resetDb, openDb } from '../spend-tracker.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 const MockDatabase = Database as unknown as { resetDb: () => void };
+const agentMailRestServer = setupServer();
 
 function makeL2Claims(overrides: Partial<PassportClaims> = {}): PassportClaims {
   return {
@@ -158,9 +161,38 @@ function setPostmarkConfig() {
   });
 }
 
+function setExternalInboxConfig() {
+  mockReadConfig.mockReturnValue({
+    version: 1,
+    instanceId: 'test-instance',
+    registryUrl: 'http://localhost:8000',
+    passphraseHash: 'hash',
+    capabilities: { email: { transport: 'local', localPort: 2525 } },
+    externalInboxes: [
+      {
+        provider: 'agentmail',
+        address: 'scout-01@agentmail.to',
+        api_key_memory_key: 'secret:agentmail_api_key',
+      },
+    ],
+  });
+}
+
+function seedMemory(key: string, value: unknown) {
+  openDb().prepare('INSERT INTO memory (key, value_json, updated_at) VALUES (?, ?, ?)')
+    .run(key, JSON.stringify(value), new Date().toISOString());
+}
+
+agentMailRestServer.listen({ onUnhandledRequest: 'error' });
+
 afterAll(() => {
+  agentMailRestServer.close();
   _resetDb();
   MockDatabase.resetDb();
+});
+
+afterEach(() => {
+  agentMailRestServer.resetHandlers();
 });
 
 // ---------------------------------------------------------------------------
@@ -297,6 +329,70 @@ describe('email capability', () => {
       const result = await readInbox({ address: 'limited@local.test', limit: 3 }, makeL2Claims());
       expect(result.messages).toHaveLength(3);
     });
+
+    it('routes bound external AgentMail addresses to the AgentMail REST API', async () => {
+      setExternalInboxConfig();
+      seedMemory('secret:agentmail_api_key', 'am-secret');
+      agentMailRestServer.use(
+        http.get('https://api.agentmail.to/v0/inboxes/:address/messages', ({ params, request }) => {
+          expect(params.address).toBe('scout-01@agentmail.to');
+          expect(request.headers.get('authorization')).toBe('Bearer am-secret');
+          return HttpResponse.json({
+            messages: [
+              {
+                messageId: 'ext-1',
+                subject: 'External hello',
+                from: 'sender@example.com',
+                extractedText: 'external body',
+                html: '<p>external body</p>',
+                receivedAt: '2026-06-11T00:00:00.000Z',
+              },
+            ],
+          });
+        }),
+      );
+
+      const result = await readInbox({ address: 'scout-01@agentmail.to', limit: 5 }, makeL2Claims());
+
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0]).toEqual(expect.objectContaining({
+        mailbox_address: 'scout-01@agentmail.to',
+        message_id: 'ext-1',
+        subject: 'External hello',
+        from_address: 'sender@example.com',
+        body_text: 'external body',
+      }));
+    });
+
+    it('leaves non-bound addresses on the internal inbox path', async () => {
+      setExternalInboxConfig();
+      const { openDb } = await import('../spend-tracker.js');
+      openDb().prepare('INSERT OR IGNORE INTO mailboxes (address, created_at) VALUES (?, ?)').run(
+        'internal@local.test',
+        new Date().toISOString(),
+      );
+      openDb().prepare(
+        'INSERT INTO emails (mailbox_address, message_id, subject, from_address, body_text, received_at) VALUES (?, ?, ?, ?, ?, ?)',
+      ).run('internal@local.test', 'local-1', 'Local', 'a@b.com', 'body', new Date().toISOString());
+      agentMailRestServer.use(
+        http.get('https://api.agentmail.to/v0/inboxes/:address/messages', () =>
+          HttpResponse.json({ error: 'should not be called' }, { status: 500 }),
+        ),
+      );
+
+      const result = await readInbox({ address: 'internal@local.test' }, makeL2Claims());
+
+      expect(result.messages).toHaveLength(1);
+      expect((result.messages[0] as { message_id: string }).message_id).toBe('local-1');
+    });
+
+    it('throws a clear error when an external inbox API key is missing', async () => {
+      setExternalInboxConfig();
+
+      await expect(readInbox({ address: 'scout-01@agentmail.to' }, makeL2Claims())).rejects.toThrow(
+        /secret:agentmail_api_key/,
+      );
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -363,6 +459,36 @@ describe('email capability', () => {
       );
 
       expect((result.message as { body_text: string }).body_text).toContain('123456');
+    });
+
+    it('routes bound external AgentMail addresses while waiting for mail', async () => {
+      setExternalInboxConfig();
+      seedMemory('secret:agentmail_api_key', 'am-secret');
+      agentMailRestServer.use(
+        http.get('https://api.agentmail.to/v0/inboxes/:address/messages', () =>
+          HttpResponse.json({
+            messages: [
+              {
+                id: 'ext-wait',
+                subject: 'Code 123',
+                from: 'codes@example.com',
+                text: 'your code is 123',
+              },
+            ],
+          }),
+        ),
+      );
+
+      const result = await waitForEmail(
+        {
+          address: 'scout-01@agentmail.to',
+          filter: { subject_contains: 'Code' },
+          timeout_ms: 1000,
+        },
+        makeL2Claims(),
+      );
+
+      expect((result.message as { message_id: string }).message_id).toBe('ext-wait');
     });
   });
 
