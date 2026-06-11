@@ -3,9 +3,10 @@
  * Creates uniquified payment requests and polls Base for USDC Transfer events to confirm receipt.
  */
 import { randomBytes } from 'crypto';
+import { ethers } from 'ethers';
 import { enforceTrust } from '../../trust.js';
 import { openDb } from '../../spend-tracker.js';
-import { getWallet } from '../../keystore.js';
+import { getWallet, loadKeystore } from '../../keystore.js';
 import type { PassportClaims } from '../../types.js';
 
 // ────────────────────────────────────────────────────────────
@@ -113,14 +114,16 @@ function resolveAddress(walletLabel: string | undefined): string {
     );
   }
 
-  const label = walletLabel ?? 'primary';
-  const entry = getWallet(label, passphrase);
-  if (!entry) throw new Error(`Wallet "${label}" not found`);
+  let entry;
+  if (walletLabel) {
+    entry = getWallet(walletLabel, passphrase);
+    if (!entry) throw new Error(`Wallet "${walletLabel}" not found`);
+  } else {
+    // no label given: try "primary", else fall back to the first wallet in the keystore
+    entry = getWallet('primary', passphrase) ?? loadKeystore(passphrase)[0];
+    if (!entry) throw new Error('No wallets in keystore — create one with create_wallet first');
+  }
 
-  // Derive address from private key (ethers not available in test env mock — use a simple checksum)
-  // We import ethers lazily so that tests can mock it
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { ethers } = require('ethers') as typeof import('ethers');
   const wallet = new ethers.Wallet(entry.privateKey);
   return wallet.address;
 }
