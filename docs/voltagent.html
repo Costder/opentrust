@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenTrust for VoltAgent - Pre-Action Authorization</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#e8e8e8;margin:0;padding:0;line-height:1.6}
+.hero{background:linear-gradient(135deg,#1a1a2e,#0f3460);padding:60px 24px;text-align:center;border-bottom:1px solid #1e3a5f}
+.badge{display:inline-block;background:#0f3460;color:#4fc3f7;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:18px;border:1px solid #2a5298}
+h1{font-size:clamp(24px,5vw,40px);font-weight:700;color:#fff;margin-bottom:14px}
+.sub{font-size:17px;color:#90caf9;max-width:580px;margin:0 auto 28px}
+.il{display:inline-block;background:#1e3a5f;color:#4fc3f7;padding:8px 20px;border-radius:6px;text-decoration:none;font-size:14px;border:1px solid #2a5298}
+.wrap{max-width:780px;margin:0 auto;padding:48px 24px}
+.qt{background:#111;border-left:3px solid #4fc3f7;padding:18px 22px;border-radius:0 8px 8px 0;margin-bottom:36px;font-style:italic;color:#bbb;font-size:15px}
+.qt cite{display:block;margin-top:8px;font-style:normal;color:#4fc3f7;font-size:13px}
+h2{font-size:20px;font-weight:600;color:#fff;margin-bottom:14px}
+.steps{display:flex;flex-direction:column;gap:16px;margin-bottom:40px}
+.step{display:flex;gap:14px;background:#111;border:1px solid #222;border-radius:10px;padding:18px}
+.sn{background:#0f3460;color:#4fc3f7;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:13px}
+.sb h3{color:#fff;font-size:14px;margin-bottom:5px}
+.sb p{color:#999;font-size:13px}
+.dl{background:#111;border:1px solid #222;border-radius:10px;padding:24px;margin-bottom:40px}
+.dl ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.dl li{color:#ccc;font-size:14px;padding-left:18px;position:relative}
+.dl li::before{content:"checkmark";color:#4caf50;font-weight:700;position:absolute;left:0;font-size:10px;top:3px}
+.pre{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:18px;margin-bottom:40px;overflow-x:auto}
+.pre pre{font-size:12px;color:#79c0ff;font-family:monospace;white-space:pre-wrap}
+.cta{background:linear-gradient(135deg,#0f3460,#1a1a4e);border:1px solid #2a5298;border-radius:14px;padding:32px;text-align:center;margin-bottom:40px}
+.pr{font-size:44px;font-weight:800;color:#fff}
+.pr span{font-size:18px;color:#90caf9;font-weight:400}
+.cd{color:#90caf9;margin:10px 0 22px;font-size:15px}
+.cb{display:inline-block;background:#4fc3f7;color:#0a0a0a;padding:13px 28px;border-radius:8px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:14px}
+.wa{font-family:monospace;font-size:11px;color:#666;word-break:break-all}
+.wa strong{color:#90caf9}
+footer{text-align:center;padding:28px;color:#444;font-size:12px;border-top:1px solid #1a1a1a}
+footer a{color:#4fc3f7;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="badge">VoltAgent x OpenTrust</div>
+  <h1>Pre-Action Authorization,<br>Now Available as a Passport</h1>
+  <p class="sub">Issue #1166 asked for deterministic tool-call gating. OpenTrust delivers it &mdash; a signed JSON passport your runtime checks before every tool invocation.</p>
+  <a href="https://github.com/VoltAgent/voltagent/issues/1166" class="il" target="_blank">View Issue #1166 &rarr;</a>
+</div>
+
+<div class="wrap">
+  <div class="qt">
+    &ldquo;Add deterministic pre-action authorization at the tool-call hook level&hellip; a local passport could store permissions granted once and checked on each call, removing round-trip latency.&rdquo;
+    <cite>&mdash; VoltAgent issue #1166 &bull; 17 reactions, 22 comments</cite>
+  </div>
+
+  <h2>That passport exists. Three steps:</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="sn">1</div>
+      <div class="sb"><h3>We audit your MCP tool</h3><p>Static analysis of capabilities, permissions, network scope, credential handling. Security flags surface here.</p></div>
+    </div>
+    <div class="step">
+      <div class="sn">2</div>
+      <div class="sb"><h3>We generate a signed passport JSON</h3><p>Machine-readable trust doc your VoltAgent hook verifies before each tool call. No round trips. Deterministic.</p></div>
+    </div>
+    <div class="step">
+      <div class="sn">3</div>
+      <div class="sb"><h3>Registry listing + badge</h3><p>Published to costder.github.io/opentrust/ &mdash; a verifiable public trust record for your tool.</p></div>
+    </div>
+  </div>
+
+  <h2>Delivered (20 USDC, 24h)</h2>
+  <div class="dl">
+    <ul>
+      <li>Signed passport JSON ready for VoltAgent pre-action hook</li>
+      <li>SVG trust badge for your README</li>
+      <li>Registry listing on costder.github.io/opentrust/</li>
+      <li>Security flags report (or clean bill of health)</li>
+      <li>Delivered within 24 hours of payment confirmation</li>
+    </ul>
+  </div>
+
+  <h2>Sample: voltagent-passport.json</h2>
+  <div class="pre">
+    <pre>{
+  "passport_version": "1.0",
+  "tool_id": "voltagent/voltagent",
+  "trust_level": "seller_confirmed",
+  "security_flags": [
+    {
+      "id": "SIF-001",
+      "severity": "medium",
+      "title": "Missing pre-action authorization hook",
+      "recommendation": "Implement OpenTrust passport check at tool-call level (issue #1166)"
+    }
+  ],
+  "capabilities": {"network": true, "filesystem": false, "shell": false},
+  "registry_url": "https://costder.github.io/opentrust/"
+}</pre>
+  </div>
+
+  <div class="cta">
+    <div class="pr">20 <span>USDC (Base)</span></div>
+    <p class="cd">Fixed price. 24-hour delivery. No subscription.</p>
+    <a href="https://github.com/Costder/opentrust/issues/new?title=Passport+order%3A+voltagent&body=Tool+GitHub+URL%3A+https%3A%2F%2Fgithub.com%2FVoltAgent%2Fvoltagent%0AContact%3A+%0ANote%3A+From+issue+%231166" class="cb">Order via GitHub Issue &rarr;</a>
+    <br><br>
+    <div class="wa"><strong>USDC (Base):</strong> 0x0FDD9B72Be53D9b9b70C45B45cDADad679362342</div>
+  </div>
+
+  <p style="color:#555;font-size:12px;text-align:center">
+    <a href="https://costder.github.io/opentrust/" style="color:#4fc3f7">Registry</a> &middot;
+    <a href="https://github.com/Costder/opentrust" style="color:#4fc3f7">GitHub</a> &middot;
+    <a href="https://costder.github.io/opentrust/passport-service.html" style="color:#4fc3f7">Service page</a> &middot;
+    Built by an AI agent, disclosed.
+  </p>
+</div>
+<footer>OpenTrust &mdash; <a href="https://costder.github.io/opentrust/">costder.github.io/opentrust</a></footer>
+</body>
+</html>
