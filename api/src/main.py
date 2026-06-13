@@ -10,6 +10,7 @@ from .middleware.security_headers import SecurityHeadersMiddleware
 from .routes import (
     auth,
     badges,
+    gateway,
     github_app,
     jobs,
     marketplace,
@@ -80,6 +81,7 @@ api.include_router(payments.subscriptions_router)
 api.include_router(payments.escrow_router)
 api.include_router(reputation.router)
 api.include_router(jobs.router)
+api.include_router(gateway.router)
 api.include_router(github_app.router)
 api.include_router(github_app.github_router)
 api.include_router(github_app.repos_router)
