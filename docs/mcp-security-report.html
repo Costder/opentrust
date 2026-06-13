@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MCP Security Audit: 8 Popular Servers Compared | OpenTrust</title>
+<meta name="description" content="Independent security audit comparing 8 popular MCP servers. Free public report.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0a0a;color:#e8e8e8;line-height:1.6}
+.hero{background:linear-gradient(135deg,#0a0a0a,#0f1a2e);padding:60px 24px;text-align:center;border-bottom:1px solid #1e3a5f}
+.hero h1{font-size:2.2rem;color:#fff;margin-bottom:16px}
+.hero h1 span{color:#3b82f6}
+.hero p{color:#94a3b8;max-width:620px;margin:0 auto 24px;font-size:1.1rem}
+.badge{display:inline-block;background:#1e3a5f;color:#60a5fa;padding:6px 14px;border-radius:20px;font-size:0.85rem;margin-bottom:16px}
+.container{max-width:1100px;margin:0 auto;padding:48px 24px}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;margin-bottom:48px}
+.stat{background:#111;border:1px solid #1e3a5f;border-radius:12px;padding:24px;text-align:center}
+.stat .num{font-size:2.2rem;font-weight:700;color:#3b82f6}
+.stat .label{color:#94a3b8;font-size:0.9rem}
+h2{font-size:1.5rem;color:#fff;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;margin-bottom:48px;background:#111;border-radius:12px;overflow:hidden}
+th{background:#0f1a2e;color:#94a3b8;font-size:0.78rem;text-transform:uppercase;padding:12px 14px;text-align:left}
+td{padding:12px 14px;border-bottom:1px solid #1a1a1a;font-size:0.88rem;vertical-align:middle}
+.score{font-weight:700;font-size:1.05rem}
+.a{color:#22c55e}.b{color:#84cc16}.c{color:#eab308}.d{color:#f97316}.f{color:#ef4444}
+.flag{background:#1a0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:4px;padding:1px 7px;font-size:0.75rem;font-family:monospace}
+.ok{background:#0a1a0a;color:#86efac;border:1px solid #14532d;border-radius:4px;padding:1px 7px;font-size:0.75rem}
+.warn{background:#1a1000;color:#fcd34d;border:1px solid #78350f;border-radius:4px;padding:1px 7px;font-size:0.75rem}
+.finding{background:#111;border-left:3px solid #ef4444;border-radius:0 8px 8px 0;padding:18px 22px;margin-bottom:14px}
+.finding.w{border-left-color:#eab308}
+.finding h3{color:#fff;font-size:0.98rem;margin-bottom:6px}
+.finding p{color:#94a3b8;font-size:0.88rem}
+.ftag{background:#1a0a0a;color:#f87171;border-radius:4px;padding:1px 8px;font-size:0.72rem;font-family:monospace;display:inline-block;margin-bottom:6px}
+.cta{background:linear-gradient(135deg,#0f1a2e,#0a0a0a);border:1px solid #1e3a5f;border-radius:16px;padding:40px;text-align:center;margin-top:48px}
+.cta p{color:#94a3b8;margin-bottom:28px}
+.btn{display:inline-block;background:#3b82f6;color:#fff;padding:13px 30px;border-radius:8px;text-decoration:none;font-weight:600;margin:0 6px}
+.btn.s{background:transparent;border:1px solid #3b82f6;color:#60a5fa}
+footer{text-align:center;padding:32px 24px;color:#4a4a4a;font-size:0.82rem;border-top:1px solid #1a1a1a}
+</style></head>
+<body>
+<div class="hero"><div class="badge">Independent Security Research &bull; June 2026</div><h1>MCP Security Audit:<br><span>8 Popular Servers Compared</span></h1><p>We scored the most widely-used MCP servers on permission scope, data handling, authentication, and trust signals. Here is what we found.</p></div>
+<div class="container">
+<div class="summary">
+<div class="stat"><div class="num">8</div><div class="label">MCP servers audited</div></div>
+<div class="stat"><div class="num">17</div><div class="label">Security findings</div></div>
+<div class="stat"><div class="num">3</div><div class="label">Critical flags</div></div>
+<div class="stat"><div class="num">62%</div><div class="label">Lack auth documentation</div></div>
+</div>
+<h2>Comparison Table</h2>
+<table>
+<thead><tr><th>Server</th><th>Stars</th><th>Perm Scope</th><th>Data Handling</th><th>Auth</th><th>Trust Docs</th><th>Score</th><th>Passport</th></tr></thead>
+<tbody>
+<tr><td><strong>discord-mcp</strong><br><small>SaseQ/discord-mcp</small></td><td>270</td><td><span class="ok">Minimal</span></td><td><span class="warn">Messages r/w</span></td><td><span class="flag">No publisher ID</span></td><td><span class="flag">None</span></td><td><span class="score d">D+</span></td><td><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/examples/discord-mcp-passport.json" style="color:#3b82f6;font-size:0.8rem">View</a></td></tr>
+<tr><td><strong>mcp-use</strong><br><small>Manufact/mcp-use</small></td><td>10k</td><td><span class="warn">Broad</span></td><td><span class="flag">Arbitrary LLM routing</span></td><td><span class="flag">No publisher ID</span></td><td><span class="flag">None</span></td><td><span class="score d">D</span></td><td><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/examples/mcp-use-passport.json" style="color:#3b82f6;font-size:0.8rem">View</a></td></tr>
+<tr><td><strong>figma-context-mcp</strong><br><small>GLips/Figma-Context-MCP</small></td><td>15k</td><td><span class="ok">Read-only</span></td><td><span class="ok">Design data only</span></td><td><span class="ok">OAuth</span></td><td><span class="flag">None</span></td><td><span class="score c">C+</span></td><td><span style="color:#555">Pending</span></td></tr>
+<tr><td><strong>github-mcp-server</strong><br><small>github/github-mcp-server</small></td><td>8k</td><td><span class="warn">Write access</span></td><td><span class="warn">Code + secrets risk</span></td><td><span class="ok">GitHub OAuth</span></td><td><span class="flag">None</span></td><td><span class="score c">C</span></td><td><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/examples/github-mcp-server-passport.json" style="color:#3b82f6;font-size:0.8rem">View</a></td></tr>
+<tr><td><strong>stripe-agent-toolkit</strong><br><small>stripe/agent-toolkit</small></td><td>4k</td><td><span class="flag">Financial write</span></td><td><span class="flag">Payment data</span></td><td><span class="ok">API key</span></td><td><span class="flag">None</span></td><td><span class="score d">D+</span></td><td><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/examples/stripe-agent-toolkit-passport.json" style="color:#3b82f6;font-size:0.8rem">View</a></td></tr>
+<tr><td><strong>server-filesystem</strong><br><small>modelcontextprotocol</small></td><td>Official</td><td><span class="flag">Full filesystem</span></td><td><span class="flag">All local files</span></td><td><span class="ok">Path scoping</span></td><td><span class="flag">None</span></td><td><span class="score d">D</span></td><td><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/examples/filesystem-mcp-passport.json" style="color:#3b82f6;font-size:0.8rem">View</a></td></tr>
+<tr><td><strong>server-postgres</strong><br><small>modelcontextprotocol</small></td><td>Official</td><td><span class="warn">DB read+write</span></td><td><span class="warn">Schema + rows</span></td><td><span class="ok">Connection string</span></td><td><span class="flag">None</span></td><td><span class="score c">C-</span></td><td><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/examples/postgres-mcp-passport.json" style="color:#3b82f6;font-size:0.8rem">View</a></td></tr>
+<tr><td><strong>playwright-mcp</strong><br><small>microsoft/playwright-mcp</small></td><td>Official</td><td><span class="warn">Full browser</span></td><td><span class="flag">All web data</span></td><td><span class="ok">Sandboxed</span></td><td><span class="flag">None</span></td><td><span class="score d">D+</span></td><td><a href="https://github.com/Costder/opentrust/blob/main/passport-schema/examples/playwright-mcp-passport.json" style="color:#3b82f6;font-size:0.8rem">View</a></td></tr>
+</tbody></table>
