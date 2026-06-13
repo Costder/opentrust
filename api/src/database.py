@@ -6,6 +6,7 @@ Leave both unset to use a local SQLite file (dev / CI).
 from __future__ import annotations
 
 import json
+import sqlite3
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -257,6 +258,27 @@ class Database:
             "updated_at=excluded.updated_at",
             [kind, obj_id, json.dumps(data)],
         )
+
+    async def claim_object(self, kind: str, obj_id: str, data: dict) -> bool:
+        """Atomically claim a unique (kind, obj_id) slot.
+
+        Returns True if newly inserted, False if it already existed. Unlike a
+        check-then-write, this relies on the table's PRIMARY KEY for atomicity,
+        so it is safe under concurrency (e.g. two requests replaying the same
+        on-chain tx hash on different serverless instances).
+        """
+        await self._ensure_objects_table()
+        try:
+            await self._execute_raw(
+                "INSERT INTO marketplace_objects (kind, obj_id, data, updated_at) "
+                "VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+                [kind, obj_id, json.dumps(data)],
+            )
+            return True
+        except (sqlite3.IntegrityError, RuntimeError):
+            # Duplicate primary key — already claimed. (Turso surfaces the
+            # constraint violation as a RuntimeError from _execute_raw.)
+            return False
 
     async def load_objects(self, kind: str) -> list[dict]:
         """Return all stored objects of a kind, newest first."""

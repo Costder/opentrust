@@ -103,6 +103,8 @@ The CLI connects to `http://localhost:8000` by default. Set `OPENTRUST_API_URL` 
 | `DB_URL` | `sqlite+aiosqlite:///./opentrust.db` | Database connection string |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |
 | `RATE_LIMIT` | `100/60` | `<max_requests>/<window_seconds>` per IP |
+| `TRUSTED_PROXIES` | _(empty)_ | Comma-separated proxy/edge IPs allowed to set `X-Forwarded-For`; else the header is ignored (anti-spoof). Set to edge ranges in prod |
+| `REGISTRY_ADMIN_TOKEN` | _(empty)_ | Bearer token gating admin endpoints. **Required in production** — startup fails if empty and the endpoints fail closed |
 | `PAYMENT_PROVIDER` | `mock` | `mock` for dev; `coinbase` for live payments |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | _(empty)_ | GitHub OAuth for claim flow |
 | `GITHUB_APP_ID` / `GITHUB_APP_PRIVATE_KEY_PATH` | _(empty)_ | GitHub App for repo verification |

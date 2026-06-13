@@ -24,7 +24,7 @@ from ..schemas.reputation import CounterpartyRating, CounterpartyRatingRequest
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
 from ._durable import (
-    consume_tx_hash,
+    claim_tx_hash,
     hydrate_escrow,
     hydrate_jobs,
     hydrate_ratings,
@@ -171,8 +171,11 @@ async def verify_escrow_deposit(
             rpc_url=settings.base_rpc_url,
             usdc_contract=settings.base_usdc_contract,
         )
+        # Atomically claim the tx hash before crediting; loser of a concurrent
+        # replay gets 409 here, preventing double-funding.
+        if not await claim_tx_hash(db, request.tx_hash, {"escrow_id": escrow_id}):
+            raise HTTPException(status_code=409, detail="transaction has already been used")
         updated = store.verify_escrow_deposit(escrow_id, request.tx_hash)
-        await consume_tx_hash(db, request.tx_hash, {"escrow_id": escrow_id})
         await persist_escrow(db, updated)
         return updated
     except OnchainVerificationError as exc:

@@ -110,6 +110,25 @@ async def test_webhook_valid_signature_marks_checkout_paid(client):
 # ── list_tools total via COUNT(*) ─────────────────────────────────────────────
 
 
+async def test_claim_object_is_atomic_and_unique(tmp_path):
+    """claim_object inserts once and reports False on any later claim of the same
+    (kind, obj_id) — the atomic guard behind replay protection."""
+    from api.src.config import settings
+    from api.src.database import Database
+
+    orig = settings.sqlite_path
+    settings.sqlite_path = str(tmp_path / "claim.db")
+    try:
+        d = Database()
+        await d.init()
+        assert await d.claim_object("consumed_tx", "0xabc", {"n": 1}) is True
+        assert await d.claim_object("consumed_tx", "0xabc", {"n": 2}) is False
+        # The original value is preserved (the second claim did not overwrite it).
+        assert (await d.get_object("consumed_tx", "0xabc")) == {"n": 1}
+    finally:
+        settings.sqlite_path = orig
+
+
 async def test_list_tools_total_counts_all_matches(client):
     payload = {
         "tool_identity": {"slug": "count-me", "name": "Count Me"},

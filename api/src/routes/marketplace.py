@@ -28,7 +28,7 @@ from ..schemas.marketplace import (
 from ..middleware.auth import mint_wallet_token, verify_wallet_ownership
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
-from ._durable import consume_tx_hash, tx_hash_consumed
+from ._durable import claim_tx_hash, tx_hash_consumed
 
 
 def _jsonable(model) -> dict:
@@ -271,14 +271,18 @@ async def create_order(request: MarketplaceOrderRequest, db: Database = Depends(
             raise HTTPException(status_code=402, detail=f"payment verification failed: {exc}") from exc
     elif not (settings.opentrust_custodial_wallets_enabled or settings.opentrust_escrow_enabled):
         raise HTTPException(status_code=501, detail="on-chain escrow and custody are not enabled")
+    # Atomically claim the funding tx hash before creating the order; the loser
+    # of a concurrent replay gets 409 here rather than a second order.
+    if request.transaction_hash and not await claim_tx_hash(
+        db, request.transaction_hash, {"listing_id": request.listing_id}
+    ):
+        raise HTTPException(status_code=409, detail="transaction has already been used")
     try:
         order = store.create_order(request)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if request.transaction_hash:
-        await consume_tx_hash(db, request.transaction_hash, {"order_id": order.order_id})
     await db.save_object("order", order.order_id, _jsonable(order))
     return order
 

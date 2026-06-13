@@ -19,7 +19,7 @@ from ..schemas.marketplace import (
 )
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
-from ._durable import consume_tx_hash, tx_hash_consumed
+from ._durable import claim_tx_hash, tx_hash_consumed
 
 router = APIRouter(prefix="/usage", tags=["usage"])
 
@@ -94,8 +94,12 @@ async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
     except OnchainVerificationError as exc:
         raise HTTPException(status_code=402, detail=f"funding verification failed: {exc}") from exc
 
-    # Credit exactly what the chain confirms, not the client-asserted amount, and
-    # consume the tx hash so the same transfer can't be replayed to top up again.
+    # Atomically claim the funding tx hash before crediting so a single transfer
+    # can't be replayed (incl. concurrently across instances) to top up twice.
+    if not await claim_tx_hash(db, request.transaction_hash, {"listing_id": request.listing_id}):
+        raise HTTPException(status_code=409, detail="transaction has already been used")
+
+    # Credit exactly what the chain confirms, not the client-asserted amount.
     credited = getattr(transfer, "amount_usdc", None) or request.amount_usdc
     try:
         account = store.fund_usage(
@@ -108,7 +112,6 @@ async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    await consume_tx_hash(db, request.transaction_hash, {"account_id": account.account_id})
     await _persist_account(db, account)
     return account
 

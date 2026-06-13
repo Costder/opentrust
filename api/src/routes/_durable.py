@@ -25,11 +25,17 @@ def _jsonable(model) -> dict:
 # never fund two escrows/orders/accounts on different instances.
 
 async def tx_hash_consumed(db: Database, tx_hash: str) -> bool:
+    """Fast-path read check (rejects obvious replays before doing on-chain work)."""
     return await db.get_object("consumed_tx", tx_hash) is not None
 
 
-async def consume_tx_hash(db: Database, tx_hash: str, context: dict) -> None:
-    await db.save_object("consumed_tx", tx_hash, context)
+async def claim_tx_hash(db: Database, tx_hash: str, context: dict) -> bool:
+    """Atomically claim a tx hash. Returns False if it was already claimed.
+
+    This is the authoritative guard: the atomic insert closes the check-then-act
+    race that a separate read+write would leave open under concurrency.
+    """
+    return await db.claim_object("consumed_tx", tx_hash, context)
 
 
 def _rep_key(record: ReputationRecord) -> str:
