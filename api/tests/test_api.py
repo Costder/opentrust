@@ -27,6 +27,7 @@ from api.src.schemas.marketplace import (
     WalletConnectRequest,
 )
 from api.src.services.marketplace_store import store
+from api.src.database import db as _db
 
 
 @pytest.fixture(autouse=True)
@@ -50,10 +51,10 @@ async def test_health():
 @pytest.mark.asyncio
 async def test_public_demo_payment_checkout_and_verify():
     store.reset()
-    payment = await checkout(CheckoutRequest(product_code=ProductCode.trust_report))
+    payment = await checkout(CheckoutRequest(product_code=ProductCode.trust_report), db=_db)
     assert payment.provider == "mock"
     assert payment.status == "paid"
-    verified = await verify(PaymentVerificationRequest(checkout_id=payment.checkout_id))
+    verified = await verify(PaymentVerificationRequest(checkout_id=payment.checkout_id), db=_db)
     assert verified.verified is True
     assert verified.amount_usdc == payment.amount_usdc
 
@@ -61,7 +62,7 @@ async def test_public_demo_payment_checkout_and_verify():
 @pytest.mark.asyncio
 async def test_public_demo_subscription_checkout():
     store.reset()
-    payment = await create_subscription()
+    payment = await create_subscription(db=_db)
     assert payment.product_code == ProductCode.monitoring_monthly
     assert payment.status == "paid"
 
@@ -74,7 +75,8 @@ async def test_mock_verified_badge_flow_without_live_secrets():
             installation_id=123,
             account="octo",
             repos=["octo/tool"],
-        )
+        ),
+        db=_db,
     )
     repo = await verify_repo(
         VerifyRepoRequest(
@@ -82,10 +84,12 @@ async def test_mock_verified_badge_flow_without_live_secrets():
             repo_full_name="octo/tool",
             branch="main",
             commit_sha="abc1234567",
-        )
+        ),
+        db=_db,
     )
     checkout_response = await create_coinbase_checkout(
-        CheckoutRequest(product_code=ProductCode.verified_badge, repo_id=repo.repo_id)
+        CheckoutRequest(product_code=ProductCode.verified_badge, repo_id=repo.repo_id),
+        db=_db,
     )
     assert checkout_response.status == "paid"
     evidence = await import_evidence(
@@ -93,21 +97,24 @@ async def test_mock_verified_badge_flow_without_live_secrets():
             repo_id=repo.repo_id,
             source="github_code_scanning",
             severity_counts=SeverityCounts(low=1),
-        )
+        ),
+        db=_db,
     )
     assert evidence.status == "pass"
-    report = await create_report(TrustReportRequest(repo_id=repo.repo_id, checkout_id=checkout_response.checkout_id))
+    report = await create_report(
+        TrustReportRequest(repo_id=repo.repo_id, checkout_id=checkout_response.checkout_id), db=_db
+    )
     assert report.status == "verified"
     assert report.evidence_count == 1
     assert len(store.badges) == 1
-    badge = await get_badge_alias(next(iter(store.badges)))
+    badge = await get_badge_alias(next(iter(store.badges)), db=_db)
     assert badge.report_id == report.report_id
 
 
 @pytest.mark.asyncio
 async def test_repo_verification_rejects_uninstalled_repo():
     store.reset()
-    await record_installation(GitHubInstallationRequest(installation_id=123, account="octo", repos=["octo/tool"]))
+    await record_installation(GitHubInstallationRequest(installation_id=123, account="octo", repos=["octo/tool"]), db=_db)
     with pytest.raises(HTTPException) as exc:
         await verify_repo(
             VerifyRepoRequest(
@@ -115,7 +122,8 @@ async def test_repo_verification_rejects_uninstalled_repo():
                 repo_full_name="other/tool",
                 branch="main",
                 commit_sha="abc1234567",
-            )
+            ),
+            db=_db,
         )
     assert exc.value.status_code == 403
 
@@ -123,12 +131,13 @@ async def test_repo_verification_rejects_uninstalled_repo():
 @pytest.mark.asyncio
 async def test_documented_github_repo_routes_have_mock_behavior():
     store.reset()
-    await record_installation(GitHubInstallationRequest(installation_id=123, account="octo", repos=["octo/tool"]))
+    await record_installation(GitHubInstallationRequest(installation_id=123, account="octo", repos=["octo/tool"]), db=_db)
     repos = await list_installed_repos()
     assert repos["repos"][0]["repo_full_name"] == "octo/tool"
     repo = await verify_repo_alias(
         "octo/tool",
         VerifyRepoRequest(installation_id=123, repo_full_name="octo/tool", branch="main", commit_sha="abc1234567"),
+        db=_db,
     )
     assert repo.repo_full_name == "octo/tool"
 
@@ -136,11 +145,11 @@ async def test_documented_github_repo_routes_have_mock_behavior():
 @pytest.mark.asyncio
 async def test_marketplace_order_uses_customer_wallets_without_custody():
     store.reset()
-    await record_installation(GitHubInstallationRequest(installation_id=123, account="octo", repos=["octo/tool"]))
+    await record_installation(GitHubInstallationRequest(installation_id=123, account="octo", repos=["octo/tool"]), db=_db)
     repo = await verify_repo(
-        VerifyRepoRequest(installation_id=123, repo_full_name="octo/tool", branch="main", commit_sha="abc1234567")
+        VerifyRepoRequest(installation_id=123, repo_full_name="octo/tool", branch="main", commit_sha="abc1234567"),
+        db=_db,
     )
-    from api.src.database import db as _db
     seller = await connect_wallet(
         WalletConnectRequest(owner="seller", address="0x1111111111111111111111111111111111111111"),
         db=_db,

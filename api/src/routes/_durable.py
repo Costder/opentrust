@@ -10,13 +10,119 @@ import json
 
 from ..database import Database
 from ..schemas.jobs import JobPosting
-from ..schemas.marketplace import EscrowRecord
+from ..schemas.marketplace import (
+    CheckoutResponse,
+    EscrowRecord,
+    EvidenceRun,
+    GitHubInstallationRequest,
+    TrustReport,
+    VerifiedBadge,
+    VerifiedRepo,
+)
 from ..schemas.reputation import CounterpartyRating, ReputationRecord
 from ..services.marketplace_store import store
 
 
 def _jsonable(model) -> dict:
     return json.loads(model.model_dump_json())
+
+
+# ── Trust-report / badge flow durability ─────────────────────────────────────
+# checkouts, repos, installations, evidence, reports and badges were in-memory
+# only, so on serverless the purchase flow broke across instances (a checkout
+# created on one worker was invisible to create_report on another). Persist on
+# write, hydrate on read, mirroring the escrow/listing pattern.
+
+async def persist_installation(db: Database, inst: GitHubInstallationRequest) -> None:
+    await db.save_object("installation", str(inst.installation_id), _jsonable(inst))
+
+
+async def hydrate_installations(db: Database) -> None:
+    for data in await db.load_objects("installation"):
+        try:
+            inst = GitHubInstallationRequest(**data)
+        except Exception:
+            continue
+        store.installations.setdefault(inst.installation_id, inst)
+
+
+async def persist_repo(db: Database, repo: VerifiedRepo) -> None:
+    await db.save_object("repo", repo.repo_id, _jsonable(repo))
+
+
+async def hydrate_repos(db: Database) -> None:
+    for data in await db.load_objects("repo"):
+        try:
+            repo = VerifiedRepo(**data)
+        except Exception:
+            continue
+        store.repos.setdefault(repo.repo_id, repo)
+
+
+async def persist_checkout(db: Database, checkout: CheckoutResponse) -> None:
+    await db.save_object("checkout", checkout.checkout_id, _jsonable(checkout))
+
+
+async def hydrate_checkout(db: Database, checkout_id: str) -> None:
+    if checkout_id in store.checkouts:
+        return
+    data = await db.get_object("checkout", checkout_id)
+    if data is None:
+        return
+    try:
+        store.checkouts[checkout_id] = CheckoutResponse(**data)
+    except Exception:
+        pass
+
+
+async def persist_evidence(db: Database, evidence: EvidenceRun) -> None:
+    await db.save_object("evidence", evidence.evidence_id, _jsonable(evidence))
+
+
+async def hydrate_evidence(db: Database) -> None:
+    for data in await db.load_objects("evidence"):
+        try:
+            ev = EvidenceRun(**data)
+        except Exception:
+            continue
+        store.evidence_runs.setdefault(ev.evidence_id, ev)
+
+
+async def persist_report(db: Database, report: TrustReport) -> None:
+    await db.save_object("report", report.report_id, _jsonable(report))
+
+
+async def hydrate_report(db: Database, report_id: str) -> None:
+    if report_id in store.reports:
+        return
+    data = await db.get_object("report", report_id)
+    if data is None:
+        return
+    try:
+        store.reports[report_id] = TrustReport(**data)
+    except Exception:
+        pass
+
+
+async def persist_badge(db: Database, badge: VerifiedBadge) -> None:
+    await db.save_object("badge", badge.badge_id, _jsonable(badge))
+
+
+async def hydrate_badge(db: Database, badge_id: str) -> None:
+    if badge_id in store.badges:
+        return
+    data = await db.get_object("badge", badge_id)
+    if data is None:
+        return
+    try:
+        store.badges[badge_id] = VerifiedBadge(**data)
+    except Exception:
+        pass
+
+
+async def claim_checkout(db: Database, checkout_id: str) -> bool:
+    """Atomically claim a paid checkout for report redemption. False if reused."""
+    return await db.claim_object("consumed_checkout", checkout_id, {})
 
 
 # ── Durable on-chain tx-hash replay protection ───────────────────────────────

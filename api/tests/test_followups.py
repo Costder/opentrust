@@ -129,6 +129,48 @@ async def test_claim_object_is_atomic_and_unique(tmp_path):
         settings.sqlite_path = orig
 
 
+async def test_report_flow_durable_across_cold_start(client):
+    """The full purchase flow (install → verify repo → checkout → evidence →
+    report) survives a cold start, and the paid checkout can't be redeemed twice
+    even on a fresh instance."""
+    inst = await client.post(
+        "/api/v1/github/app/installations/callback",
+        json={"installation_id": 777, "account": "octo", "repos": ["octo/tool"]},
+    )
+    assert inst.status_code == 200, inst.text
+    repo_resp = await client.post(
+        "/api/v1/github/app/repos/verify",
+        json={"installation_id": 777, "repo_full_name": "octo/tool", "branch": "main", "commit_sha": "abc1234567"},
+    )
+    assert repo_resp.status_code == 200, repo_resp.text
+    repo_id = repo_resp.json()["repo_id"]
+
+    chk = await client.post(
+        "/api/v1/payments/coinbase/checkouts",
+        json={"product_code": "trust_report", "repo_id": repo_id},
+    )
+    assert chk.status_code == 200, chk.text
+    checkout_id = chk.json()["checkout_id"]
+
+    await client.post(
+        "/api/v1/evidence/import",
+        json={"repo_id": repo_id, "source": "github_code_scanning", "severity_counts": {"low": 1}},
+    )
+    rep = await client.post("/api/v1/reports", json={"repo_id": repo_id, "checkout_id": checkout_id})
+    assert rep.status_code == 200, rep.text
+    report_id = rep.json()["report_id"]
+
+    store.reset()  # simulate a fresh serverless instance
+
+    # The report is still retrievable (hydrated from the DB on the new instance).
+    got = await client.get(f"/api/v1/reports/{report_id}")
+    assert got.status_code == 200
+
+    # The same paid checkout cannot mint a second report.
+    reuse = await client.post("/api/v1/reports", json={"repo_id": repo_id, "checkout_id": checkout_id})
+    assert reuse.status_code == 409
+
+
 async def test_claim_callback_rejects_unknown_oauth_state(client):
     """A callback with a state nonce the server never issued is rejected (CSRF)."""
     resp = await client.get("/api/v1/claim/callback?state=forged-nonce&code=x")

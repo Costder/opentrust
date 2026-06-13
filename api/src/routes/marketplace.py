@@ -28,7 +28,20 @@ from ..schemas.marketplace import (
 from ..middleware.auth import mint_wallet_token, verify_wallet_ownership
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
-from ._durable import claim_tx_hash, tx_hash_consumed
+from ._durable import (
+    claim_checkout,
+    claim_tx_hash,
+    hydrate_badge,
+    hydrate_checkout,
+    hydrate_evidence,
+    hydrate_report,
+    hydrate_repos,
+    persist_badge,
+    persist_checkout,
+    persist_evidence,
+    persist_report,
+    tx_hash_consumed,
+)
 
 
 def _jsonable(model) -> dict:
@@ -44,11 +57,13 @@ coinbase_router = APIRouter(prefix="/payments/coinbase", tags=["payments"])
 
 
 @coinbase_router.post("/checkouts", response_model=CheckoutResponse)
-async def create_coinbase_checkout(request: CheckoutRequest):
+async def create_coinbase_checkout(request: CheckoutRequest, db: Database = Depends(get_db)):
     try:
-        return store.create_checkout(request)
+        result = store.create_checkout(request)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await persist_checkout(db, result)
+    return result
 
 
 @coinbase_router.post("/webhooks")
@@ -288,25 +303,43 @@ async def create_order(request: MarketplaceOrderRequest, db: Database = Depends(
 
 
 @evidence_router.post("/import", response_model=EvidenceRun)
-async def import_evidence(request: EvidenceImportRequest):
+async def import_evidence(request: EvidenceImportRequest, db: Database = Depends(get_db)):
+    await hydrate_repos(db)  # repo may live only in the DB (cold start)
     try:
-        return store.import_evidence(request)
+        evidence = store.import_evidence(request)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await persist_evidence(db, evidence)
+    return evidence
 
 
 @reports_router.post("", response_model=TrustReport)
-async def create_report(request: TrustReportRequest):
+async def create_report(request: TrustReportRequest, db: Database = Depends(get_db)):
+    # The repo, checkout and evidence may all have been created on a different
+    # instance — hydrate before validating/redeeming.
+    await hydrate_repos(db)
+    await hydrate_checkout(db, request.checkout_id)
+    await hydrate_evidence(db)
     try:
-        return store.create_report(request)
+        report = store.create_report(request)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(status_code=402, detail=str(exc)) from exc
+    # Durable, atomic redemption: one paid checkout → one report, even across
+    # concurrent instances. The loser of a race is rejected and not persisted.
+    if not await claim_checkout(db, request.checkout_id):
+        raise HTTPException(status_code=409, detail="checkout has already been redeemed")
+    await persist_report(db, report)
+    badge = next((b for b in store.badges.values() if b.report_id == report.report_id), None)
+    if badge is not None:
+        await persist_badge(db, badge)
+    return report
 
 
 @reports_router.get("/{report_id}", response_model=TrustReport)
-async def get_report(report_id: str):
+async def get_report(report_id: str, db: Database = Depends(get_db)):
+    await hydrate_report(db, report_id)
     report = store.reports.get(report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="report does not exist")
@@ -314,7 +347,8 @@ async def get_report(report_id: str):
 
 
 @reports_router.get("/badges/{badge_id}", response_model=VerifiedBadge)
-async def get_badge(badge_id: str):
+async def get_badge(badge_id: str, db: Database = Depends(get_db)):
+    await hydrate_badge(db, badge_id)
     badge = store.badges.get(badge_id)
     if badge is None:
         raise HTTPException(status_code=404, detail="badge does not exist")
@@ -322,5 +356,5 @@ async def get_badge(badge_id: str):
 
 
 @badges_router.get("/{badge_id}", response_model=VerifiedBadge)
-async def get_badge_alias(badge_id: str):
-    return await get_badge(badge_id)
+async def get_badge_alias(badge_id: str, db: Database = Depends(get_db)):
+    return await get_badge(badge_id, db)
