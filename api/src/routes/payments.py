@@ -24,6 +24,7 @@ from ..schemas.reputation import CounterpartyRating, CounterpartyRatingRequest
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
 from ._durable import (
+    consume_tx_hash,
     hydrate_escrow,
     hydrate_jobs,
     hydrate_ratings,
@@ -32,6 +33,7 @@ from ._durable import (
     persist_rating,
     persist_reputation_all,
     persist_settlement,
+    tx_hash_consumed,
 )
 
 class OnchainVerifyRequest(BaseModel):
@@ -154,6 +156,8 @@ async def verify_escrow_deposit(
         raise HTTPException(status_code=404, detail="escrow does not exist")
     if wallet_id != escrow.buyer_wallet_id:
         raise HTTPException(status_code=403, detail="only the buyer may verify the deposit")
+    if await tx_hash_consumed(db, request.tx_hash):
+        raise HTTPException(status_code=409, detail="transaction has already been used")
     await _hydrate_wallets(db)
     buyer_wallet = store.wallets.get(escrow.buyer_wallet_id)
     if buyer_wallet is None:
@@ -168,6 +172,7 @@ async def verify_escrow_deposit(
             usdc_contract=settings.base_usdc_contract,
         )
         updated = store.verify_escrow_deposit(escrow_id, request.tx_hash)
+        await consume_tx_hash(db, request.tx_hash, {"escrow_id": escrow_id})
         await persist_escrow(db, updated)
         return updated
     except OnchainVerificationError as exc:

@@ -203,6 +203,45 @@ def _check_wallet_encryption_secret() -> None:
             )
 
 
+def _check_admin_token() -> None:
+    """In production the admin token MUST be set, else admin-gated endpoints
+    (passport overwrite, revocation) fall open to anyone."""
+    if settings.environment == "production" and not settings.registry_admin_token.strip():
+        _ERRORS.append(
+            "REGISTRY_ADMIN_TOKEN is empty in production. Admin endpoints would be "
+            "unauthenticated. Set a strong token: openssl rand -hex 32"
+        )
+
+
+def _check_payment_config() -> None:
+    """In production, live payment rails must have their verifying secrets set."""
+    if settings.environment != "production":
+        return
+    if (settings.payment_provider or "").lower() == "coinbase" and not settings.coinbase_business_webhook_secret.strip():
+        _ERRORS.append(
+            "PAYMENT_PROVIDER=coinbase but COINBASE_BUSINESS_WEBHOOK_SECRET is empty — "
+            "webhook signatures cannot be verified."
+        )
+    fee_or_escrow = settings.opentrust_escrow_enabled or settings.opentrust_marketplace_fee_enabled
+    if fee_or_escrow and not settings.opentrust_registry_treasury_address.strip():
+        _WARNINGS.append(
+            "Escrow/fee flows are enabled but OPENTRUST_REGISTRY_TREASURY_ADDRESS is empty."
+        )
+
+
+def _check_trusted_proxies() -> None:
+    """Warn if rate limiting is on in production without a trusted-proxy list, in
+    which case the real client IP can't be derived behind a proxy/edge."""
+    if settings.environment != "production":
+        return
+    rate_on = settings.rate_limit.strip() not in ("", "0/0")
+    if rate_on and not os.environ.get("TRUSTED_PROXIES", "").strip():
+        _WARNINGS.append(
+            "RATE_LIMIT is set but TRUSTED_PROXIES is empty. Behind a proxy/edge the "
+            "client IP cannot be trusted — set TRUSTED_PROXIES to your edge ranges."
+        )
+
+
 def _check_environment() -> None:
     """Log the environment mode."""
     _INFOS.append(f"Running in '{settings.environment}' mode")
@@ -216,6 +255,9 @@ def run_config_validation() -> None:
 
     _check_environment()
     _check_jwt_secret()
+    _check_admin_token()
+    _check_payment_config()
+    _check_trusted_proxies()
     _check_db_url()
     _check_cors_origins()
     _check_rate_limit()

@@ -149,3 +149,17 @@ async def test_account_persists_across_cold_start(client):
     got = await c.get(f"/api/v1/usage/accounts/{acct['account_id']}")
     assert got.status_code == 200
     assert got.json()["balance_usdc"] == "1.00"
+
+
+async def test_fund_tx_replay_blocked_across_cold_start(client):
+    """A funding tx consumed on one instance is rejected on another (DB-backed),
+    even though the in-memory dedup set is empty after a cold start."""
+    c, _ = client
+    buyer, seller, listing = await _setup(c)
+    first = await _fund(c, listing, buyer, "1.00")
+    assert first.status_code == 200
+
+    store.reset()  # simulate a fresh serverless instance: in-memory state gone
+    replay = await _fund(c, listing, buyer, "1.00")  # same TX hash
+    assert replay.status_code == 409
+    assert "already been used" in replay.json()["detail"]

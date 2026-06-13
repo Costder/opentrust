@@ -241,6 +241,64 @@ class TestConfigValidation:
             settings.environment = original_env
 
 
+class TestProductionFailClosed:
+    """Production config must fail closed on missing security-critical settings."""
+
+    def test_admin_token_required_in_production(self):
+        from api.src.config import _ERRORS, _check_admin_token, settings
+        _ERRORS.clear()
+        orig_tok, orig_env = settings.registry_admin_token, settings.environment
+        try:
+            settings.registry_admin_token = ""
+            settings.environment = "production"
+            _check_admin_token()
+            assert any("REGISTRY_ADMIN_TOKEN" in e for e in _ERRORS)
+        finally:
+            settings.registry_admin_token, settings.environment = orig_tok, orig_env
+
+    def test_coinbase_secret_required_in_production(self):
+        from api.src.config import _ERRORS, _check_payment_config, settings
+        _ERRORS.clear()
+        orig = (settings.environment, settings.payment_provider, settings.coinbase_business_webhook_secret)
+        try:
+            settings.environment = "production"
+            settings.payment_provider = "coinbase"
+            settings.coinbase_business_webhook_secret = ""
+            _check_payment_config()
+            assert any("COINBASE_BUSINESS_WEBHOOK_SECRET" in e for e in _ERRORS)
+        finally:
+            settings.environment, settings.payment_provider, settings.coinbase_business_webhook_secret = orig
+
+    def test_trusted_proxies_warns_in_production(self):
+        from api.src.config import _WARNINGS, _check_trusted_proxies, settings
+        _WARNINGS.clear()
+        orig_env, orig_rl = settings.environment, settings.rate_limit
+        os.environ.pop("TRUSTED_PROXIES", None)
+        try:
+            settings.environment = "production"
+            settings.rate_limit = "100/60"
+            _check_trusted_proxies()
+            assert any("TRUSTED_PROXIES" in w for w in _WARNINGS)
+        finally:
+            settings.environment, settings.rate_limit = orig_env, orig_rl
+
+    @pytest.mark.asyncio
+    async def test_require_admin_fails_closed_in_production(self):
+        from fastapi import HTTPException
+
+        from api.src.config import settings
+        from api.src.routes.well_known import _require_admin
+        orig_tok, orig_env = settings.registry_admin_token, settings.environment
+        try:
+            settings.registry_admin_token = ""
+            settings.environment = "production"
+            with pytest.raises(HTTPException) as exc:
+                await _require_admin(authorization=None)
+            assert exc.value.status_code == 503
+        finally:
+            settings.registry_admin_token, settings.environment = orig_tok, orig_env
+
+
 class TestMiddlewareIntegration:
     """Integration tests via the ASGI app."""
 

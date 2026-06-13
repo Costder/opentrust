@@ -28,6 +28,7 @@ from ..schemas.marketplace import (
 from ..middleware.auth import mint_wallet_token, verify_wallet_ownership
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
+from ._durable import consume_tx_hash, tx_hash_consumed
 
 
 def _jsonable(model) -> dict:
@@ -251,6 +252,8 @@ async def create_order(request: MarketplaceOrderRequest, db: Database = Depends(
             raise HTTPException(status_code=409, detail="escrow does not match order")
     if request.transaction_hash:
         # On-chain escrow: verify the USDC transfer before creating the order
+        if await tx_hash_consumed(db, request.transaction_hash):
+            raise HTTPException(status_code=409, detail="transaction has already been used")
         buyer_wallet = store.wallets.get(request.buyer_wallet_id)
         seller_wallet = store.wallets.get(listing.seller_wallet_id)
         if buyer_wallet is None or seller_wallet is None:
@@ -274,6 +277,8 @@ async def create_order(request: MarketplaceOrderRequest, db: Database = Depends(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if request.transaction_hash:
+        await consume_tx_hash(db, request.transaction_hash, {"order_id": order.order_id})
     await db.save_object("order", order.order_id, _jsonable(order))
     return order
 

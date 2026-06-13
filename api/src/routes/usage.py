@@ -19,6 +19,7 @@ from ..schemas.marketplace import (
 )
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
+from ._durable import consume_tx_hash, tx_hash_consumed
 
 router = APIRouter(prefix="/usage", tags=["usage"])
 
@@ -77,6 +78,9 @@ async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
     if buyer is None or seller is None:
         raise HTTPException(status_code=404, detail="wallet not found")
 
+    if await tx_hash_consumed(db, request.transaction_hash):
+        raise HTTPException(status_code=409, detail="transaction has already been used")
+
     # Verify the funding transfer landed in the seller's wallet on-chain.
     try:
         transfer = verify_usdc_transfer(
@@ -104,6 +108,7 @@ async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await consume_tx_hash(db, request.transaction_hash, {"account_id": account.account_id})
     await _persist_account(db, account)
     return account
 

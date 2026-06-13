@@ -41,6 +41,10 @@ async def _require_admin(authorization: str | None = Header(None)) -> str | None
     """
     token = settings.registry_admin_token
     if not token:
+        # Fail closed in production: an unset admin token must never silently
+        # leave admin endpoints open to everyone.
+        if settings.environment == "production":
+            raise HTTPException(status_code=503, detail="admin access is not configured")
         return None  # Dev mode — allow all, record as anonymous
 
     if not authorization:

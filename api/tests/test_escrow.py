@@ -36,9 +36,25 @@ def reset_store():
 
 
 @pytest.fixture
-async def client():
+async def client(tmp_path):
+    from api.src.config import settings
+    from api.src.database import Database, get_db
+
+    orig = (settings.turso_url, settings.turso_auth_token, settings.sqlite_path)
+    settings.turso_url = ""
+    settings.turso_auth_token = ""
+    settings.sqlite_path = str(tmp_path / "escrow.db")
+    test_db = Database()
+    await test_db.init()
+
+    async def _override():
+        yield test_db
+
+    app.dependency_overrides[get_db] = _override
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
+    app.dependency_overrides.clear()
+    settings.turso_url, settings.turso_auth_token, settings.sqlite_path = orig
 
 
 def seed_wallets() -> tuple[str, str]:

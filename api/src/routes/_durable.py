@@ -19,6 +19,19 @@ def _jsonable(model) -> dict:
     return json.loads(model.model_dump_json())
 
 
+# ── Durable on-chain tx-hash replay protection ───────────────────────────────
+# The in-memory store dedups within a single process; this DB-backed layer makes
+# it correct across workers and serverless cold starts so one real transfer can
+# never fund two escrows/orders/accounts on different instances.
+
+async def tx_hash_consumed(db: Database, tx_hash: str) -> bool:
+    return await db.get_object("consumed_tx", tx_hash) is not None
+
+
+async def consume_tx_hash(db: Database, tx_hash: str, context: dict) -> None:
+    await db.save_object("consumed_tx", tx_hash, context)
+
+
 def _rep_key(record: ReputationRecord) -> str:
     kind = record.subject_kind
     return f"{record.subject_id}::{kind.value if hasattr(kind, 'value') else kind}"

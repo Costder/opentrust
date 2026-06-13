@@ -29,6 +29,19 @@ from api.src.schemas.marketplace import (
 from api.src.services.marketplace_store import store
 
 
+@pytest.fixture(autouse=True)
+def _isolate_api_db(tmp_path):
+    """Point the shared db singleton at a throwaway file so these tests never
+    read or write the real dev database (and durable tx-hash dedup stays clean
+    across runs)."""
+    from api.src.database import db
+
+    orig = db._sqlite_path
+    db._sqlite_path = str(tmp_path / "api.db")
+    yield
+    db._sqlite_path = orig
+
+
 @pytest.mark.asyncio
 async def test_health():
     assert (await health())["status"] == "ok"
