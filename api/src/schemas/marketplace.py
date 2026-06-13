@@ -121,6 +121,9 @@ class WalletConnectRequest(BaseModel):
     owner: str = Field(min_length=1)
     address: str = Field(min_length=1)
     kind: WalletKind = WalletKind.byo
+    # EIP-191 signature of the canonical ownership-proof message. Required to be
+    # issued a party session token; absent → wallet is registered without one.
+    signature: str | None = None
 
     @field_validator("address")
     @classmethod
@@ -137,6 +140,12 @@ class WalletAccount(BaseModel):
     address: str
     kind: WalletKind
     custody: str = "customer"
+
+
+class WalletConnectResponse(WalletAccount):
+    # Party session token, present only when wallet ownership was proven (connect
+    # with a valid signature) or the registry owns the key (generated wallet).
+    session_token: str | None = None
 
 
 class DeliveryProofRequirement(BaseModel):

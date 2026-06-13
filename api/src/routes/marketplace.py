@@ -20,8 +20,10 @@ from ..schemas.marketplace import (
     VerifiedBadge,
     WalletAccount,
     WalletConnectRequest,
+    WalletConnectResponse,
     WalletKind,
 )
+from ..middleware.auth import mint_wallet_token, verify_wallet_ownership
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
 
@@ -56,17 +58,26 @@ async def coinbase_webhook():
     }
 
 
-@wallets_router.post("/connect", response_model=WalletAccount)
+@wallets_router.post("/connect", response_model=WalletConnectResponse)
 async def connect_wallet(request: WalletConnectRequest, db: Database = Depends(get_db)):
     if not settings.opentrust_customer_wallets_enabled:
         raise HTTPException(status_code=403, detail="customer wallets are disabled")
+    # A session token (party authority) is only issued when the caller proves
+    # control of the address with a valid signature. Registration without a
+    # signature still works but yields no token, so the wallet cannot act on
+    # escrow/job/payment endpoints.
+    if request.signature is not None and not verify_wallet_ownership(
+        request.owner, request.address, request.signature
+    ):
+        raise HTTPException(status_code=403, detail="wallet ownership signature is invalid")
     try:
         wallet = store.connect_wallet(request)
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     # Persist so the wallet survives a serverless cold start, like listings do.
     await db.save_object("wallet", wallet.wallet_id, _jsonable(wallet))
-    return wallet
+    session_token = mint_wallet_token(wallet.wallet_id) if request.signature is not None else None
+    return WalletConnectResponse(**wallet.model_dump(), session_token=session_token)
 
 
 @wallets_router.get("/{wallet_id}", response_model=WalletAccount)
@@ -88,7 +99,7 @@ class _GenerateWalletRequest(BaseModel):
     owner: str = Field(min_length=1)
 
 
-@wallets_router.post("/generate", response_model=WalletAccount)
+@wallets_router.post("/generate", response_model=WalletConnectResponse)
 async def generate_embedded_wallet(request: _GenerateWalletRequest, db: Database = Depends(get_db)):
     """Generate a new embedded wallet server-side. Requires OPENTRUST_EMBEDDED_WALLET_ENABLED=true."""
     if not settings.opentrust_embedded_wallet_enabled:
@@ -109,7 +120,9 @@ async def generate_embedded_wallet(request: _GenerateWalletRequest, db: Database
     )
     store.wallets[account.wallet_id] = account
     await db.save_object("wallet", account.wallet_id, _jsonable(account))
-    return account
+    # The registry generated and controls this key, so ownership is implicit —
+    # issue a session token directly.
+    return WalletConnectResponse(**account.model_dump(), session_token=mint_wallet_token(account.wallet_id))
 
 
 async def _hydrate_listings(db: Database) -> None:

@@ -186,6 +186,28 @@ def test_api_filter_jobs_by_provider_kind():
     assert resp.json() == []
 
 
+from api.src.middleware.auth import mint_wallet_token  # noqa: E402
+
+
+def _auth(wallet_id: str) -> dict:
+    return {"Authorization": f"Bearer {mint_wallet_token(wallet_id)}"}
+
+
+def test_api_cancel_requires_job_owner():
+    client, other = _connect()
+    job_id = api.post("/api/v1/jobs", json=_job_payload(client)).json()["job_id"]
+
+    # Unauthenticated callers are rejected.
+    assert api.post(f"/api/v1/jobs/{job_id}/cancel").status_code == 401
+    # A non-owner wallet cannot cancel someone else's job.
+    forbidden = api.post(f"/api/v1/jobs/{job_id}/cancel", headers=_auth(other.wallet_id))
+    assert forbidden.status_code == 403
+    # The job creator can cancel.
+    ok = api.post(f"/api/v1/jobs/{job_id}/cancel", headers=_auth(client.wallet_id))
+    assert ok.status_code == 200
+    assert ok.json()["status"] == "cancelled"
+
+
 def test_api_engage_returns_job_and_escrow(monkeypatch):
     from api.src.config import settings
 

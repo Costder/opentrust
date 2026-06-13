@@ -1,5 +1,7 @@
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -12,10 +14,51 @@ from ..services.github_verifier import build_github_oauth_url
 router = APIRouter(prefix="/claim", tags=["claim"])
 signup_router = APIRouter(prefix="/signup", tags=["signup"])
 
+# In-memory OAuth state nonces (nonce -> expiry epoch). Prevents login-CSRF /
+# unsolicited callbacks. In-memory is fine for a single worker; multi-worker or
+# serverless deployments should back this with a shared store.
+_OAUTH_STATES: dict[str, float] = {}
+_STATE_TTL_SECONDS = 600
+
+
+def _allowed_redirect_hosts() -> set[str]:
+    hosts = {h.strip().lower() for h in settings.oauth_allowed_redirect_hosts.split(",") if h.strip()}
+    for origin in settings.cors_origins.split(","):
+        netloc = urlparse(origin.strip()).hostname
+        if netloc:
+            hosts.add(netloc.lower())
+    return hosts
+
+
+def _validate_redirect_uri(redirect_uri: str) -> None:
+    host = (urlparse(redirect_uri).hostname or "").lower()
+    if host not in _allowed_redirect_hosts():
+        raise HTTPException(status_code=400, detail=f"redirect_uri host '{host}' is not allowed")
+
+
+def _new_state() -> str:
+    nonce = secrets.token_urlsafe(32)
+    _OAUTH_STATES[nonce] = time.time() + _STATE_TTL_SECONDS
+    return nonce
+
+
+def _consume_state(state: str | None) -> None:
+    if not state or state not in _OAUTH_STATES:
+        raise HTTPException(status_code=400, detail="invalid or missing OAuth state")
+    expiry = _OAUTH_STATES.pop(state)
+    if expiry < time.time():
+        raise HTTPException(status_code=400, detail="OAuth state has expired")
+
 
 @router.post("")
 async def start_claim(slug: str, redirect_uri: str = "http://localhost:8000/api/v1/claim/callback"):
-    return {"auth_url": build_github_oauth_url(settings.github_client_id, redirect_uri), "slug": slug}
+    _validate_redirect_uri(redirect_uri)
+    state = _new_state()
+    return {
+        "auth_url": build_github_oauth_url(settings.github_client_id, redirect_uri, state),
+        "slug": slug,
+        "state": state,
+    }
 
 
 # ── Agent-driven human signup ────────────────────────────────────────────────
@@ -37,6 +80,7 @@ async def signup_start(request: SignupStartRequest):
     """
     if not settings.github_client_id:
         raise HTTPException(status_code=503, detail="GitHub sign-in is not configured on this registry")
+    _validate_redirect_uri(request.redirect_uri)
 
     pending = secrets.token_urlsafe(16)
     state = f"signup:{request.agent_id}:{pending}"
@@ -59,14 +103,15 @@ async def signup_start(request: SignupStartRequest):
 
 
 @router.get("/callback")
-async def claim_callback(code: str | None = None):
+async def claim_callback(code: str | None = None, state: str | None = None):
     """Exchange a GitHub OAuth ``code`` for a registry JWT bound to the real user.
 
     Previously this minted a valid signed JWT (subject ``github-user``) for *any*
     caller, with or without a code — an authentication bypass. We now require a
-    code, require GitHub OAuth to be configured, exchange the code server-side,
-    and mint a token whose subject is the authenticated GitHub user's id.
+    valid state nonce (CSRF), a code, GitHub OAuth to be configured, exchange the
+    code server-side, and mint a token whose subject is the authenticated user.
     """
+    _consume_state(state)
     if not code:
         raise HTTPException(status_code=400, detail="Missing OAuth code")
     if not settings.github_client_id or not settings.github_client_secret:

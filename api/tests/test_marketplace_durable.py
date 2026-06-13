@@ -11,7 +11,12 @@ from httpx import ASGITransport, AsyncClient
 
 from api.src.database import Database, get_db
 from api.src.main import app
+from api.src.middleware.auth import mint_wallet_token
 from api.src.services.marketplace_store import store
+
+
+def _auth(wallet_id: str) -> dict:
+    return {"Authorization": f"Bearer {mint_wallet_token(wallet_id)}"}
 
 
 @pytest.fixture
@@ -260,17 +265,25 @@ async def test_escrow_lifecycle_survives_cold_start(client):
         ms.base_rpc_url = "https://mainnet.base.org"
         ms.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
         mock_verify.return_value = MagicMock(verified=True)
-        resp = await c.post(f"/api/v1/escrow/{escrow_id}/verify-deposit", json={"tx_hash": "0x" + "a" * 64})
+        resp = await c.post(
+            f"/api/v1/escrow/{escrow_id}/verify-deposit",
+            json={"tx_hash": "0x" + "a" * 64},
+            headers=_auth(buyer),
+        )
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "funded"
 
     store.reset()  # cold start before deliver
-    resp = await c.post(f"/api/v1/escrow/{escrow_id}/deliver", json={"result_hash": "sha256:abc"})
+    resp = await c.post(
+        f"/api/v1/escrow/{escrow_id}/deliver",
+        json={"result_hash": "sha256:abc"},
+        headers=_auth(seller),
+    )
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "delivered"
 
     store.reset()  # cold start before release (mutates escrow + reputation)
-    resp = await c.post(f"/api/v1/escrow/{escrow_id}/release")
+    resp = await c.post(f"/api/v1/escrow/{escrow_id}/release", headers=_auth(buyer))
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "released"
 

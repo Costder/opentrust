@@ -7,7 +7,12 @@ from unittest.mock import MagicMock, patch
 from httpx import ASGITransport, AsyncClient
 
 from api.src.main import app
+from api.src.middleware.auth import mint_wallet_token
 from api.src.services.marketplace_store import store
+
+
+def _wallet_auth(wallet_id: str = "w_test") -> dict:
+    return {"Authorization": f"Bearer {mint_wallet_token(wallet_id)}"}
 
 
 @pytest.fixture(autouse=True)
@@ -234,6 +239,65 @@ class TestEscrowOrderFlow:
         mock_verify.assert_not_called()
 
 
+class TestWalletOwnershipProof:
+    """A party session token is only issued when the caller proves control of
+    the wallet address with a valid EIP-191 signature."""
+
+    @staticmethod
+    def _sign(owner: str, acct) -> str:
+        from eth_account import Account
+        from eth_account.messages import encode_defunct
+
+        from api.src.middleware.auth import wallet_connect_message
+
+        signed = Account.sign_message(encode_defunct(text=wallet_connect_message(owner, acct.address)), acct.key)
+        sig = signed.signature.hex()
+        return sig if sig.startswith("0x") else "0x" + sig
+
+    async def test_valid_signature_issues_session_token(self, client):
+        from eth_account import Account
+
+        acct = Account.create()
+        with patch("api.src.routes.marketplace.settings") as mock_settings:
+            mock_settings.opentrust_customer_wallets_enabled = True
+            mock_settings.opentrust_byo_wallet_enabled = True
+            mock_settings.opentrust_embedded_wallet_enabled = False
+            resp = await client.post(
+                "/api/v1/wallets/connect",
+                json={"owner": "alice", "address": acct.address, "kind": "byo", "signature": self._sign("alice", acct)},
+            )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["session_token"]
+
+    async def test_invalid_signature_is_rejected(self, client):
+        from eth_account import Account
+
+        acct = Account.create()
+        attacker = Account.create()  # signs with the wrong key
+        with patch("api.src.routes.marketplace.settings") as mock_settings:
+            mock_settings.opentrust_customer_wallets_enabled = True
+            mock_settings.opentrust_byo_wallet_enabled = True
+            mock_settings.opentrust_embedded_wallet_enabled = False
+            resp = await client.post(
+                "/api/v1/wallets/connect",
+                json={"owner": "alice", "address": acct.address, "kind": "byo", "signature": self._sign("alice", attacker)},
+            )
+        assert resp.status_code == 403
+        assert "signature" in resp.json()["detail"]
+
+    async def test_connect_without_signature_has_no_token(self, client):
+        with patch("api.src.routes.marketplace.settings") as mock_settings:
+            mock_settings.opentrust_customer_wallets_enabled = True
+            mock_settings.opentrust_byo_wallet_enabled = True
+            mock_settings.opentrust_embedded_wallet_enabled = False
+            resp = await client.post(
+                "/api/v1/wallets/connect",
+                json={"owner": "bob", "address": "0x" + "a" * 40, "kind": "byo"},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["session_token"] is None
+
+
 class TestOnchainPaymentVerificationEndpoint:
     async def test_valid_tx_returns_verified_true(self, client):
         """POST /payments/verify-onchain returns 200 and verified=True for a valid tx."""
@@ -253,6 +317,7 @@ class TestOnchainPaymentVerificationEndpoint:
                     "expected_recipient": "0x" + "b" * 40,
                     "expected_amount_usdc": "25.00",
                 },
+                headers=_wallet_auth(),
             )
         assert response.status_code == 200
         data = response.json()
@@ -275,6 +340,7 @@ class TestOnchainPaymentVerificationEndpoint:
                     "expected_recipient": "0x" + "b" * 40,
                     "expected_amount_usdc": "25.00",
                 },
+                headers=_wallet_auth(),
             )
         assert response.status_code == 400
         assert "amount mismatch" in response.json()["detail"]
@@ -289,6 +355,7 @@ class TestOnchainPaymentVerificationEndpoint:
                 "expected_recipient": "0x" + "b" * 40,
                 "expected_amount_usdc": "25.00",
             },
+            headers=_wallet_auth(),
         )
         assert response.status_code == 422
 
@@ -302,5 +369,6 @@ class TestOnchainPaymentVerificationEndpoint:
                 "expected_recipient": "0x" + "b" * 40,
                 "expected_amount_usdc": "not-a-number",
             },
+            headers=_wallet_auth(),
         )
         assert response.status_code == 422

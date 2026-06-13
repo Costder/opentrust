@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: str = "http://localhost:3000"
 
+    # OAuth redirect allowlist (hosts permitted as GitHub OAuth redirect_uri).
+    # Comma-separated hostnames; cors_origins hosts are merged in at runtime.
+    oauth_allowed_redirect_hosts: str = "localhost,127.0.0.1,opentrust.infiniterealms.io"
+
     # Pricing
     opentrust_price_trust_report_usdc: str = "19.00"
     opentrust_price_verified_badge_usdc: str = "49.00"

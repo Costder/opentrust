@@ -88,6 +88,8 @@ async def test_install_flags_paid_tools(client):
 async def test_signup_start_returns_github_link(client):
     with patch("api.src.routes.auth.settings") as mock_settings:
         mock_settings.github_client_id = "Iv1.testid"
+        mock_settings.oauth_allowed_redirect_hosts = "app.test"
+        mock_settings.cors_origins = "http://localhost:3000"
         resp = await client.post("/api/v1/signup/start", json={
             "agent_id": "acme/research-agent",
             "redirect_uri": "https://app.test/signup/github",
@@ -98,6 +100,20 @@ async def test_signup_start_returns_github_link(client):
     assert "Iv1.testid" in body["signin_url"]
     assert body["pending_token"]
     assert body["instructions"]  # human-facing instruction string
+
+
+async def test_signup_start_rejects_unallowed_redirect(client):
+    """An attacker-controlled redirect_uri host must be rejected (open-redirect / code interception)."""
+    with patch("api.src.routes.auth.settings") as mock_settings:
+        mock_settings.github_client_id = "Iv1.testid"
+        mock_settings.oauth_allowed_redirect_hosts = "opentrust.infiniterealms.io"
+        mock_settings.cors_origins = "http://localhost:3000"
+        resp = await client.post("/api/v1/signup/start", json={
+            "agent_id": "acme/research-agent",
+            "redirect_uri": "https://evil.example/steal",
+        })
+    assert resp.status_code == 400
+    assert "not allowed" in resp.json()["detail"]
 
 
 async def test_signup_start_requires_oauth_configured(client):

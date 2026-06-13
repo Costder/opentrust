@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -5,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from ..config import settings
 from ..database import Database, get_db
+from ..middleware.auth import current_wallet
 from ..schemas.marketplace import (
     CheckoutRequest,
     CheckoutResponse,
@@ -140,11 +142,18 @@ async def get_escrow(escrow_id: str, db: Database = Depends(get_db)):
 
 
 @escrow_router.post("/{escrow_id}/verify-deposit", response_model=EscrowRecord)
-async def verify_escrow_deposit(escrow_id: str, request: EscrowDepositVerificationRequest, db: Database = Depends(get_db)):
+async def verify_escrow_deposit(
+    escrow_id: str,
+    request: EscrowDepositVerificationRequest,
+    db: Database = Depends(get_db),
+    wallet_id: str = Depends(current_wallet),
+):
     from ..routes.marketplace import _hydrate_wallets
     escrow = await hydrate_escrow(db, escrow_id)
     if escrow is None:
         raise HTTPException(status_code=404, detail="escrow does not exist")
+    if wallet_id != escrow.buyer_wallet_id:
+        raise HTTPException(status_code=403, detail="only the buyer may verify the deposit")
     await _hydrate_wallets(db)
     buyer_wallet = store.wallets.get(escrow.buyer_wallet_id)
     if buyer_wallet is None:
@@ -168,8 +177,17 @@ async def verify_escrow_deposit(escrow_id: str, request: EscrowDepositVerificati
 
 
 @escrow_router.post("/{escrow_id}/deliver", response_model=EscrowRecord)
-async def deliver_escrow(escrow_id: str, request: EscrowDeliveryRequest, db: Database = Depends(get_db)):
-    await hydrate_escrow(db, escrow_id)
+async def deliver_escrow(
+    escrow_id: str,
+    request: EscrowDeliveryRequest,
+    db: Database = Depends(get_db),
+    wallet_id: str = Depends(current_wallet),
+):
+    escrow = await hydrate_escrow(db, escrow_id)
+    if escrow is None:
+        raise HTTPException(status_code=404, detail="escrow does not exist")
+    if wallet_id != escrow.seller_wallet_id:
+        raise HTTPException(status_code=403, detail="only the seller may mark delivery")
     try:
         escrow = store.mark_escrow_delivered(
             escrow_id,
@@ -183,8 +201,26 @@ async def deliver_escrow(escrow_id: str, request: EscrowDeliveryRequest, db: Dat
 
 
 @escrow_router.post("/{escrow_id}/release", response_model=EscrowRecord)
-async def release_escrow(escrow_id: str, db: Database = Depends(get_db)):
-    await hydrate_escrow(db, escrow_id)
+async def release_escrow(
+    escrow_id: str,
+    db: Database = Depends(get_db),
+    wallet_id: str = Depends(current_wallet),
+):
+    escrow = await hydrate_escrow(db, escrow_id)
+    if escrow is None:
+        raise HTTPException(status_code=404, detail="escrow does not exist")
+    is_buyer = wallet_id == escrow.buyer_wallet_id
+    is_seller = wallet_id == escrow.seller_wallet_id
+    if not (is_buyer or is_seller):
+        raise HTTPException(status_code=403, detail="only a party to this escrow may release it")
+    # Buyer can approve release at any time. The seller may only self-release once
+    # the dispute window (release_available_at) has elapsed.
+    if is_seller and not is_buyer and escrow.release_available_at:
+        if datetime.now(timezone.utc).isoformat() < escrow.release_available_at:
+            raise HTTPException(
+                status_code=403,
+                detail=f"release not available until the dispute window ends ({escrow.release_available_at})",
+            )
     await hydrate_reputation(db)  # accrual must build on existing history
     await hydrate_jobs(db)        # so a linked job can be completed
     try:
@@ -196,8 +232,16 @@ async def release_escrow(escrow_id: str, db: Database = Depends(get_db)):
 
 
 @escrow_router.post("/{escrow_id}/refund", response_model=EscrowRecord)
-async def refund_escrow(escrow_id: str, db: Database = Depends(get_db)):
-    await hydrate_escrow(db, escrow_id)
+async def refund_escrow(
+    escrow_id: str,
+    db: Database = Depends(get_db),
+    wallet_id: str = Depends(current_wallet),
+):
+    escrow = await hydrate_escrow(db, escrow_id)
+    if escrow is None:
+        raise HTTPException(status_code=404, detail="escrow does not exist")
+    if wallet_id != escrow.buyer_wallet_id:
+        raise HTTPException(status_code=403, detail="only the buyer may request a refund")
     await hydrate_reputation(db)
     try:
         escrow = store.refund_escrow(escrow_id)
@@ -208,8 +252,17 @@ async def refund_escrow(escrow_id: str, db: Database = Depends(get_db)):
 
 
 @escrow_router.post("/{escrow_id}/disputes", response_model=EscrowRecord)
-async def dispute_escrow(escrow_id: str, request: EscrowDisputeRequest, db: Database = Depends(get_db)):
-    await hydrate_escrow(db, escrow_id)
+async def dispute_escrow(
+    escrow_id: str,
+    request: EscrowDisputeRequest,
+    db: Database = Depends(get_db),
+    wallet_id: str = Depends(current_wallet),
+):
+    escrow = await hydrate_escrow(db, escrow_id)
+    if escrow is None:
+        raise HTTPException(status_code=404, detail="escrow does not exist")
+    if wallet_id not in (escrow.buyer_wallet_id, escrow.seller_wallet_id):
+        raise HTTPException(status_code=403, detail="only a party to this escrow may dispute it")
     await hydrate_reputation(db)
     try:
         escrow = store.mark_escrow_disputed(escrow_id, request.reason)
@@ -242,8 +295,15 @@ async def list_escrow_ratings(escrow_id: str, db: Database = Depends(get_db)):
 
 
 @router.post("/verify-onchain", response_model=OnchainVerifyResponse)
-async def verify_onchain_payment(request: OnchainVerifyRequest):
-    """Verify a USDC payment on Base L2 by inspecting the transaction receipt."""
+async def verify_onchain_payment(
+    request: OnchainVerifyRequest,
+    _wallet_id: str = Depends(current_wallet),
+):
+    """Verify a USDC payment on Base L2 by inspecting the transaction receipt.
+
+    Authenticated-only: this is a chain oracle, so leaving it open let anyone
+    probe arbitrary tx/sender/recipient/amount combinations.
+    """
     try:
         result = verify_usdc_transfer(
             tx_hash=request.tx_hash,

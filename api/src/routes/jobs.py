@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..config import settings
 from ..database import Database, get_db
+from ..middleware.auth import current_wallet
 from ..schemas.jobs import (
     JobEngagement,
     JobEngageRequest,
@@ -84,8 +85,16 @@ async def engage_job(job_id: str, request: JobEngageRequest, db: Database = Depe
 
 
 @router.post("/{job_id}/cancel", response_model=JobPosting)
-async def cancel_job(job_id: str, db: Database = Depends(get_db)):
-    await hydrate_job(db, job_id)
+async def cancel_job(
+    job_id: str,
+    db: Database = Depends(get_db),
+    wallet_id: str = Depends(current_wallet),
+):
+    job = await hydrate_job(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job does not exist")
+    if wallet_id != job.client_wallet_id:
+        raise HTTPException(status_code=403, detail="only the job creator may cancel this job")
     try:
         job = store.cancel_job(job_id)
     except (KeyError, PermissionError, ValueError) as exc:

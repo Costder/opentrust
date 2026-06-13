@@ -7,6 +7,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from api.src.main import app
+from api.src.middleware.auth import mint_wallet_token
 from api.src.schemas.marketplace import (
     DeliveryProofRequirement,
     MarketplaceListing,
@@ -14,6 +15,11 @@ from api.src.schemas.marketplace import (
     WalletKind,
 )
 from api.src.services.marketplace_store import store
+
+
+def _auth(wallet_id: str) -> dict:
+    """Authorization header carrying a party session token for ``wallet_id``."""
+    return {"Authorization": f"Bearer {mint_wallet_token(wallet_id)}"}
 
 
 BUYER_ADDRESS = "0x" + "b" * 40
@@ -188,6 +194,7 @@ class TestEscrowLifecycle:
                 response = await client.post(
                     f"/api/v1/escrow/{escrow['escrow_id']}/verify-deposit",
                     json={"tx_hash": TX_HASH},
+                    headers=_auth("wallet_buyer"),
                 )
 
         assert response.status_code == 200
@@ -211,6 +218,7 @@ class TestEscrowLifecycle:
                 response = await client.post(
                     f"/api/v1/escrow/{escrow['escrow_id']}/verify-deposit",
                     json={"tx_hash": TX_HASH},
+                    headers=_auth("wallet_buyer"),
                 )
 
         assert response.status_code == 402
@@ -222,6 +230,7 @@ class TestEscrowLifecycle:
         response = await client.post(
             f"/api/v1/escrow/{escrow['escrow_id']}/deliver",
             json={"result_hash": "sha256:abc"},
+            headers=_auth("wallet_seller"),
         )
 
         assert response.status_code == 409
@@ -234,8 +243,13 @@ class TestEscrowLifecycle:
         deliver = await client.post(
             f"/api/v1/escrow/{escrow['escrow_id']}/deliver",
             json={"result_hash": "sha256:abc", "artifact_uri": "https://example.test/out"},
+            headers=_auth("wallet_seller"),
         )
-        release = await client.post(f"/api/v1/escrow/{escrow['escrow_id']}/release")
+        # Buyer approves release immediately (allowed at any time).
+        release = await client.post(
+            f"/api/v1/escrow/{escrow['escrow_id']}/release",
+            headers=_auth("wallet_buyer"),
+        )
         read = await client.get(f"/api/v1/escrow/{escrow['escrow_id']}")
 
         assert deliver.status_code == 200
@@ -253,9 +267,16 @@ class TestEscrowLifecycle:
         dispute = await client.post(
             f"/api/v1/escrow/{escrow['escrow_id']}/disputes",
             json={"reason": "delivery missing required files"},
+            headers=_auth("wallet_buyer"),
         )
-        release = await client.post(f"/api/v1/escrow/{escrow['escrow_id']}/release")
-        refund = await client.post(f"/api/v1/escrow/{escrow['escrow_id']}/refund")
+        release = await client.post(
+            f"/api/v1/escrow/{escrow['escrow_id']}/release",
+            headers=_auth("wallet_buyer"),
+        )
+        refund = await client.post(
+            f"/api/v1/escrow/{escrow['escrow_id']}/refund",
+            headers=_auth("wallet_buyer"),
+        )
 
         assert dispute.status_code == 200
         assert dispute.json()["status"] == "disputed"
@@ -263,3 +284,42 @@ class TestEscrowLifecycle:
         assert refund.status_code == 200
         assert refund.json()["status"] == "refunded"
         assert refund.json()["refund_tx_hash"].startswith("mock_refund_")
+
+    async def test_unauthenticated_requests_are_rejected(self, client):
+        escrow = await create_escrow(client)
+        store.verify_escrow_deposit(escrow["escrow_id"], TX_HASH)
+        # No bearer token at all.
+        resp = await client.post(f"/api/v1/escrow/{escrow['escrow_id']}/deliver", json={"result_hash": "x"})
+        assert resp.status_code == 401
+
+    async def test_deliver_rejected_for_non_seller(self, client):
+        escrow = await create_escrow(client)
+        store.verify_escrow_deposit(escrow["escrow_id"], TX_HASH)
+        # Buyer (not the seller) attempts to mark delivery.
+        resp = await client.post(
+            f"/api/v1/escrow/{escrow['escrow_id']}/deliver",
+            json={"result_hash": "sha256:abc"},
+            headers=_auth("wallet_buyer"),
+        )
+        assert resp.status_code == 403
+        assert "seller" in resp.json()["detail"]
+
+    async def test_seller_self_release_blocked_until_window_then_allowed(self, client):
+        escrow = await create_escrow(client)
+        eid = escrow["escrow_id"]
+        store.verify_escrow_deposit(eid, TX_HASH)
+        await client.post(
+            f"/api/v1/escrow/{eid}/deliver",
+            json={"result_hash": "sha256:abc"},
+            headers=_auth("wallet_seller"),
+        )
+        # Seller tries to self-release before the dispute window elapses → 403.
+        early = await client.post(f"/api/v1/escrow/{eid}/release", headers=_auth("wallet_seller"))
+        assert early.status_code == 403
+        assert "dispute window" in early.json()["detail"]
+
+        # Simulate the window elapsing, then seller self-release succeeds.
+        store.escrows[eid].release_available_at = "2000-01-01T00:00:00+00:00"
+        late = await client.post(f"/api/v1/escrow/{eid}/release", headers=_auth("wallet_seller"))
+        assert late.status_code == 200
+        assert late.json()["status"] == "released"
