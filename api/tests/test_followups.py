@@ -129,6 +129,31 @@ async def test_claim_object_is_atomic_and_unique(tmp_path):
         settings.sqlite_path = orig
 
 
+async def test_claim_callback_rejects_unknown_oauth_state(client):
+    """A callback with a state nonce the server never issued is rejected (CSRF)."""
+    resp = await client.get("/api/v1/claim/callback?state=forged-nonce&code=x")
+    assert resp.status_code == 400
+    assert "state" in resp.json()["detail"].lower()
+
+
+async def test_oauth_state_is_durable_and_one_time(client):
+    """The state minted by start_claim validates on a later request (DB-backed,
+    survives a different worker) and cannot be replayed."""
+    start = await client.post("/api/v1/claim?slug=foo")
+    assert start.status_code == 200
+    state = start.json()["state"]
+
+    # Valid state is accepted (flow then stops at the missing OAuth code).
+    first = await client.get(f"/api/v1/claim/callback?state={state}")
+    assert first.status_code == 400
+    assert "code" in first.json()["detail"].lower()
+
+    # The nonce was consumed — replaying it is rejected as invalid state.
+    replay = await client.get(f"/api/v1/claim/callback?state={state}&code=x")
+    assert replay.status_code == 400
+    assert "state" in replay.json()["detail"].lower()
+
+
 async def test_list_tools_total_counts_all_matches(client):
     payload = {
         "tool_identity": {"slug": "count-me", "name": "Count Me"},

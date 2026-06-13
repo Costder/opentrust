@@ -4,20 +4,20 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from jose import jwt
 from pydantic import BaseModel, Field
 
 from ..config import settings
+from ..database import Database, get_db
 from ..services.github_verifier import build_github_oauth_url
 
 router = APIRouter(prefix="/claim", tags=["claim"])
 signup_router = APIRouter(prefix="/signup", tags=["signup"])
 
-# In-memory OAuth state nonces (nonce -> expiry epoch). Prevents login-CSRF /
-# unsolicited callbacks. In-memory is fine for a single worker; multi-worker or
-# serverless deployments should back this with a shared store.
-_OAUTH_STATES: dict[str, float] = {}
+# OAuth state nonces prevent login-CSRF / unsolicited callbacks. Persisted in the
+# shared object store so a callback can validate a nonce minted by a different
+# worker / serverless instance (in-memory alone breaks on serverless).
 _STATE_TTL_SECONDS = 600
 
 
@@ -36,24 +36,31 @@ def _validate_redirect_uri(redirect_uri: str) -> None:
         raise HTTPException(status_code=400, detail=f"redirect_uri host '{host}' is not allowed")
 
 
-def _new_state() -> str:
+async def _new_state(db: Database) -> str:
     nonce = secrets.token_urlsafe(32)
-    _OAUTH_STATES[nonce] = time.time() + _STATE_TTL_SECONDS
+    await db.save_object("oauth_state", nonce, {"created": time.time()})
     return nonce
 
 
-def _consume_state(state: str | None) -> None:
-    if not state or state not in _OAUTH_STATES:
+async def _consume_state(db: Database, state: str | None) -> None:
+    if not state:
         raise HTTPException(status_code=400, detail="invalid or missing OAuth state")
-    expiry = _OAUTH_STATES.pop(state)
-    if expiry < time.time():
+    record = await db.get_object("oauth_state", state)
+    if record is None:
+        raise HTTPException(status_code=400, detail="invalid or missing OAuth state")
+    await db.delete_object("oauth_state", state)  # one-time use
+    if time.time() - float(record.get("created", 0)) > _STATE_TTL_SECONDS:
         raise HTTPException(status_code=400, detail="OAuth state has expired")
 
 
 @router.post("")
-async def start_claim(slug: str, redirect_uri: str = "http://localhost:8000/api/v1/claim/callback"):
+async def start_claim(
+    slug: str,
+    redirect_uri: str = "http://localhost:8000/api/v1/claim/callback",
+    db: Database = Depends(get_db),
+):
     _validate_redirect_uri(redirect_uri)
-    state = _new_state()
+    state = await _new_state(db)
     return {
         "auth_url": build_github_oauth_url(settings.github_client_id, redirect_uri, state),
         "slug": slug,
@@ -103,7 +110,11 @@ async def signup_start(request: SignupStartRequest):
 
 
 @router.get("/callback")
-async def claim_callback(code: str | None = None, state: str | None = None):
+async def claim_callback(
+    code: str | None = None,
+    state: str | None = None,
+    db: Database = Depends(get_db),
+):
     """Exchange a GitHub OAuth ``code`` for a registry JWT bound to the real user.
 
     Previously this minted a valid signed JWT (subject ``github-user``) for *any*
@@ -111,7 +122,7 @@ async def claim_callback(code: str | None = None, state: str | None = None):
     valid state nonce (CSRF), a code, GitHub OAuth to be configured, exchange the
     code server-side, and mint a token whose subject is the authenticated user.
     """
-    _consume_state(state)
+    await _consume_state(db, state)
     if not code:
         raise HTTPException(status_code=400, detail="Missing OAuth code")
     if not settings.github_client_id or not settings.github_client_secret:
