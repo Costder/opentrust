@@ -75,6 +75,9 @@ class MarketplaceStore:
         # usage accounts (double-credit / replay). In-memory; for multi-worker or
         # serverless durability this should be backed by a unique DB index.
         self.consumed_tx_hashes: set[str] = set()
+        # Checkout ids already redeemed for a trust report / badge, so one paid
+        # checkout cannot mint unlimited reports.
+        self.consumed_checkouts: set[str] = set()
 
     def reset(self) -> None:
         self.__init__()
@@ -137,6 +140,15 @@ class MarketplaceStore:
         )
         self.wallets[wallet.wallet_id] = wallet
         return wallet
+
+    def mark_checkout_paid(self, checkout_id: str) -> bool:
+        """Mark a checkout paid (used by the verified Coinbase webhook). Returns
+        True if a matching checkout was found."""
+        checkout = self.checkouts.get(checkout_id)
+        if checkout is None:
+            return False
+        checkout.status = PaymentStatus.paid
+        return True
 
     def create_listing(self, request: MarketplaceListingRequest) -> MarketplaceListing:
         if request.seller_wallet_id not in self.wallets:
@@ -679,6 +691,9 @@ class MarketplaceStore:
             raise KeyError("checkout does not exist")
         if checkout.status != PaymentStatus.paid:
             raise PermissionError("checkout is not paid")
+        if request.checkout_id in self.consumed_checkouts:
+            raise PermissionError("checkout has already been redeemed")
+        self.consumed_checkouts.add(request.checkout_id)
         evidence_count = sum(1 for item in self.evidence_runs.values() if item.repo_id == request.repo_id)
         status = "verified" if evidence_count else "verified_no_evidence"
         report = TrustReport(

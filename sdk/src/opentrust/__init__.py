@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import asyncio
 
+import httpx
+
 from ._client import _Client
 from ._recommend import TRUST_LEVELS, recommend, risk_level
 from ._types import ToolsPage, VerifyResult
+from ._verify import extract_registry_key, verify_passport_signature
 
 __version__ = "0.1.0"
 __all__ = [
@@ -15,7 +18,7 @@ __all__ = [
 ]
 
 
-def _build_result(passport: dict) -> VerifyResult:
+def _build_result(passport: dict, *, verified_signature: bool | None = None) -> VerifyResult:
     status = passport.get("trust_status", "auto_generated_draft")
     level = TRUST_LEVELS.get(status, 1)
     perms = passport.get("permission_manifest") or {}
@@ -28,13 +31,48 @@ def _build_result(passport: dict) -> VerifyResult:
         risk=risk_level(status, perms),
         passport=passport,
         permissions=perms,
+        verified_signature=verified_signature,
     )
 
 
-async def verify(slug: str, *, api_url: str | None = None) -> VerifyResult:
-    """Fetch a passport and return a VerifyResult with recommendation and risk level."""
+async def _fetch_registry_key(api_url: str | None) -> str | None:
+    """Fetch the registry's active Ed25519 public key from the well-known endpoint."""
+    base = _Client(base_url=api_url)._base  # resolves api_url / env / default
+    try:
+        async with httpx.AsyncClient(base_url=base) as client:
+            resp = await client.get("/.well-known/opentrust-keys.json")
+            resp.raise_for_status()
+            return extract_registry_key(resp.json())
+    except (httpx.HTTPError, ValueError):
+        return None
+
+
+async def verify(
+    slug: str,
+    *,
+    api_url: str | None = None,
+    require_signature: bool = False,
+) -> VerifyResult:
+    """Fetch a passport and return a VerifyResult with recommendation and risk level.
+
+    Signature handling:
+    - If the passport carries a signature block, it is verified against the
+      registry's published Ed25519 key; a present-but-invalid signature raises
+      ValueError (tamper detection).
+    - If it carries no signature, the result's ``verified_signature`` is None and
+      it passes — unless ``require_signature`` is set, which rejects unsigned
+      passports (defends against an attacker stripping the signature in transit).
+    """
     passport = await get(slug, api_url=api_url)
-    return _build_result(passport)
+    verified: bool | None = None
+    if passport.get("signature") is not None:
+        public_key = await _fetch_registry_key(api_url)
+        verified = bool(public_key) and verify_passport_signature(passport, public_key)
+        if not verified:
+            raise ValueError(f"passport signature verification failed for {slug!r}")
+    elif require_signature:
+        raise ValueError(f"passport {slug!r} is unsigned but a signature is required")
+    return _build_result(passport, verified_signature=verified)
 
 
 async def get(slug: str, *, api_url: str | None = None) -> dict:

@@ -332,11 +332,30 @@ class Database:
         demo: bool | None = False,
         include_hidden: bool = False,
     ) -> int:
-        """Return total row count matching filters (fetches all matching rows)."""
-        rows = await self.list_filtered(
-            q, trust_status, offset=0, limit=99999, demo=demo, include_hidden=include_hidden
-        )
-        return len(rows)
+        """Return total row count matching filters via SELECT COUNT(*).
+
+        Avoids the O(n) full-table fetch (a cheap DoS amplifier) that pulling
+        every matching row just to count it would incur. ``COUNT(*) AS id``
+        aliases onto the first PassportRow column so it maps on both backends.
+        """
+        conditions: list[str] = []
+        args: list[Any] = []
+        if q:
+            like = f"%{q}%"
+            conditions.append("(name LIKE ? OR description LIKE ? OR capabilities LIKE ?)")
+            args.extend([like, like, like])
+        if trust_status:
+            conditions.append("trust_status = ?")
+            args.append(trust_status)
+        if demo is True:
+            conditions.append("is_demo = 1")
+        elif demo is False:
+            conditions.append("(is_demo = 0 OR is_demo IS NULL)")
+        if not include_hidden:
+            conditions.append("(hidden = 0 OR hidden IS NULL)")
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        rows = await self._execute(f"SELECT COUNT(*) AS id FROM passports {where}", args)
+        return int(rows[0].id) if rows and rows[0].id is not None else 0
 
     async def get_by_slug(self, slug: str) -> PassportRow | None:
         cols = ", ".join(_COLUMNS)

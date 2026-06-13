@@ -313,7 +313,10 @@ async def fee_verify(slug: str, request: FeeVerifyRequest, db: Database = Depend
     if not treasury:
         raise HTTPException(status_code=503, detail="registry treasury address not configured")
 
-    if request.tx_hash in _CONSUMED_FEE_TX:
+    # Replay check is durable: the in-memory set is a fast path, the DB object is
+    # authoritative so a restart (e.g. serverless cold start) can't let the same
+    # $10 payment verify a second passport.
+    if request.tx_hash in _CONSUMED_FEE_TX or await db.get_object("fee_tx", request.tx_hash):
         raise HTTPException(status_code=409, detail="this transaction has already been used for verification")
 
     wallet = store.wallets.get(request.wallet_id)
@@ -334,6 +337,7 @@ async def fee_verify(slug: str, request: FeeVerifyRequest, db: Database = Depend
         raise HTTPException(status_code=402, detail=str(exc)) from exc
 
     _CONSUMED_FEE_TX.add(request.tx_hash)
+    await db.save_object("fee_tx", request.tx_hash, {"slug": slug})
     return await _set_trust(
         slug, db, trust_status="community_reviewed", verification_path="fee_verified"
     )

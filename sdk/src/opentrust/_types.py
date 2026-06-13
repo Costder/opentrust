@@ -11,6 +11,10 @@ class VerifyResult:
     risk: str               # "low" | "medium" | "high"
     passport: dict          # full raw passport
     permissions: dict       # permission_manifest
+    # None  = passport carried no signature block (not verified)
+    # True  = signature present and cryptographically valid
+    # (an invalid signature raises in verify(); it never reaches a result)
+    verified_signature: bool | None = None
 
 
 @dataclass

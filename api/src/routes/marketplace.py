@@ -1,6 +1,8 @@
+import hashlib
+import hmac
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..config import settings
@@ -49,13 +51,33 @@ async def create_coinbase_checkout(request: CheckoutRequest):
 
 
 @coinbase_router.post("/webhooks")
-async def coinbase_webhook():
-    # Webhook verification and payment processing is handled by the full
-    # payment integration layer. Set COINBASE_BUSINESS_WEBHOOK_SECRET in .env.
-    return {
-        "status": "webhook_endpoint_active",
-        "verified": bool(settings.coinbase_business_webhook_secret),
-    }
+async def coinbase_webhook(
+    request: Request,
+    x_cc_webhook_signature: str | None = Header(default=None, alias="X-CC-Webhook-Signature"),
+):
+    """Coinbase Commerce webhook. Verifies the HMAC-SHA256 signature against the
+    raw body before processing — previously this was an unauthenticated
+    accept-all stub that never verified anything and dropped real events."""
+    secret = settings.coinbase_business_webhook_secret
+    if not secret:
+        raise HTTPException(status_code=503, detail="coinbase webhook secret is not configured")
+
+    body = await request.body()
+    expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    if not x_cc_webhook_signature or not hmac.compare_digest(expected, x_cc_webhook_signature):
+        raise HTTPException(status_code=401, detail="invalid webhook signature")
+
+    try:
+        event = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail="invalid JSON body") from exc
+
+    payload = event.get("event") or {}
+    data = payload.get("data") or {}
+    checkout_id = (data.get("metadata") or {}).get("checkout_id")
+    if payload.get("type") == "charge:confirmed" and checkout_id:
+        store.mark_checkout_paid(checkout_id)
+    return {"status": "ok"}
 
 
 @wallets_router.post("/connect", response_model=WalletConnectResponse)
