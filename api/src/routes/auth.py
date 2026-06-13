@@ -73,7 +73,7 @@ async def start_claim(
 
 class SignupStartRequest(BaseModel):
     agent_id: str = Field(min_length=1)
-    redirect_uri: str = "https://opentrust.infiniterealms.io/signup/github"
+    redirect_uri: str = "https://opentrust.sh/signup/github"
 
 
 @signup_router.post("/start")

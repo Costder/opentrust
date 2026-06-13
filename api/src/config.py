@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     # OAuth redirect allowlist (hosts permitted as GitHub OAuth redirect_uri).
     # Comma-separated hostnames; cors_origins hosts are merged in at runtime.
-    oauth_allowed_redirect_hosts: str = "localhost,127.0.0.1,opentrust.infiniterealms.io"
+    oauth_allowed_redirect_hosts: str = "localhost,127.0.0.1,opentrust.sh,www.opentrust.sh,opentrust.infiniterealms.io"
 
     # Pricing
     opentrust_price_trust_report_usdc: str = "19.00"
@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     registry_private_key_base64: str = ""
     registry_state_path: str = ""
     registry_admin_token: str = ""
-    registry_url: str = "https://opentrust.local"
+    registry_url: str = "https://opentrust.sh"
     registry_operator: str = "Joshua Herron"
     registry_name: str = "Joshua Herron / SoulForge Registry"
 

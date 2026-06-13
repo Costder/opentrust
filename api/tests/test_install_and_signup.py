@@ -102,11 +102,26 @@ async def test_signup_start_returns_github_link(client):
     assert body["instructions"]  # human-facing instruction string
 
 
+async def test_signup_start_default_redirect_targets_opentrust_sh(client):
+    from api.src.config import settings
+
+    original_client_id = settings.github_client_id
+    settings.github_client_id = "Iv1.testid"
+    try:
+        resp = await client.post("/api/v1/signup/start", json={
+            "agent_id": "acme/research-agent",
+        })
+    finally:
+        settings.github_client_id = original_client_id
+    assert resp.status_code == 200, resp.text
+    assert "redirect_uri=https://opentrust.sh/signup/github" in resp.json()["signin_url"]
+
+
 async def test_signup_start_rejects_unallowed_redirect(client):
     """An attacker-controlled redirect_uri host must be rejected (open-redirect / code interception)."""
     with patch("api.src.routes.auth.settings") as mock_settings:
         mock_settings.github_client_id = "Iv1.testid"
-        mock_settings.oauth_allowed_redirect_hosts = "opentrust.infiniterealms.io"
+        mock_settings.oauth_allowed_redirect_hosts = "opentrust.sh"
         mock_settings.cors_origins = "http://localhost:3000"
         resp = await client.post("/api/v1/signup/start", json={
             "agent_id": "acme/research-agent",

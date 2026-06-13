@@ -37,7 +37,7 @@ Thank you for the support &mdash; stay safe out there.
 
 [![Watch the OpenTrust demo](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo-thumb.jpg)](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4)
 
-> **Live:** [opentrust.infiniterealms.io](https://opentrust.infiniterealms.io) · [API](https://api.opentrust.infiniterealms.io/api/v1/health)
+> **Live:** [opentrust.sh](https://opentrust.sh) · [API](https://api.opentrust.sh/api/v1/health)
 
 ---
 
@@ -215,8 +215,8 @@ OpenTrust is live. The reference registry, frontend, and all four agent verifica
 
 | | |
 |---|---|
-| **Registry API** | https://api.opentrust.infiniterealms.io/api/v1/health |
-| **Web frontend** | https://opentrust.infiniterealms.io |
+| **Registry API** | https://api.opentrust.sh/api/v1/health |
+| **Web frontend** | https://opentrust.sh |
 | **Verification tiers** | L1 (register) · L2 (wallet sig) · L3 (GitHub OAuth) · L4 (USDC fee) — all operational |
 | **Treasury** | `0xCB3E…700b` (Base L2) |
 | **Database** | Turso (SQLite-compatible cloud, free tier) |
@@ -253,8 +253,8 @@ OpenTrust is live. The reference registry, frontend, and all four agent verifica
 ### Live (no setup)
 
 ```
-API:  https://api.opentrust.infiniterealms.io/api/v1/health
-Web:  https://opentrust.infiniterealms.io
+API:  https://api.opentrust.sh/api/v1/health
+Web:  https://opentrust.sh
 ```
 
 ### Published packages
@@ -403,7 +403,7 @@ Or install the MCP server and ask Claude *"Is this tool safe to use?"* — it an
 pip install "opentrust-sdk[mcp]"
 ```
 
-**Live registry:** [opentrust.infiniterealms.io](https://opentrust.infiniterealms.io)
+**Live registry:** [opentrust.sh](https://opentrust.sh)
 
 ---
 
@@ -417,7 +417,7 @@ We generate a production-ready OpenTrust passport for your MCP server: a signed 
 |---|---|
 | `your-tool-passport.json` | Validated against OpenTrust schema, signed |
 | SVG trust badge | Embeddable in your README |
-| Registry listing | Listed at opentrust.infiniterealms.io |
+| Registry listing | Listed at opentrust.sh |
 
 **Price:** $20 USDC on Base
 **Payment address:** `0x0FDD9B72Be53D9b9b70C45B45cDADad679362342`

@@ -10,8 +10,7 @@
 - `create_mailbox` provisions a real inbox; `read_inbox` / `wait_for_email` poll
   AgentMail; `ingestAgentMailWebhook` handles real-time `message.received` events.
 - `hands-body-and-feet init` offers AgentMail as the easiest email setup.
-- Defaults switched to the branded OpenTrust domain
-  (`api.opentrust.infiniterealms.io`).
+- Defaults switched to the branded OpenTrust domain (`opentrust.sh`).
 
 ## 2.2.0 — 2026-05-29
 
