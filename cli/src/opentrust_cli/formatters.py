@@ -1,4 +1,5 @@
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 console = Console()
@@ -20,10 +21,10 @@ def print_passport(passport: dict) -> None:
     table.add_column("Field")
     table.add_column("Value")
     status = passport.get("trust_status", "unknown")
-    table.add_row("trust_status", f"[{STATUS_COLORS.get(status, 'white')}]{status}[/]")
-    table.add_row("slug", passport.get("slug", ""))
-    table.add_row("capabilities", ", ".join(passport.get("capabilities", [])))
-    table.add_row("commercial_status", passport.get("commercial_status", {}).get("status", "unknown"))
+    table.add_row("trust_status", f"[{STATUS_COLORS.get(status, 'white')}]{escape(str(status))}[/]")
+    table.add_row("slug", escape(str(passport.get("slug", ""))))
+    table.add_row("capabilities", escape(", ".join(passport.get("capabilities", []))))
+    table.add_row("commercial_status", escape(str(passport.get("commercial_status", {}).get("status", "unknown"))))
     console.print(table)
     if passport.get("warning"):
-        console.print(f"[bold yellow]{passport['warning']}[/]")
+        console.print(f"[bold yellow]{escape(str(passport['warning']))}[/]")

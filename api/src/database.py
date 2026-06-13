@@ -355,6 +355,9 @@ class Database:
         )
 
     async def create(self, data: dict) -> PassportRow:
+        unknown = set(data) - set(_COLUMNS)
+        if unknown:
+            raise ValueError(f"unknown passport columns: {sorted(unknown)}")
         cols = list(data.keys())
         vals = [_serialize(c, data[c]) for c in cols]
         placeholders = ", ".join("?" * len(cols))
@@ -364,7 +367,11 @@ class Database:
         return await self.get_by_slug(data["slug"])
 
     async def update(self, slug: str, data: dict) -> PassportRow:
-        writable = {c: v for c, v in data.items() if c not in ("id", "slug")}
+        _allowed = frozenset(_COLUMNS) - {"id", "slug"}
+        unknown = {c for c in data if c not in ("id", "slug")} - _allowed
+        if unknown:
+            raise ValueError(f"unknown passport columns: {sorted(unknown)}")
+        writable = {c: v for c, v in data.items() if c in _allowed}
         sets = ", ".join(f"{c} = ?" for c in writable)
         sets += ", updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"
         vals = [_serialize(c, v) for c, v in writable.items()]

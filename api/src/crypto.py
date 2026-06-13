@@ -170,7 +170,7 @@ def verify_signed_document(
     if payload_hash != signature.get("payload_hash"):
         return False
 
-    value = signature.get("value") or signature.get("signature")
+    value = signature.get("value")
     if not value:
         return False
     try:

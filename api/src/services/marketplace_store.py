@@ -70,9 +70,23 @@ class MarketplaceStore:
         self.reputation: dict[tuple[str, SubjectKind], ReputationRecord] = {}
         self.ratings: dict[str, CounterpartyRating] = {}
         self.jobs: dict[str, JobPosting] = {}
+        # On-chain tx hashes already consumed by any funding/payment flow.
+        # Prevents a single real transfer from funding multiple escrows/orders/
+        # usage accounts (double-credit / replay). In-memory; for multi-worker or
+        # serverless durability this should be backed by a unique DB index.
+        self.consumed_tx_hashes: set[str] = set()
 
     def reset(self) -> None:
         self.__init__()
+
+    def _consume_tx_hash(self, tx_hash: str) -> None:
+        """Mark an on-chain tx hash as used; reject reuse.
+
+        Raises ValueError if the hash has already funded something.
+        """
+        if tx_hash in self.consumed_tx_hashes:
+            raise ValueError(f"transaction {tx_hash} has already been used")
+        self.consumed_tx_hashes.add(tx_hash)
 
     def record_installation(self, request: GitHubInstallationRequest) -> GitHubInstallationRequest:
         self.installations[request.installation_id] = request
@@ -157,17 +171,28 @@ class MarketplaceStore:
         """Per-unit price for a metered listing; falls back to price_usdc."""
         return listing.unit_price_usdc if listing.unit_price_usdc is not None else listing.price_usdc
 
-    def fund_usage(self, listing_id: str, buyer_wallet_id: str, amount: Decimal) -> UsageAccount:
+    def fund_usage(
+        self,
+        listing_id: str,
+        buyer_wallet_id: str,
+        amount: Decimal,
+        *,
+        tx_hash: str | None = None,
+    ) -> UsageAccount:
         """Credit a buyer's prepaid balance for a listing (creates account on first fund).
 
         On-chain verification of the funding transfer happens in the route; this
         records the credit. Same (buyer, listing) always maps to one account.
+        When a funding ``tx_hash`` is supplied it is consumed so a single
+        transfer cannot be replayed to credit a balance more than once.
         """
         listing = self.listings.get(listing_id)
         if listing is None:
             raise KeyError("listing does not exist")
         if buyer_wallet_id not in self.wallets:
             raise KeyError("buyer wallet is not connected")
+        if tx_hash:
+            self._consume_tx_hash(tx_hash)
 
         now = datetime.now(timezone.utc).isoformat()
         existing = self._find_usage_account(listing_id, buyer_wallet_id)
@@ -289,6 +314,10 @@ class MarketplaceStore:
             raise KeyError("listing does not exist")
         if request.buyer_wallet_id not in self.wallets:
             raise KeyError("buyer wallet is not connected")
+        # A direct (non-escrow) order is settled by an on-chain transfer; ensure
+        # that transfer hasn't already been consumed by another order/escrow.
+        if request.transaction_hash:
+            self._consume_tx_hash(request.transaction_hash)
         order = MarketplaceOrder(
             order_id=f"order_{uuid4().hex}",
             listing_id=listing.listing_id,
@@ -358,6 +387,7 @@ class MarketplaceStore:
             raise KeyError("escrow does not exist")
         if escrow.status != EscrowStatus.created:
             raise ValueError("escrow deposit can only be verified while created")
+        self._consume_tx_hash(tx_hash)
         escrow.status = EscrowStatus.funded
         escrow.funding_tx_hash = tx_hash
         return escrow

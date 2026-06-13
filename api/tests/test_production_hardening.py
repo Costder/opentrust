@@ -53,17 +53,32 @@ class TestRateLimitMiddleware:
         ip = mw._client_ip(scope)
         assert ip == "192.168.1.1"
 
-    def test_client_ip_from_forwarded(self):
-        """Extract client IP from X-Forwarded-For header."""
+    def test_client_ip_ignores_forwarded_from_untrusted_peer(self):
+        """An untrusted direct peer cannot spoof its IP via X-Forwarded-For."""
         os.environ["RATE_LIMIT"] = "10/60"
+        os.environ.pop("TRUSTED_PROXIES", None)
         mw = RateLimitMiddleware(None)
         scope = {
             "client": ("10.0.0.1", 12345),
             "headers": [(b"x-forwarded-for", b"203.0.113.1, 10.0.0.1")],
         }
-        ip = mw._client_ip(scope)
-        # Should take the first IP from X-Forwarded-For
-        assert ip == "203.0.113.1"
+        # No trusted proxy configured → header is ignored, peer IP wins.
+        assert mw._client_ip(scope) == "10.0.0.1"
+
+    def test_client_ip_from_trusted_proxy_uses_rightmost(self):
+        """When the peer is a trusted proxy, use the rightmost XFF entry it appended."""
+        os.environ["RATE_LIMIT"] = "10/60"
+        os.environ["TRUSTED_PROXIES"] = "10.0.0.1"
+        try:
+            mw = RateLimitMiddleware(None)
+            scope = {
+                "client": ("10.0.0.1", 12345),
+                # A spoofed leftmost value plus the real client appended by the proxy.
+                "headers": [(b"x-forwarded-for", b"1.2.3.4, 198.51.100.7")],
+            }
+            assert mw._client_ip(scope) == "198.51.100.7"
+        finally:
+            os.environ.pop("TRUSTED_PROXIES", None)
 
     def test_sliding_window_allows_under_limit(self):
         """Under the request limit, _check should return True."""

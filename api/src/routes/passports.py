@@ -299,7 +299,12 @@ async def create_tool(payload: PassportCreate, db: Database = Depends(get_db)):
 
 
 @router.put("/{slug}", response_model=PassportRead)
-async def update_tool(slug: str, payload: PassportCreate, db: Database = Depends(get_db)):
+async def update_tool(
+    slug: str,
+    payload: PassportCreate,
+    db: Database = Depends(get_db),
+    actor: str | None = Depends(_require_admin),
+):
     _check_permission_scope(payload)
     _check_evidence_block(payload)
     existing = await db.get_by_slug(slug)

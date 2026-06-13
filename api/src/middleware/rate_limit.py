@@ -21,6 +21,13 @@ class RateLimitMiddleware:
     def __init__(self, app):
         self.app = app
         self._windows: dict[str, list[float]] = defaultdict(list)
+        # Peer IPs that are trusted to set X-Forwarded-For (comma-separated).
+        # When the direct connection comes from one of these, the rightmost
+        # X-Forwarded-For entry (appended by that proxy) is used as the client
+        # IP. Otherwise the header is ignored so clients cannot spoof their IP
+        # to bypass per-IP rate limiting. Leave unset in local dev.
+        trusted_raw = os.environ.get("TRUSTED_PROXIES", "").strip()
+        self.trusted_proxies = {ip.strip() for ip in trusted_raw.split(",") if ip.strip()}
         # Parse RATE_LIMIT from env
         raw = os.environ.get("RATE_LIMIT", "").strip()
         if raw and "/" in raw:
@@ -39,16 +46,24 @@ class RateLimitMiddleware:
             self.enabled = False
 
     def _client_ip(self, scope: dict) -> str:
-        """Extract the client IP from the ASGI scope."""
-        # Try X-Forwarded-For client header (set by reverse proxy)
-        headers = dict(scope.get("headers", []))
-        forwarded = headers.get(b"x-forwarded-for", b"").decode()
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-        # Fall back to direct connection address
+        """Extract the client IP from the ASGI scope.
+
+        X-Forwarded-For is only honored when the direct peer is a configured
+        trusted proxy, and then the *rightmost* entry (the one the trusted proxy
+        appended) is used — never the leftmost, which is fully client-controlled.
+        """
         client = scope.get("client")
-        if client:
-            return client[0]
+        peer_ip = client[0] if client else None
+
+        if peer_ip and peer_ip in self.trusted_proxies:
+            headers = dict(scope.get("headers", []))
+            forwarded = headers.get(b"x-forwarded-for", b"").decode()
+            ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+            if ips:
+                return ips[-1]
+
+        if peer_ip:
+            return peer_ip
         return "127.0.0.1"
 
     def _check(self, ip: str) -> bool:

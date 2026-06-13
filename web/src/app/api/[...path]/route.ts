@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// The browser calls this proxy same-origin, so we scope CORS to our own
+// configured origin instead of "*" (which would let any site read responses to
+// token-authenticated API calls, including the admin endpoints).
+const allowedOrigin = process.env.CORS_ORIGINS?.split(",")[0]?.trim() || "http://localhost:3000";
+
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const params = await context.params;
   const path = params.path.join("/");
@@ -30,7 +35,8 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     status: upstream.status,
     headers: {
       "Content-Type": contentType,
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Vary": "Origin",
     },
   });
 }
@@ -44,9 +50,10 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": allowedOrigin,
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Vary": "Origin",
     },
   });
 }

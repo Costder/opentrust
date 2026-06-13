@@ -123,6 +123,12 @@ def _check_jwt_secret() -> None:
     insecure_secrets = {"change_me", "changeme", "secret", "password", "jwt_secret"}
     if raw.lower() in insecure_secrets:
         _ERRORS.append(f"JWT_SECRET is set to an insecure value ('{raw}'). Generate a strong secret with: openssl rand -hex 64")
+        return
+    if len(raw) < 32:
+        _ERRORS.append(
+            f"JWT_SECRET is too short ({len(raw)} characters). "
+            "Use at least 32 characters: openssl rand -hex 64"
+        )
 
 
 def _check_db_url() -> None:

@@ -20,7 +20,7 @@ def _build_result(passport: dict) -> VerifyResult:
     level = TRUST_LEVELS.get(status, 1)
     perms = passport.get("permission_manifest") or {}
     return VerifyResult(
-        slug=passport["slug"],
+        slug=passport.get("slug", ""),
         trust_status=status,
         trust_level=level,
         is_disputed=(status == "disputed"),

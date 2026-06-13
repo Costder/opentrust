@@ -59,6 +59,15 @@ function pad32(hex: string): string {
 
 /** Encode an erc-20 transfer(address,uint256) call as 0x-prefixed calldata. */
 export function encodeUsdcTransfer(to: string, amountUsdc: string): string {
+  // Validate the recipient and amount before encoding. An unchecked `to` (empty,
+  // wrong length, non-hex) would silently encode a transfer to the wrong/zero
+  // address — i.e. irreversible loss of funds.
+  if (!/^0x[0-9a-fA-F]{40}$/.test(to)) {
+    throw new Error(`Invalid ERC-20 recipient address: "${to}" (expected 0x + 40 hex chars).`);
+  }
+  if (!/^\d+(\.\d+)?$/.test(amountUsdc) || Number(amountUsdc) <= 0) {
+    throw new Error(`Invalid USDC amount: "${amountUsdc}" (expected a positive decimal string).`);
+  }
   // function selector for transfer(address,uint256) = 0xa9059cbb
   const selector = "a9059cbb";
   // amount in base units (USDC has 6 decimals) — parse decimal string safely

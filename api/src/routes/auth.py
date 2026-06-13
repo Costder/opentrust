@@ -1,6 +1,7 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from jose import jwt
 from pydantic import BaseModel, Field
@@ -59,9 +60,47 @@ async def signup_start(request: SignupStartRequest):
 
 @router.get("/callback")
 async def claim_callback(code: str | None = None):
+    """Exchange a GitHub OAuth ``code`` for a registry JWT bound to the real user.
+
+    Previously this minted a valid signed JWT (subject ``github-user``) for *any*
+    caller, with or without a code — an authentication bypass. We now require a
+    code, require GitHub OAuth to be configured, exchange the code server-side,
+    and mint a token whose subject is the authenticated GitHub user's id.
+    """
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing OAuth code")
+    if not settings.github_client_id or not settings.github_client_secret:
+        raise HTTPException(status_code=503, detail="GitHub OAuth is not configured on this registry")
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        token_resp = await client.post(
+            "https://github.com/login/oauth/access_token",
+            json={
+                "client_id": settings.github_client_id,
+                "client_secret": settings.github_client_secret,
+                "code": code,
+            },
+            headers={"Accept": "application/json"},
+        )
+        access_token = token_resp.json().get("access_token") if token_resp.status_code == 200 else None
+        if not access_token:
+            raise HTTPException(status_code=400, detail="GitHub code exchange failed")
+        user_resp = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github+json"},
+        )
+    if user_resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Failed to fetch GitHub user")
+    user = user_resp.json()
+
     token = jwt.encode(
-        {"sub": "github-user", "iat": datetime.now(timezone.utc), "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        {
+            "sub": str(user["id"]),
+            "login": user.get("login"),
+            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+        },
         settings.jwt_secret,
         algorithm="HS256",
     )
-    return {"access_token": token, "token_type": "bearer", "code_received": bool(code)}
+    return {"access_token": token, "token_type": "bearer"}

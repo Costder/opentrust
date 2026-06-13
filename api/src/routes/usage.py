@@ -79,7 +79,7 @@ async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
 
     # Verify the funding transfer landed in the seller's wallet on-chain.
     try:
-        verify_usdc_transfer(
+        transfer = verify_usdc_transfer(
             tx_hash=request.transaction_hash,
             expected_sender=buyer.address,
             expected_recipient=seller.address,
@@ -90,10 +90,20 @@ async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
     except OnchainVerificationError as exc:
         raise HTTPException(status_code=402, detail=f"funding verification failed: {exc}") from exc
 
+    # Credit exactly what the chain confirms, not the client-asserted amount, and
+    # consume the tx hash so the same transfer can't be replayed to top up again.
+    credited = getattr(transfer, "amount_usdc", None) or request.amount_usdc
     try:
-        account = store.fund_usage(request.listing_id, request.buyer_wallet_id, request.amount_usdc)
+        account = store.fund_usage(
+            request.listing_id,
+            request.buyer_wallet_id,
+            credited,
+            tx_hash=request.transaction_hash,
+        )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     await _persist_account(db, account)
     return account
 

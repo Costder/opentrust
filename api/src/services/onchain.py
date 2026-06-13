@@ -65,7 +65,7 @@ def verify_usdc_transfer(
     expected_amount_usdc: Decimal,
     rpc_url: str,
     usdc_contract: str = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    tolerance_usdc: Decimal = Decimal("0.01"),
+    tolerance_usdc: Decimal = Decimal("0"),
 ) -> UsdcTransferResult:
     """Verify that tx_hash is a USDC transfer of at least expected_amount_usdc from sender to recipient.
 
@@ -128,8 +128,10 @@ def verify_usdc_transfer(
             f"recipient mismatch: expected {expected_recipient}, got {actual_recipient}"
         )
 
-    # Validate amount (allow small tolerance for rounding)
-    if abs(actual_amount - expected_amount_usdc) > tolerance_usdc:
+    # Validate amount. Reject underpayment (beyond an explicit tolerance);
+    # overpayment is accepted. Default tolerance is zero — callers that need
+    # slack must pass it explicitly rather than rely on a library-wide default.
+    if actual_amount < expected_amount_usdc - tolerance_usdc:
         raise OnchainVerificationError(
             f"amount mismatch: expected {expected_amount_usdc} USDC, "
             f"got {actual_amount} USDC (tolerance: {tolerance_usdc})"

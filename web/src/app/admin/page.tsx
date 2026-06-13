@@ -58,8 +58,12 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      // include both demo and real so the admin sees everything
-      const res = await fetch("/api/v1/tools?include_demo=true&limit=100", { cache: "no-store" });
+      // include both demo and real so the admin sees everything; send the admin
+      // token so this privileged listing is authenticated, not anonymous.
+      const res = await fetch("/api/v1/tools?include_demo=true&limit=100", {
+        cache: "no-store",
+        headers: auth(),
+      });
       const data = await res.json();
       setTools((data.items ?? []).map((t: { slug: string; name: string; trust_status: string; is_demo?: boolean }) => ({
         slug: t.slug, name: t.name, trust_status: t.trust_status, is_demo: !!t.is_demo,
@@ -69,7 +73,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [auth]);
 
   useEffect(() => { if (token) void load(); }, [token, load]);
 

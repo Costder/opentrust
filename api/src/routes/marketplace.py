@@ -237,6 +237,8 @@ async def create_order(request: MarketplaceOrderRequest, db: Database = Depends(
         order = store.create_order(request)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     await db.save_object("order", order.order_id, _jsonable(order))
     return order
 

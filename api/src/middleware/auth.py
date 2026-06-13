@@ -4,6 +4,10 @@ from ..config import settings
 
 
 def decode_bearer(authorization: str | None = Header(default=None)) -> dict:
+    # An empty signing secret would let HS256 accept tokens signed with "" —
+    # refuse to authenticate anything rather than trust an unsigned token.
+    if not settings.jwt_secret:
+        raise HTTPException(status_code=503, detail="Registry JWT secret is not configured")
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
     try:
