@@ -42,6 +42,8 @@ import {
 import { MAIL_TOOLS } from './capabilities/mail/index.js';
 import { loadActiveTriggers } from './capabilities/triggers/index.js';
 import { BUS_TOOLS } from './capabilities/bus/index.js';
+import { CODEX_TOOLS } from './capabilities/codex/index.js';
+import { CLAUDE_TOOLS } from './capabilities/claude/index.js';
 import { HELP_TOOLS } from './capabilities/help/index.js';
 import type { PassportClaims } from './types.js';
 import { dispatchTool } from './dispatch.js';
@@ -57,7 +59,7 @@ interface AuthedRequest extends Request {
 
 export function createMcpServer(claims: PassportClaims): Server {
   const server = new Server(
-    { name: 'hands-body-and-feet', version: '2.2.0' },
+    { name: 'hands-body-and-feet', version: '2.3.0' },
     { capabilities: { tools: {} } },
   );
 
@@ -1065,6 +1067,59 @@ export function createMcpServer(claims: PassportClaims): Server {
             agent_id: { type: 'string', description: 'Agent ID whose queue to watch' },
             timeout_ms: { type: 'number', description: 'Max wait time in milliseconds (default: 60000)' },
             poll_interval_ms: { type: 'number', description: 'Polling interval in milliseconds (default: 2000)' },
+          },
+        },
+      },
+      // Codex tools
+      {
+        name: CODEX_TOOLS.codex_exec.name,
+        description: 'Runs Codex non-interactively with codex exec. Use for headless-safe work that does not require interactive approval.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['prompt'],
+          properties: {
+            prompt: { type: 'string', description: 'Prompt/instructions to pass to codex exec' },
+            cwd: { type: 'string', description: 'Working directory for Codex (defaults to HBF process cwd)' },
+            timeout_ms: { type: 'number', description: 'Max runtime in milliseconds (default: 300000)' },
+            approval_policy: { type: 'string', enum: ['never', 'on-request', 'untrusted'], description: 'Codex approval policy (default: never)' },
+          },
+        },
+      },
+      {
+        name: CODEX_TOOLS.codex_open_desktop.name,
+        description: 'Launches Codex Desktop for interactive work that may require approval. Returns immediately with an optional follow-up prompt for the human/session.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            cwd: { type: 'string', description: 'Workspace path to open in Codex Desktop' },
+            prompt: { type: 'string', description: 'Optional prompt to show/forward after desktop opens' },
+          },
+        },
+      },
+      // Claude Code tools
+      {
+        name: CLAUDE_TOOLS.claude_exec.name,
+        description: 'Runs Claude Code non-interactively with `claude -p`. Use for headless-safe work (analysis, drafting, allow-listed/read-only tools). Approval-gated work should use claude_open_desktop.',
+        inputSchema: {
+          type: 'object' as const,
+          required: ['prompt'],
+          properties: {
+            prompt: { type: 'string', description: 'Prompt/instructions to pass to claude -p' },
+            cwd: { type: 'string', description: 'Working directory for Claude (defaults to HBF process cwd)' },
+            timeout_ms: { type: 'number', description: 'Max runtime in milliseconds (default: 300000)' },
+            model: { type: 'string', description: 'Optional model override (e.g. a specific Claude model id)' },
+            allowed_tools: { type: 'array', items: { type: 'string' }, description: 'Optional allow-list of tools (maps to --allowedTools); keep tight for headless-safe runs' },
+          },
+        },
+      },
+      {
+        name: CLAUDE_TOOLS.claude_open_desktop.name,
+        description: 'Opens the Claude desktop app (interactive) for approval-gated work, via the claude:// protocol (or CLAUDE_DESKTOP_PATH). Returns immediately with an optional follow-up prompt for the human/session.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            cwd: { type: 'string', description: 'Workspace path context' },
+            prompt: { type: 'string', description: 'Optional prompt to show/forward after desktop opens' },
           },
         },
       },

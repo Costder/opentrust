@@ -77,6 +77,10 @@ vi.mock('../capabilities/body/index.js', () => ({
 vi.mock('../capabilities/bus/index.js', () => ({
   busSend: vi.fn().mockResolvedValue({}), busPoll: vi.fn().mockResolvedValue({}), busWait: vi.fn().mockResolvedValue({}),
 }));
+vi.mock('../capabilities/codex/index.js', () => ({
+  codexExec: vi.fn().mockResolvedValue({ mode: 'headless', exit_code: 0 }),
+  codexOpenDesktop: vi.fn().mockResolvedValue({ launched: true, mode: 'desktop' }),
+}));
 vi.mock('../capabilities/help/index.js', () => ({
   hbfHelp: vi.fn().mockResolvedValue({ domains: [], recipes: [] }),
 }));
@@ -84,6 +88,7 @@ vi.mock('../capabilities/help/index.js', () => ({
 import { notifyHuman } from '../capabilities/notify/index.js';
 import { createWallet, getAddress } from '../capabilities/wallet/index.js';
 import { getMemory } from '../capabilities/body/index.js';
+import { codexExec, codexOpenDesktop } from '../capabilities/codex/index.js';
 
 function makeL3Claims(): PassportClaims {
   return { passportId: 'p1', agentId: 'a1', trustLevel: 3, trustStatus: 'seller_confirmed', flags: [], isDisputed: false, version: '1' };
@@ -116,6 +121,18 @@ describe('dispatchTool', () => {
     const { dispatchTool } = await import('../dispatch.js');
     await dispatchTool('memory_get', { key: 'k' }, makeL3Claims());
     expect(getMemory).toHaveBeenCalledWith({ key: 'k' }, makeL3Claims());
+  });
+
+  it('routes codex_exec', async () => {
+    const { dispatchTool } = await import('../dispatch.js');
+    await dispatchTool('codex_exec', { prompt: 'poll bus' }, makeL3Claims());
+    expect(codexExec).toHaveBeenCalledWith({ prompt: 'poll bus' }, makeL3Claims());
+  });
+
+  it('routes codex_open_desktop', async () => {
+    const { dispatchTool } = await import('../dispatch.js');
+    await dispatchTool('codex_open_desktop', { cwd: 'C:/work' }, makeL3Claims());
+    expect(codexOpenDesktop).toHaveBeenCalledWith({ cwd: 'C:/work' }, makeL3Claims());
   });
 
   it('returns isError for unknown tool', async () => {

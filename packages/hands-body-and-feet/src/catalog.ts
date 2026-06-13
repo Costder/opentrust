@@ -148,6 +148,14 @@ export const CATALOG: CatalogEntry[] = [
   { domain: 'bus',         name: 'bus_poll',                minTrustLevel: 2, description: 'Atomically claim and return oldest unclaimed messages addressed to agent_id.' },
   { domain: 'bus',         name: 'bus_wait',                minTrustLevel: 2, description: 'Long-poll until a message arrives for agent_id or timeout elapses.' },
 
+  // codex
+  { domain: 'codex',       name: 'codex_exec',              minTrustLevel: 3, description: 'Run Codex non-interactively with codex exec for headless-safe work.' },
+  { domain: 'codex',       name: 'codex_open_desktop',      minTrustLevel: 3, description: 'Launch Codex Desktop for approval-gated interactive work.' },
+
+  // claude
+  { domain: 'claude',      name: 'claude_exec',             minTrustLevel: 3, description: 'Run Claude Code non-interactively with claude -p for headless-safe work.' },
+  { domain: 'claude',      name: 'claude_open_desktop',     minTrustLevel: 3, description: 'Open the Claude desktop app for approval-gated interactive work.' },
+
   // help
   { domain: 'help',        name: 'hbf_help',                minTrustLevel: 1, description: 'Return the full tool catalog grouped by domain, with optional domain filter.' },
 ];

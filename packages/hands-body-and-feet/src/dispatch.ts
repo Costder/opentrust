@@ -24,6 +24,8 @@ import { createDelegation, listDelegations, revokeDelegation } from './capabilit
 import { createTrigger, listTriggers, deleteTrigger, pauseTrigger } from './capabilities/triggers/index.js';
 import { getIdentity, setIdentityBinding, getMemory, setMemory, listMemory, deleteMemory } from './capabilities/body/index.js';
 import { busSend, busPoll, busWait } from './capabilities/bus/index.js';
+import { codexExec, codexOpenDesktop } from './capabilities/codex/index.js';
+import { claudeExec, claudeOpenDesktop } from './capabilities/claude/index.js';
 import { hbfHelp } from './capabilities/help/index.js';
 import type { PassportClaims } from './types.js';
 
@@ -153,6 +155,10 @@ export async function dispatchTool(
     if (name === 'bus_send')  return ok(await busSend(args as { to_agent: string; payload: unknown; from_agent?: string }, claims));
     if (name === 'bus_poll')  return ok(await busPoll(args as { agent_id: string; limit?: number }, claims));
     if (name === 'bus_wait')  return ok(await busWait(args as { agent_id: string; timeout_ms?: number; poll_interval_ms?: number }, claims));
+    if (name === 'codex_exec') return ok(await codexExec(args as { prompt: string; cwd?: string; timeout_ms?: number; approval_policy?: 'never' | 'on-request' | 'untrusted' }, claims));
+    if (name === 'codex_open_desktop') return ok(await codexOpenDesktop(args as { cwd?: string; prompt?: string }, claims));
+    if (name === 'claude_exec') return ok(await claudeExec(args as { prompt: string; cwd?: string; timeout_ms?: number; model?: string; allowed_tools?: string[] }, claims));
+    if (name === 'claude_open_desktop') return ok(await claudeOpenDesktop(args as { cwd?: string; prompt?: string }, claims));
 
     if (name === 'hbf_help')  return ok(await hbfHelp(args as { domain?: string }, claims));
 
