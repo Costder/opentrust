@@ -46,15 +46,15 @@ The write sets are disjoint except `routes.ts` may need to import Claude-owned m
 - Test: `packages/hands-body-and-feet/src/__tests__/control-panel-store.test.ts`
 - Test: `packages/hands-body-and-feet/src/__tests__/control-panel-permissions.test.ts`
 
-- [ ] **Step 1: Add tests for mode metadata and hard-budget spend decisions**
+- [x] **Step 1: Add tests for mode metadata and hard-budget spend decisions**
 
 Create tests that assert all four public modes exist, money actions are allowed inside hard caps, and above-cap actions are blocked.
 
-- [ ] **Step 2: Add store tests**
+- [x] **Step 2: Add store tests**
 
 Create tests that use a temp `HBF_TEST_CONFIG_DIR`, create a mission, append events, update budgets, and read the append-only timeline.
 
-- [ ] **Step 3: Implement focused types, store migrations, and permission helpers**
+- [x] **Step 3: Implement focused types, store migrations, and permission helpers**
 
 Store tables:
 
@@ -64,7 +64,7 @@ Store tables:
 - `agent_os_capability_status`
 - `agent_os_harness_status`
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -82,7 +82,7 @@ Expected: new tests pass.
 - Modify: `packages/hands-body-and-feet/src/server.ts`
 - Test: `packages/hands-body-and-feet/src/__tests__/control-panel-routes.test.ts`
 
-- [ ] **Step 1: Add route tests**
+- [x] **Step 1: Add route tests**
 
 Test:
 
@@ -93,15 +93,15 @@ Test:
 - `GET /api/local/missions/:id/events` returns append-only timeline.
 - `POST /api/local/kill-switch/pause` and `/resume` update local paused state.
 
-- [ ] **Step 2: Implement routes**
+- [x] **Step 2: Implement routes**
 
-Register routes before MCP auth middleware so browser control panel reads do not require an agent passport. Write operations must use a local session guard header, except tests may pass `x-hbf-local-session: test`.
+Register routes before MCP auth middleware so browser control panel reads do not require an agent passport. Write operations must use a configured local session guard header.
 
-- [ ] **Step 3: Integrate into server**
+- [x] **Step 3: Integrate into server**
 
 Import `registerControlPanelRoutes` in `server.ts` and call it immediately after webhooks/RSS routes and before auth middleware.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -120,19 +120,19 @@ Expected: route tests pass.
 - Test: `packages/hands-body-and-feet/src/__tests__/control-panel-capabilities.test.ts`
 - Test: `packages/hands-body-and-feet/src/__tests__/control-panel-harnesses.test.ts`
 
-- [ ] **Step 1: Add capability tests**
+- [x] **Step 1: Add capability tests**
 
 Assert the surfaced capability list includes email, phone/SMS, GitHub, wallets/payments, virtual cards, Docker, tunnels/webhooks, IPFS, physical mail, and existing distribution-capable tools.
 
-- [ ] **Step 2: Add readiness tests**
+- [x] **Step 2: Add readiness tests**
 
 Assert env var combinations mark AgentMail, Twilio, SignalWire, JMP, GitHub, Moon, IPFS, PostScan, and Earth Class Mail ready/missing without exposing secret values.
 
-- [ ] **Step 3: Add harness tests**
+- [x] **Step 3: Add harness tests**
 
 Assert Hermes Agent, OpenClaw, Codex, and Claude are included with `dayOne: true`; Claude supports unattended/overnight but has `socialAutomationAllowed: false`.
 
-- [ ] **Step 4: Implement modules**
+- [x] **Step 4: Implement modules**
 
 Return safe metadata only. Do not return raw env values.
 
@@ -144,11 +144,11 @@ Return safe metadata only. Do not return raw env values.
 - Create: `packages/hands-body-and-feet/src/control-panel/ui/styles.css`
 - Test: `packages/hands-body-and-feet/src/__tests__/control-panel-ui.test.ts`
 
-- [ ] **Step 1: Add static UI test**
+- [x] **Step 1: Add static UI test**
 
 Assert `/control` includes "What do you want done?", Manager/Operator/Shopkeeper/Founder, kill switch, spend cap, Strategy Skill, Hermes, OpenClaw, Codex, Claude, and OpenTrust marketplace prompts.
 
-- [ ] **Step 2: Implement UI**
+- [x] **Step 2: Implement UI**
 
 Build a static local app shell with:
 
@@ -167,18 +167,18 @@ Build a static local app shell with:
 - Modify: `packages/hands-body-and-feet/src/control-panel/routes.ts`
 - Test: `packages/hands-body-and-feet/src/__tests__/control-panel-strategy.test.ts`
 
-- [ ] **Step 1: Add strategy tests**
+- [x] **Step 1: Add strategy tests**
 
 Assert big goals produce a strategy record with goal, assumptions, milestones, exit rules, and a timeline event. Assert simple tasks can skip strategy with a direct-execution classification.
 
-- [ ] **Step 2: Implement strategy helper**
+- [x] **Step 2: Implement strategy helper**
 
 Use deterministic classification for v1:
 
 - big if objective contains growth/revenue/company/ARR/launch/business/marketplace or has more than 140 characters
 - otherwise simple
 
-- [ ] **Step 3: Wire into mission creation route**
+- [x] **Step 3: Wire into mission creation route**
 
 `POST /api/local/missions` creates mission, strategy record when classified big, and timeline events.
 
@@ -187,14 +187,14 @@ Use deterministic classification for v1:
 **Files:**
 - Modify only if failures require small fixes.
 
-- [ ] **Step 1: Run full HBF tests**
+- [x] **Step 1: Run full HBF tests**
 
 ```bash
 cd packages/hands-body-and-feet
 npm test
 ```
 
-- [ ] **Step 2: Run typecheck and build**
+- [x] **Step 2: Run typecheck and build**
 
 ```bash
 cd packages/hands-body-and-feet
@@ -202,14 +202,14 @@ npm run typecheck
 npm run build
 ```
 
-- [ ] **Step 3: Smoke route manually**
+- [x] **Step 3: Smoke route manually**
 
 Start:
 
 ```bash
 cd packages/hands-body-and-feet
 npm run build
-node dist/cli/serve.js --port 3847 --allow-local-fallback
+node bin/hands-body-and-feet.js serve --port 3847 --allow-local-fallback
 ```
 
 Open:
