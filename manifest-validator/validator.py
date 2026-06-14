@@ -19,9 +19,9 @@ def _load_bundle() -> tuple[dict, Registry]:
         ("permissions.schema.json", Resource.from_contents(permissions)),
         ("commercial-status.schema.json", Resource.from_contents(commercial)),
         ("security.schema.json", Resource.from_contents(security)),
-        ("https://opentrust.dev/schemas/permissions.schema.json", Resource.from_contents(permissions)),
-        ("https://opentrust.dev/schemas/commercial-status.schema.json", Resource.from_contents(commercial)),
-        ("https://opentrust.dev/schemas/security.schema.json", Resource.from_contents(security)),
+        ("https://opentrust.sh/schemas/permissions.schema.json", Resource.from_contents(permissions)),
+        ("https://opentrust.sh/schemas/commercial-status.schema.json", Resource.from_contents(commercial)),
+        ("https://opentrust.sh/schemas/security.schema.json", Resource.from_contents(security)),
     ])
     return schema, registry
 

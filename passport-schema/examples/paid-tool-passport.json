@@ -130,7 +130,7 @@
     }
   ],
   "agent_access": {
-    "api_url": "https://registry.opentrust.dev/api/v1/tools/code-analysis-pro",
+    "api_url": "https://opentrust.sh/api/v1/tools/code-analysis-pro",
     "mcp_readable": true,
     "cli_command": "opentrust inspect code-analysis-pro"
   }

@@ -664,7 +664,7 @@ export function LaunchLab() {
                 aria-describedby="api-base-hint"
               />
               <p id="api-base-hint" className="mt-1 text-xs text-stone-400">
-                Example: https://api.opentrust.sh
+                Example: https://opentrust.sh
               </p>
             </div>
 

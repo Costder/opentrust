@@ -181,7 +181,7 @@
   },
   "cache_ttl_seconds": 86400,
   "agent_access": {
-    "api_url": "https://registry.opentrust.dev/api/v1/tools/github-file-search",
+    "api_url": "https://opentrust.sh/api/v1/tools/github-file-search",
     "mcp_readable": true,
     "cli_command": "opentrust inspect github-file-search",
     "rate_limits": {

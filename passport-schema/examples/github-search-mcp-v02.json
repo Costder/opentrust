@@ -22,7 +22,7 @@
 
   "revocation": {
     "revoked": false,
-    "revocation_list_url": "https://opentrust.dev/.well-known/revoked-passports.json"
+    "revocation_list_url": "https://opentrust.sh/.well-known/revoked-passports.json"
   },
 
   "version_hash": {

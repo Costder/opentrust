@@ -46,7 +46,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 
 # 1. Fetch the registry's public key set
-# GET https://opentrust.dev/.well-known/opentrust-keys.json
+# GET https://opentrust.sh/.well-known/opentrust-keys.json
 # { "keys": [{ "key_id": "opentrust-registry-2026-v1", "public_key_der_b64": "..." }] }
 
 # 2. Reconstruct the payload hash
@@ -69,7 +69,7 @@ public_key.verify(
 
 ### Key rotation
 
-Registry keys are published at `https://opentrust.dev/.well-known/opentrust-keys.json` with expiry dates. Agents should cache this key set with a 1-hour TTL. Old keys are retained for 90 days after rotation to allow verification of passports signed with them.
+Registry keys are published at `https://opentrust.sh/.well-known/opentrust-keys.json` with expiry dates. Agents should cache this key set with a 1-hour TTL. Old keys are retained for 90 days after rotation to allow verification of passports signed with them.
 
 ---
 
@@ -165,7 +165,7 @@ Required checks:
 4. **Token contract** — must be the canonical USDC or USDT contract address for the declared network.
 5. **Not already used** — the registry provides a nonce-check endpoint to prevent reuse of a single transaction across multiple calls.
 
-Canonical token contract addresses are published at `https://opentrust.dev/.well-known/token-contracts.json`.
+Canonical token contract addresses are published at `https://opentrust.sh/.well-known/token-contracts.json`.
 
 ---
 
@@ -201,7 +201,7 @@ Emergency revocation bypasses the normal dispute process. Use it when a tool is 
 ### How revocation works
 
 1. The registry sets `revocation.revoked = true` on the passport and publishes the updated record.
-2. The canonical revocation list at `https://opentrust.dev/.well-known/revoked-passports.json` is updated immediately.
+2. The canonical revocation list at `https://opentrust.sh/.well-known/revoked-passports.json` is updated immediately.
 3. Agents checking this list (required before acting on any cached passport) will see the revocation and must refuse to call the tool.
 
 ### Revocation list format

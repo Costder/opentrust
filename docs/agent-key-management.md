@@ -63,7 +63,7 @@ openssl pkey -in agent-signing-key.pem -pubout -outform DER \
 Once you have the public key, register it with the registry:
 
 ```bash
-curl -X POST https://registry.opentrust.dev/api/v1/operators/{your-identity}/keys \
+curl -X POST https://opentrust.sh/api/v1/operators/{your-identity}/keys \
   -H "Authorization: Bearer {github-oauth-token}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -91,7 +91,7 @@ with open("agent-signing-key.pem", "rb") as f:
 
 # Build token payload (signature field excluded)
 token = {
-    "agent_id": "opentrust.dev/acme-corp/research-agent",
+    "agent_id": "opentrust.sh/acme-corp/research-agent",
     "agent_type": "autonomous",
     "operator": {
         "identity_type": "github_org",
@@ -228,7 +228,7 @@ import json, hashlib, base64, requests
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 
-def verify_agent_identity(token_json: str, registry_url: str = "https://registry.opentrust.dev") -> dict:
+def verify_agent_identity(token_json: str, registry_url: str = "https://opentrust.sh") -> dict:
     token = json.loads(token_json)
     sig_block = token.pop("signature")
 

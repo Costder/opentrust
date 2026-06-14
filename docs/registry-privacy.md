@@ -2,7 +2,7 @@
 
 OpenTrust passports contain data about the people who create and maintain tools — names, GitHub handles, domains, and email addresses. This document describes what data the reference registry collects, how it is used, and what rights tool authors and reviewers have over their data.
 
-This policy applies to the reference registry operated at `registry.opentrust.dev`. Operators running private registries must write their own data handling policy.
+This policy applies to the reference registry operated at `opentrust.sh`. Operators running private registries must write their own data handling policy.
 
 ---
 
@@ -114,7 +114,7 @@ In the event of a data breach affecting personal data, the registry operator wil
 
 1. Notify affected users within 72 hours of discovery (GDPR requirement)
 2. Notify relevant supervisory authorities within 72 hours where required
-3. Publish a breach notice at `https://status.opentrust.dev`
+3. Publish a breach notice at `https://opentrust.sh`
 
 ---
 

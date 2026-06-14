@@ -34,7 +34,7 @@ Without spend policies:
   "require_escrow_above_usdc": 1.00,
   "human_approval_above_usdc": 10.00,
   "blocked_categories": ["finance"],
-  "allowed_registries": ["https://registry.opentrust.dev"]
+  "allowed_registries": ["https://opentrust.sh"]
 }
 ```
 
@@ -111,7 +111,7 @@ Example:
     ],
     "allocation_controller": {
       "type": "ai_agent",
-      "agent_id": "opentrust.dev/acme/budget-optimizer"
+      "agent_id": "opentrust.sh/acme/budget-optimizer"
     },
     "budget_adjustment_endpoint": "https://orchestrator.acme.com/budgets/session-123",
     "unallocated_fallback": "restrict",

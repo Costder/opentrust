@@ -15,7 +15,7 @@ npm install @infinitestudios/opentrust-client
 ```ts
 import { OpenTrust } from '@infinitestudios/opentrust-client';
 
-const client = new OpenTrust({ baseUrl: 'https://api.opentrust.dev' });
+const client = new OpenTrust({ baseUrl: 'https://opentrust.sh' });
 const passport = await client.getPassport('github/file-search-mcp');
 console.log(passport);
 ```

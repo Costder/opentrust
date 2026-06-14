@@ -128,7 +128,7 @@ def _check_permission_scope(payload: PassportCreate) -> None:
             detail=(
                 f"trust_status '{trust}' requires granular permission scopes (v0.2) for: "
                 f"{', '.join(sorted(violations))}. Replace boolean true with a structured scope object. "
-                f"See https://opentrust.dev/schemas/v0.2/permissions.schema.json"
+                f"See https://opentrust.sh/schemas/v0.2/permissions.schema.json"
             ),
         )
 

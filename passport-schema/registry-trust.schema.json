@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/registry-trust.schema.json",
+  "$id": "https://opentrust.sh/schemas/registry-trust.schema.json",
   "title": "Registry Trust",
   "description": "Multi-registry trust model. OpenTrust is open source — anyone can run a registry. This schema defines how agents discover, trust, and verify multiple registries. Follows a delegated trust hierarchy similar to certificate authorities: root registries, delegated registries, and private registries.",
 
@@ -91,7 +91,7 @@
     "root_registry_url": {
       "type": "string",
       "format": "uri",
-      "const": "https://registry.opentrust.dev",
+      "const": "https://opentrust.sh",
       "description": "The canonical root registry. Hardcoded in reference implementations."
     }
 

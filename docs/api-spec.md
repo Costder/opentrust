@@ -35,7 +35,7 @@ Fetch a single passport by slug.
 ```json
 {
   "passport": { /* passport.schema.json */ },
-  "resolved_from": "https://registry.opentrust.dev"
+  "resolved_from": "https://opentrust.sh"
 }
 ```
 
@@ -133,7 +133,7 @@ Prevent a single on-chain transaction from being reused across multiple tool cal
   "tx_hash": "0xabc123...",
   "network": "base",
   "slug": "github-file-search",
-  "caller_agent_id": "opentrust.dev/acme/research-agent"
+  "caller_agent_id": "opentrust.sh/acme/research-agent"
 }
 ```
 
@@ -172,7 +172,7 @@ Agents report tool call outcomes to feed trust signals for `continuously_monitor
   "slug": "github-file-search",
   "version": "1.2.0",
   "session_id": "sess-abc123",
-  "caller_agent_id": "opentrust.dev/acme/research-agent",
+  "caller_agent_id": "opentrust.sh/acme/research-agent",
   "outcome": "success",
   "latency_ms": 340,
   "error_code": null,

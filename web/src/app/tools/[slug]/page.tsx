@@ -84,7 +84,7 @@ export default async function ToolPage({ params }: { params: Promise<{ slug: str
   const pricing = (tool.commercial_status as { pricing?: { amount: number; currency: string } })?.pricing;
   const paymentConfig = (tool.commercial_status as { payment_config?: { network: string; wallet_address: string } })?.payment_config;
 
-  const badgeMarkdown = `![OpenTrust](https://api.opentrust.sh/api/v1/badge/${slug}.svg)`;
+  const badgeMarkdown = `![OpenTrust](https://opentrust.sh/api/v1/badge/${slug}.svg)`;
 
   const accessKind = (tool.agent_access as { kind?: string })?.kind;
   const sourceFormats = (tool as { source_formats?: string[] }).source_formats ?? [];

@@ -1,14 +1,14 @@
 {
   "description": "Agent identity token Ed25519 signature (signature field excluded from canonical JSON)",
   "inputs": {
-    "canonical_string": "{\"agent_id\":\"opentrust.dev/test-corp/research-agent\",\"agent_type\":\"autonomous\",\"depth\":0,\"expires_at\":\"2099-12-31T23:59:59Z\",\"issued_at\":\"2026-05-14T10:00:00Z\",\"operator\":{\"identity_type\":\"github_org\",\"identity_value\":\"test-corp\",\"verification_state\":\"github_verified\"},\"session_id\":\"sess-testvector001\",\"trust_status\":\"github_verified\"}",
+    "canonical_string": "{\"agent_id\":\"opentrust.sh/test-corp/research-agent\",\"agent_type\":\"autonomous\",\"depth\":0,\"expires_at\":\"2099-12-31T23:59:59Z\",\"issued_at\":\"2026-05-14T10:00:00Z\",\"operator\":{\"identity_type\":\"github_org\",\"identity_value\":\"test-corp\",\"verification_state\":\"github_verified\"},\"session_id\":\"sess-testvector001\",\"trust_status\":\"github_verified\"}",
     "note": "Token JSON with keys sorted, no whitespace, signature field excluded"
   },
   "expected": {
     "payload_hash_hex": "f6b038bd7692e7349769b63d22d5985d5ea28220958c8f62f4ab6247ced8b8d4",
     "signature_b64url": "pIVC3mVMoS1hXozUCL1RBlrGsisGUuqLOxSBLyEC_fieZ7SybHiL365HZBRCuM7eGXYW7r5-AANfdNi7o8XnCA",
     "full_token": {
-      "agent_id": "opentrust.dev/test-corp/research-agent",
+      "agent_id": "opentrust.sh/test-corp/research-agent",
       "agent_type": "autonomous",
       "depth": 0,
       "expires_at": "2099-12-31T23:59:59Z",

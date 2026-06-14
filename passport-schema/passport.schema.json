@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/passport.schema.json",
+  "$id": "https://opentrust.sh/schemas/passport.schema.json",
   "title": "Agent Tool Passport",
   "description": "Universal trust record for any AI agent tool, regardless of framework or model provider.",
   "type": "object",
@@ -197,7 +197,7 @@
         "revocation_list_url": {
           "type": "string",
           "format": "uri",
-          "description": "Agents must periodically check the revocation list. Canonical list: https://opentrust.dev/.well-known/revoked-passports.json"
+          "description": "Agents must periodically check the revocation list. Canonical list: https://opentrust.sh/.well-known/revoked-passports.json"
         }
       },
       "additionalProperties": false
@@ -302,7 +302,7 @@
           "registry_url": {
             "type": "string",
             "format": "uri",
-            "description": "Registry where the dependency passport lives. Defaults to https://registry.opentrust.dev if omitted."
+            "description": "Registry where the dependency passport lives. Defaults to https://opentrust.sh if omitted."
           },
           "optional": { "type": "boolean", "default": false }
         },

@@ -21,7 +21,7 @@
       codex: false,
       claude: true,
     },
-    registryUrl: 'https://opentrust.dev/api/v1',
+    registryUrl: 'https://opentrust.sh/api/v1',
   };
 
   // ── Kill switch ──────────────────────────────────────────

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/agent-identity.schema.json",
+  "$id": "https://opentrust.sh/schemas/agent-identity.schema.json",
   "title": "Agent Identity",
   "description": "Identity token for an AI agent making calls to OpenTrust-registered tools. Agents present this as a signed JWT in the X-OpenTrust-Agent-Identity header. Tools with caller_requirements.require_agent_identity=true will reject calls that lack a valid token.",
 
@@ -10,7 +10,7 @@
 
     "agent_id": {
       "type": "string",
-      "description": "Globally unique identifier for this agent instance. Format: '{registry_domain}/{org_slug}/{agent_slug}'. Example: 'opentrust.dev/acme-corp/billing-agent'."
+      "description": "Globally unique identifier for this agent instance. Format: '{registry_domain}/{org_slug}/{agent_slug}'. Example: 'opentrust.sh/acme-corp/billing-agent'."
     },
 
     "agent_type": {
@@ -95,7 +95,7 @@
 
     "signature": {
       "type": "object",
-      "description": "Ed25519 signature over the canonical token payload. The operator's key must be registered with an OpenTrust registry. If this key_id appears in the operator key revocation list at https://opentrust.dev/.well-known/revoked-operator-keys.json, the token must be rejected immediately regardless of signature validity.",
+      "description": "Ed25519 signature over the canonical token payload. The operator's key must be registered with an OpenTrust registry. If this key_id appears in the operator key revocation list at https://opentrust.sh/.well-known/revoked-operator-keys.json, the token must be rejected immediately regardless of signature validity.",
       "required": ["key_id", "algorithm", "value"],
       "properties": {
         "key_id": { "type": "string", "description": "The operator's registered key ID. Format: '{operator_identity_value}-{year}-{n}'. Agents look this up in the registry's operator key set and check it against the revocation list before verifying the signature." },

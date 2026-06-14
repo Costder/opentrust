@@ -146,7 +146,7 @@ Budget allocations can be updated mid-session by pushing a PATCH to `budget_adju
   ],
   "allocation_controller": {
     "type": "ai_agent",
-    "agent_id": "opentrust.dev/acme/budget-optimizer"
+    "agent_id": "opentrust.sh/acme/budget-optimizer"
   },
   "budget_adjustment_endpoint": "https://orchestrator.acme.com/budgets/session-abc",
   "unallocated_fallback": "restrict"

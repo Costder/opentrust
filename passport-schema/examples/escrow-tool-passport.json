@@ -116,7 +116,7 @@
             "tier": 3,
             "type": "arbitration",
             "description": "Buyer disputes quality of findings. Submitted to OpenTrust arbitration queue.",
-            "resolution_endpoint": "https://registry.opentrust.dev/api/v1/disputes",
+            "resolution_endpoint": "https://opentrust.sh/api/v1/disputes",
             "resolution_sla_seconds": 172800
           }
         ]
@@ -149,7 +149,7 @@
     }
   ],
   "agent_access": {
-    "api_url": "https://registry.opentrust.dev/api/v1/tools/deep-code-audit",
+    "api_url": "https://opentrust.sh/api/v1/tools/deep-code-audit",
     "mcp_readable": true,
     "cli_command": "opentrust inspect deep-code-audit"
   }

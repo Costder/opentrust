@@ -463,7 +463,7 @@
             <div class="notice info">
               <strong>For agents reading this page:</strong> The canonical machine-readable spec lives at
               <a href="https://github.com/Costder/opentrust/blob/main/passport-schema/passport.schema.json">passport-schema/passport.schema.json</a>.
-              The revocation list endpoint is <code>https://opentrust.dev/.well-known/revoked-passports.json</code>.
+              The revocation list endpoint is <code>https://opentrust.sh/.well-known/revoked-passports.json</code>.
               The CLI command to inspect any tool is <code>opentrust inspect &lt;tool-slug&gt;</code>.
             </div>
             <p>A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an OpenAPI endpoint gets <strong>one passport</strong>. One trust status. One badge. Readable by any agent, any platform, any runtime.</p>
@@ -556,7 +556,7 @@
   "source_formats": ["mcp", "openai_function"],
   "revocation": {
     "revoked": false,
-    "revocation_list_url": "https://opentrust.dev/.well-known/revoked-passports.json"
+    "revocation_list_url": "https://opentrust.sh/.well-known/revoked-passports.json"
   }
 }</pre>
             <p>A single passport describes the tool across every framework it ships in: MCP, OpenAI functions, LangChain, OpenAPI, npm, PyPI, and more. See <a href="https://github.com/Costder/opentrust/tree/main/passport-schema/examples">passport-schema/examples/</a> for complete working examples.</p>
@@ -618,7 +618,7 @@
               <br>
               <span class="key">spec_url</span>: <span class="val">https://github.com/Costder/opentrust/blob/main/passport-schema/passport.schema.json</span><br>
               <span class="key">permissions_schema</span>: <span class="val">https://github.com/Costder/opentrust/blob/main/passport-schema/permissions.schema.json</span><br>
-              <span class="key">revocation_list</span>: <span class="val">https://opentrust.dev/.well-known/revoked-passports.json</span><br>
+              <span class="key">revocation_list</span>: <span class="val">https://opentrust.sh/.well-known/revoked-passports.json</span><br>
               <span class="key">trust_levels</span>: <span class="val">1-7 (see trust_ladder above) + disputed overlay</span><br>
               <span class="key">cli_install</span>: <span class="val">pip install opentrust-cli</span><br>
               <span class="key">inspect_command</span>: <span class="val">opentrust inspect &lt;tool-slug&gt;</span><br>

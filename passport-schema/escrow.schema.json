@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/escrow.schema.json",
+  "$id": "https://opentrust.sh/schemas/escrow.schema.json",
   "title": "Escrow Config",
   "description": "Describes whether and how a tool supports escrow-protected transactions. The spec defines the interface and dispute model. The actual escrow logic lives in smart contracts or trusted services that implement this interface. Rule from v3 doc: no proof standard defined = no escrow-protected listing.",
   "type": "object",
@@ -171,7 +171,7 @@
                 "expectation_mismatch"
               ],
               "resolution_sla_seconds": 172800,
-              "arbitration_endpoint": "https://registry.opentrust.dev/api/v1/disputes"
+              "arbitration_endpoint": "https://opentrust.sh/api/v1/disputes"
             }
           ]
         }

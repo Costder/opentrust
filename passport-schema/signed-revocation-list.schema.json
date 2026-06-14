@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/signed-revocation-list.schema.json",
+  "$id": "https://opentrust.sh/schemas/signed-revocation-list.schema.json",
   "title": "Signed Revocation List",
-  "description": "The canonical revocation list published at https://opentrust.dev/.well-known/revoked-passports.json and https://opentrust.dev/.well-known/revoked-operator-keys.json. The entire document is signed by the registry's Ed25519 key so agents can verify it was not tampered with in transit. Agents must verify the signature before trusting any entry. An unverified revocation list must be treated as if it listed all cached passports as revoked (fail closed).",
+  "description": "The canonical revocation list published at https://opentrust.sh/.well-known/revoked-passports.json and https://opentrust.sh/.well-known/revoked-operator-keys.json. The entire document is signed by the registry's Ed25519 key so agents can verify it was not tampered with in transit. Agents must verify the signature before trusting any entry. An unverified revocation list must be treated as if it listed all cached passports as revoked (fail closed).",
 
   "type": "object",
   "required": ["version", "updated_at", "passports", "operator_keys", "signature"],

@@ -72,7 +72,7 @@ safe_passport = {
         "creator": "OpenTrust Demo",
         "organization": "OpenTrust",
         "github": "opentrust",
-        "domain": "opentrust.dev",
+        "domain": "opentrust.sh",
         "verification_state": "github_verified",
     },
     "trust_status": "community_reviewed",

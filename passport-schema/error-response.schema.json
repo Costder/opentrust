@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/error-response.schema.json",
+  "$id": "https://opentrust.sh/schemas/error-response.schema.json",
   "title": "OpenTrust Error Response",
   "description": "Standard error envelope for all OpenTrust registry API responses. Every non-2xx response from a conforming registry must use this format. Standardizing error codes lets agent implementations handle failures consistently regardless of which registry they are speaking to.",
 
