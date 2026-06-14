@@ -223,11 +223,11 @@ describe('status bar', () => {
 
 // ── Script and style links ────────────────────────────────────────────────────
 describe('resource links', () => {
-  it('links styles.css', () => {
-    expect(html).toContain('styles.css');
+  it('links styles.css from the served control panel asset path', () => {
+    expect(html).toContain('href="/control-panel/styles.css"');
   });
 
-  it('links app.js', () => {
-    expect(html).toContain('app.js');
+  it('links app.js from the served control panel asset path', () => {
+    expect(html).toContain('src="/control-panel/app.js"');
   });
 });
