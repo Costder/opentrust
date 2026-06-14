@@ -7,7 +7,7 @@ Status: design approved for planning
 
 OpenTrust should ship a local-first Agent OS control panel inside Hands Body and Feet (HBF). HBF is an npm package and MCP server, not an agent harness. It gives agents real-world tools, and it gives humans a local control panel for configuring those tools, supervising agents, and managing credentials safely.
 
-The first target user is a solo casual user who wants to give an AI a real-world objective and supervise the result without learning MCP, env files, or agent orchestration.
+The first target user is Marcus: a 30-40 year old solo founder or small AI-automation operator. He is technical enough to run `npx`, already loses hours to email, outreach, support, GitHub, and operations, and wants autonomy with a visible kill switch and spend caps. He watches build-in-public content, buys tools that save him time, and participates in the `opentrust.sh` marketplace when it helps him list what he built, get passports, earn reviews, post jobs, or discover trusted tools.
 
 The product promise is:
 
@@ -16,6 +16,8 @@ The product promise is:
 This is not only a setup dashboard. It is a local mission control layer for agent work. Configuration remains available anytime, but the primary flow starts with the user's objective.
 
 The local version is fully usable without an OpenTrust login. OpenTrust account connection comes later for marketplace sync, passports, jobs, reviews, reputation, hosted gateway, and cloud/team governance.
+
+Scope note: this design does not narrow HBF v1. Every capability already attached and working in HBF remains in the v1 local control panel surface: email, SMS/phone, GitHub, wallets/payments, virtual cards, Docker, tunnels/webhooks, IPFS, physical mail, distribution workflows through existing tools, and the rest of the current MCP tool surface. The control panel adds the human layer on top: setup, supervision, approvals, spend/activity visibility, and safety levers.
 
 ## Correct Product Boundary
 
@@ -43,19 +45,27 @@ OpenTrust does not become an agent harness. Harnesses such as Hermes Agent, Open
 3. Casual users should see plain language before env vars.
 4. Every meaningful action becomes a timeline event.
 5. Token/cost tracking is best effort and honest about gaps.
-6. Risky capabilities are the reason the product exists, so they are present from the start but gated by autonomy mode, spend caps, approvals, and kill switch controls.
+6. Risky capabilities are the reason the product exists, so they are present from the start and controlled by autonomy mode, hard spend caps, approvals where needed, and kill switch controls.
 7. Loading and empty states may promote OpenTrust marketplace, jobs, passports, reviews, and registry growth. They should not repeatedly upsell cloud.
+8. Lead with control on top of the full capability set. Marcus shares the product only if the interface makes autonomous action feel powerful and visibly bounded.
 
 ## Target Users
 
-### V1: Solo Casual User
+### V1 ICP: Marcus
 
-Examples:
+Marcus is the heavy focus for v1:
 
-- A founder trying to grow a small product.
-- A creator who wants an agent to handle email, GitHub, web research, and simple operations.
-- A non-technical user who wants useful automation without understanding MCP configuration.
-- A developer-adjacent user who already uses Codex, Claude, Hermes, or OpenClaw but wants one control surface.
+- Male, 30-40.
+- Solo founder or small AI-automation operator.
+- Technical enough to run `npx`, but does not want to manage raw env files, MCP JSON, scattered logs, or manual approvals across multiple tools.
+- Already spends too much time on email, outreach, support, GitHub, tool setup, and day-to-day operations.
+- Wants agents to act on their own, but his core fear is irreversible autonomous action.
+- Trusts autonomy when he can see modes, caps, approvals, spend/activity, and a kill switch.
+- Watches build-in-public and tool demo content.
+- Will share HBF/Agent OS with friends and industry connections if the first-run experience makes real-world automation feel safe and impressive.
+- Should naturally participate in `opentrust.sh`: listing tools, requesting passports, posting jobs, collecting reviews, and finding trusted tools.
+
+Secondary v1 users can still benefit, but design decisions should optimize for Marcus first.
 
 ### Later: Developers And Businesses
 
@@ -78,6 +88,8 @@ The local control panel should integrate with harnesses, but must not pretend to
 - OpenClaw
 - Codex
 - Claude Desktop / Claude Code
+
+The capability should ship to all four day-one harnesses. Claude is not special-cased for unattended or overnight operation; users already run Claude unattended through bypass-permissions mode with a `/goal`, through automations, or through API-based workflows. Agent OS should track and control Claude activity like the other harnesses.
 
 Later integrations:
 
@@ -154,6 +166,8 @@ Public names:
 | 3 | Shopkeeper Mode | Hands-off daily operations within budgets and policies |
 | 4 | Founder Mode | Mission-level continuous autonomy |
 
+All four modes are visible and selectable from day one. They are a core product lever and a central part of the demo/video appeal: the user can set up HBF, pick the level of autonomy they trust, and see exactly which controls make that autonomy safe.
+
 ### Manager Mode
 
 Best for first-time users and sensitive work.
@@ -161,7 +175,8 @@ Best for first-time users and sensitive work.
 Default behavior:
 
 - Agent may plan, research, summarize, draft, and recommend.
-- User approves external messages, payments, public actions, account changes, deploys, Docker, card use, and irreversible file changes.
+- User approves external messages, public actions, account changes, deploys, Docker, and irreversible file changes.
+- Money/card/wallet actions require a configured hard budget cap first, then run without per-action approval inside that cap.
 - No always-on background loops unless explicitly enabled.
 - No subagent spawning without approval.
 
@@ -173,7 +188,8 @@ Default behavior:
 
 - Agent may do routine local work and reversible prep.
 - Agent may create drafts, branches, local files, pull requests for review, and provider test calls.
-- User approves money movement, card use, outbound external communication, public posts, deploys, account changes, deleting data, and high-risk tool calls.
+- User approves outbound external communication, public posts, deploys, account changes, deleting data, and high-risk tool calls outside configured policy.
+- Money/card/wallet actions run inside hard budget caps instead of per-action approvals.
 - Scheduled/background tasks require explicit confirmation.
 
 ### Shopkeeper Mode
@@ -184,7 +200,8 @@ Default behavior:
 
 - Agent may run day-to-day tasks within approved budgets and policies.
 - Agent may send approved categories of email/SMS, respond to leads/customers, manage tickets, open pull requests, run scheduled tasks, and use approved provider credentials.
-- Approval is required for exceptions: unusual spend, new vendors, new public channels, new credential scopes, new accounts, legal/financial commitments, or trust-level violations.
+- Approval is required for exceptions: new vendors, new public channels, new credential scopes, new accounts, legal/financial commitments, or trust-level violations.
+- Spend is governed by hard budget caps; spend above cap is blocked rather than approval-gated.
 - Strategy Skill runs periodic reviews and reroutes based on metrics and assumptions.
 
 ### Founder Mode
@@ -213,15 +230,30 @@ Product copy should avoid saying "bypass mode" even if founder users understand 
 | Docker/container actions | Approval | Approval | Allowed if preapproved | Allowed |
 | Send email/SMS | Approval | Approval | Allowed for approved categories | Allowed within policy |
 | Public posts/submissions | Approval | Approval | Approval unless preapproved | Allowed within policy |
-| Spend money | Approval | Approval | Allowed within caps | Allowed within mission budget |
-| Virtual cards | Approval | Approval | Allowed if preapproved | Allowed within mission budget |
-| Wallet signing/payments | Approval | Approval | Allowed within caps | Allowed within mission budget |
+| Spend money | Allowed within hard budget cap | Allowed within hard budget cap | Allowed within hard budget cap | Allowed within mission budget |
+| Virtual cards | Allowed within hard budget cap | Allowed within hard budget cap | Allowed within hard budget cap | Allowed within mission budget |
+| Wallet signing/payments | Allowed within hard budget cap | Allowed within hard budget cap | Allowed within hard budget cap | Allowed within mission budget |
 | Create accounts/vendors | Approval | Approval | Approval | Allowed unless forbidden |
 | Spawn subagents | Approval | Approval | Allowed for approved roles | Allowed |
 | Always-on operation | Off | Optional explicit | On for active missions | On until stopped |
 | Strategy reroute | Suggest only | Suggest or request approval | Allowed within goal | Allowed |
 
 All tiers keep emergency stop, audit logging, and credential revocation.
+
+### Spending Controls
+
+Spending controls ship from day one. OpenTrust/HBF already has hard caps and an "ok-to-spend-freely" budget amount. The agent physically cannot exceed the budgeted amount.
+
+Because overspend is physically blocked, money actions should be treated like a trusted human operator working inside an assigned budget: the agent may act freely within the configured budget without per-action approval prompts. The cap is the control.
+
+Backstops still apply:
+
+- hard budget ceiling
+- per-call and daily caps where configured
+- global kill switch
+- disable payments/cards/wallet signing
+- credential revocation
+- audit timeline
 
 ## User Experience
 
@@ -292,7 +324,8 @@ Capabilities:
 - Tunnels/webhooks
 - IPFS
 - Physical mail
-- Agent accounts and distribution channels
+- Existing HBF distribution-capable tools
+- Agent accounts and distribution channels in Phase 2
 
 Each capability card shows:
 
@@ -304,9 +337,11 @@ Each capability card shows:
 - test button
 - delete/disable
 
-### Agent Accounts And Distribution Page
+### Phase 2: Agent Accounts And Distribution Page
 
-Marketing and distribution are core real-world agent workflows. Many users will bring their own custom setup, but casual users need a standard path that hides developer tooling.
+Marketing and distribution are core real-world agent workflows. Existing HBF tools and custom user setups remain available in V1. The new standard Agent Accounts / Distribution management surface moves to Phase 2.
+
+Many users will bring their own custom setup, but casual users need a standard path that hides developer tooling.
 
 Add an `Agent Accounts` or `Distribution` page for accounts the agent may use:
 
@@ -345,6 +380,8 @@ When OAuth is unavailable or not enough, support manual account records:
 - human approval requirements
 
 Manual login records must be treated as high-risk secrets, not ordinary config.
+
+Agent-operated social media is generally available across harnesses when the user has configured the required provider and policy. The only harness-specific carve-out is Claude: social automation is disabled for the Claude harness because Claude's usage policy disallows it. This is a single Claude-specific carve-out, not a broad per-harness policy framework.
 
 ### Channel Policy
 
@@ -387,6 +424,8 @@ Standard workflows for casual users:
 - Ask for reviews after successful tool/job interactions.
 
 These workflows should appear as templates in mission creation and loading states.
+
+For V1, templates may route through existing HBF tools, user-provided setups, marketplace/job flows, and manual setup. Phase 2 adds the standard OAuth-first Agent Accounts page for users unfamiliar with developer tooling.
 
 ### Env Import
 
@@ -556,8 +595,8 @@ The event log is append-only. Corrections are new events, not mutation.
 ```json
 {
   "mode": "manager",
-  "requires_approval": ["send_external_message", "spend_money"],
-  "allowed_without_approval": ["research_web", "draft_private_file"],
+  "requires_approval": ["send_external_message", "public_post", "delete_data"],
+  "allowed_without_approval": ["research_web", "draft_private_file", "spend_within_cap"],
   "spend_caps": {
     "per_call": 0,
     "daily": 0,
@@ -693,14 +732,21 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 
 ## Implementation Phases
 
-### Phase 1: Local Shell
+These phases are implementation order, not a reduction of the V1 capability surface. HBF's existing tools remain available from the start. The local control panel v1 should expose the full current HBF capability set with human-friendly setup, supervision, spending visibility, and safety controls. The only explicitly deferred new surface is the Phase 2 standard Agent Accounts / Distribution management page.
+
+### Phase 1: Local Shell And Day-One Control Layer
 
 - Serve `/control` and `/setup` from HBF HTTP mode.
 - Add local Agent OS API skeleton.
 - Add mission store, event log, capability registry, permission profiles.
 - Add static UI with first-run flow, capabilities page, mission dashboard, and safety controls.
+- Show all four autonomy modes from day one.
+- Expose current HBF capabilities in the control panel.
+- Add day-one hard spend caps, ok-to-spend-freely budget display, kill switch, disable-payments/cards/wallet controls, and activity/spend timeline.
+- Vendor/pin Strategy Skill, add strategy store, and add big-goal classification.
+- Add detection and launch/deep-link/helpful handoff for Hermes Agent, OpenClaw, Codex, and Claude where available.
 
-### Phase 2: Provider Setup
+### Phase 2: Provider Setup And Agent Accounts
 
 - Add `.env`/text import.
 - Add guided forms for AgentMail, Twilio, SignalWire, JMP, GitHub, Moon, IPFS, PostScan/Earth Class Mail.
@@ -711,27 +757,27 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Add manual high-risk account records for providers without OAuth.
 - Add channel policy controls for read, draft, send, reply, post, delete, spend, and approval behavior.
 - Add local credential-vault abstraction with secret references instead of raw values in API responses.
+- Add the Claude-specific social automation carve-out.
 
-### Phase 3: Harness Adapters
+### Phase 3: Harness Adapter Depth
 
-- Add detection and launch for Hermes Agent, OpenClaw, Codex, Claude.
+- Improve detection and launch for Hermes Agent, OpenClaw, Codex, Claude.
 - Add adapter status and telemetry quality.
 - Add mission dispatch to selected harness.
 - Add event capture for launch, stop, task sent, task result, and errors.
 
-### Phase 4: Strategy Skill
+### Phase 4: Strategy Skill Depth
 
-- Vendor/pin Strategy Skill.
-- Add strategy store.
-- Add big-goal classification.
-- Generate strategy goal records, assumptions, milestones, tasks, exit rules, and work packets.
-- Link strategy events into mission timeline.
+- Expand strategy records, assumptions, milestones, tasks, exit rules, and work packets.
+- Improve strategy reroute behavior when assumptions are invalidated.
+- Link richer strategy events into mission timeline.
 
 ### Phase 5: Permissions And Approvals
 
 - Enforce Manager, Operator, Shopkeeper, Founder profiles.
 - Add approval queue and policy checks before HBF tool execution.
-- Add budget and risk-class checks.
+- Add risk-class checks.
+- Ensure money/card/wallet actions are governed by hard budget caps rather than per-action approval prompts.
 - Add mode downgrade/upgrade with explicit confirmation.
 
 ### Phase 6: Token/Cost Telemetry
@@ -752,6 +798,7 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 ### Unit Tests
 
 - Permission profile decisions per mode.
+- Money/card/wallet decisions are allowed inside hard budget caps and blocked above caps.
 - Env parser redaction and provider detection.
 - Provider config validation.
 - Agent account metadata never returns raw secret values.
@@ -768,6 +815,9 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Connect OAuth provider -> create agent account -> apply channel policy -> event logged.
 - Manual login record -> save encrypted secret refs -> 2FA policy required for use.
 - Tool call -> permission check -> approval required/allowed -> event logged.
+- Money action inside cap -> no approval required -> event logged.
+- Money action above cap -> blocked physically -> event logged.
+- Claude social automation request -> denied by the single Claude carve-out.
 - Kill switch blocks tool execution in all modes.
 - Founder Mode continues without routine approval but still respects hard blocks.
 
@@ -777,6 +827,7 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Capability setup from mission flow and from Capabilities page.
 - Agent Accounts page for OAuth and manual account setup.
 - Distribution workflow templates.
+- Spending controls and ok-to-spend-freely budget display.
 - Approval queue.
 - Timeline event rendering.
 - Loading/empty state suggestions are contextual and dismissible.
@@ -789,6 +840,7 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - OAuth tokens, passwords, cookies, TOTP seeds, and wallet keys are stored only behind secret references.
 - Exported bundles redact or omit secrets by default.
 - Compromise-response controls disable accounts, payments, cards, and wallet signing.
+- Hard budget caps cannot be bypassed by autonomy mode changes.
 - Control panel binds to loopback by default.
 - Cloud sync does not run unless explicitly enabled.
 
@@ -799,7 +851,7 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Perfect token accounting for every harness.
 - Public remote access to the local control panel.
 - Replacing all harnesses with an OpenTrust-built agent runner.
-- Becoming a social network management SaaS in local v1.
+- Replacing all existing HBF distribution-capable tools while Phase 2 account management is being built.
 - Storing unrestricted banking credentials.
 - Fully autonomous legal, medical, or regulated financial commitments.
 
@@ -813,6 +865,8 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 6. Which providers can support first-party OAuth without users creating developer apps?
 7. Should TOTP seed storage be allowed at all in v1, or should 2FA always require human interaction?
 8. Which social providers should be treated as distribution templates on day one versus later?
+9. What is the exact existing HBF budget/cap primitive that should back the "ok-to-spend-freely" UI?
+10. Which existing social/distribution-capable HBF tools should be surfaced in V1 before the Phase 2 OAuth account page?
 
 ## References
 
@@ -827,12 +881,16 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Local works fully without login.
 - Optional OpenTrust login comes later for marketplace sync, passports, jobs, reviews, reputation, and hosted cloud.
 - Day-one harnesses include OpenClaw and Hermes Agent.
+- Claude is a day-one harness and is allowed for unattended/overnight operation.
 - HBF is not the harness; it is the npm MCP server/tool layer plus local control panel.
 - Use autonomy names: Manager, Operator, Shopkeeper, Founder.
+- All four autonomy modes ship as visible day-one levers.
 - Founder Mode is a core meme/name and should stay.
 - Strategy Skill ships day one for hands-off and founder-style missions.
-- Add agent social login/account management for distribution workflows.
-- Prefer OAuth for Google, GitHub, LinkedIn, Apple, and future social/account providers.
+- Add agent social login/account management for distribution workflows in Phase 2.
+- Prefer OAuth for Google, GitHub, LinkedIn, Apple, and future social/account providers in Phase 2.
+- Social automation is available across harnesses except for the Claude harness carve-out.
+- Money actions are controlled by hard spend caps and ok-to-spend-freely budgets rather than per-action approvals.
 - Store account credentials locally through a compromise-aware vault model.
 - Loading states may promote OpenTrust registry, jobs, passports, reviews, marketplace, and tool listings.
 - Cloud should not be repeatedly advertised inside local Agent OS.
