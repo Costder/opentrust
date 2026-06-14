@@ -3,6 +3,7 @@ import type {
   GatewayAdapterResult,
   GatewayToolCall,
 } from "../types.js";
+import { HostedHbfAdapter } from "./hbf.js";
 
 class PendingAdapter implements GatewayAdapter {
   constructor(public executionMode: GatewayAdapter["executionMode"]) {}
@@ -20,7 +21,14 @@ class PendingAdapter implements GatewayAdapter {
 }
 
 const adapters = new Map<GatewayAdapter["executionMode"], GatewayAdapter>([
-  ["hosted_hbf", new PendingAdapter("hosted_hbf")],
+  [
+    "hosted_hbf",
+    new HostedHbfAdapter(async (name, args) => ({
+      pendingRealDispatch: true,
+      name,
+      args,
+    })),
+  ],
   ["hosted_mcp", new PendingAdapter("hosted_mcp")],
   ["remote_mcp", new PendingAdapter("remote_mcp")],
   ["api_oauth", new PendingAdapter("api_oauth")],

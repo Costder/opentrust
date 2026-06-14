@@ -141,7 +141,7 @@ describe("createGatewayApp", () => {
     expect(recordAuditEvent).not.toHaveBeenCalled();
   });
 
-  it("routes allowed low-dollar wallet.spend calls to the pending adapter", async () => {
+  it("routes allowed low-dollar wallet.spend calls to the hosted HBF adapter", async () => {
     const app = createGatewayApp();
     const response = await request(app)
       .post("/api/v1/tools/call")
@@ -158,9 +158,9 @@ describe("createGatewayApp", () => {
     expect(response.body.result).toEqual({
       ok: true,
       result: {
-        routed: true,
-        executionMode: "hosted_hbf",
-        toolSlug: "hands-body-and-feet.pay_with_usdc",
+        pendingRealDispatch: true,
+        name: "pay_with_usdc",
+        args: { amount: 2.5 },
       },
     });
   });
