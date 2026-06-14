@@ -4,6 +4,7 @@ import type {
   GatewayToolCall,
 } from "../types.js";
 import { HostedHbfAdapter } from "./hbf.js";
+import { RemoteMcpAdapter } from "./remote-mcp.js";
 
 class PendingAdapter implements GatewayAdapter {
   constructor(public executionMode: GatewayAdapter["executionMode"]) {}
@@ -30,7 +31,13 @@ const adapters = new Map<GatewayAdapter["executionMode"], GatewayAdapter>([
     })),
   ],
   ["hosted_mcp", new PendingAdapter("hosted_mcp")],
-  ["remote_mcp", new PendingAdapter("remote_mcp")],
+  [
+    "remote_mcp",
+    new RemoteMcpAdapter({
+      endpointUrl:
+        process.env.OPENTRUST_REMOTE_MCP_URL ?? "http://127.0.0.1:3999/mcp",
+    }),
+  ],
   ["api_oauth", new PendingAdapter("api_oauth")],
   ["local_connector", new PendingAdapter("local_connector")],
 ]);
