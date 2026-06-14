@@ -1,7 +1,7 @@
 {
   "name": "@infinitestudios/opentrust-client",
-  "version": "1.0.1",
-  "description": "TypeScript SDK for the OpenTrust tool trust registry",
+  "version": "1.0.2",
+  "description": "TypeScript SDK for verifying and auditing MCP tool passports \u2014 OpenTrust trust registry client",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -40,11 +40,17 @@
   },
   "keywords": [
     "opentrust",
-    "sdk",
-    "typescript",
+    "mcp",
+    "model-context-protocol",
+    "mcp-security",
+    "passport",
     "trust-registry",
     "ai-agents",
-    "tool-passports"
+    "agent-security",
+    "tool-passports",
+    "security-audit",
+    "claude",
+    "typescript"
   ],
   "engines": {
     "node": ">=20"
