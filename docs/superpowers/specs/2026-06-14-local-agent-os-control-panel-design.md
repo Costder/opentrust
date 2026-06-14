@@ -5,15 +5,36 @@ Status: design approved for planning
 
 ## Summary
 
-OpenTrust should ship a local-first Agent OS control panel inside Hands Body and Feet (HBF). The first target user is a solo casual user who wants to give an AI a real-world objective and supervise the result without learning MCP, env files, or agent orchestration.
+OpenTrust should ship a local-first Agent OS control panel inside Hands Body and Feet (HBF). HBF is an npm package and MCP server, not an agent harness. It gives agents real-world tools, and it gives humans a local control panel for configuring those tools, supervising agents, and managing credentials safely.
+
+The first target user is a solo casual user who wants to give an AI a real-world objective and supervise the result without learning MCP, env files, or agent orchestration.
 
 The product promise is:
 
-> Tell an agent what real-world outcome you want. OpenTrust helps it plan, use the right harness, configure needed capabilities, act through HBF, track what happened, and stay stoppable.
+> Tell an agent what real-world outcome you want. OpenTrust helps the agent use real-world tools through HBF, while the human sees setup, approvals, accounts, spend, activity, and safety controls in one local panel.
 
 This is not only a setup dashboard. It is a local mission control layer for agent work. Configuration remains available anytime, but the primary flow starts with the user's objective.
 
 The local version is fully usable without an OpenTrust login. OpenTrust account connection comes later for marketplace sync, passports, jobs, reviews, reputation, hosted gateway, and cloud/team governance.
+
+## Correct Product Boundary
+
+HBF is distributed as `@infinitestudios/hands-body-and-feet` on npm and runs as an MCP server. Users should not need a separate Agent OS install.
+
+User-facing install/run path:
+
+```bash
+npx -y @infinitestudios/hands-body-and-feet serve
+```
+
+Local surfaces served by the HBF process:
+
+- MCP endpoint: `http://localhost:3847/mcp`
+- Control panel: `http://localhost:3847/control`
+- Setup UI: `http://localhost:3847/setup`
+- Local Agent OS API: `http://localhost:3847/api/local/*`
+
+OpenTrust does not become an agent harness. Harnesses such as Hermes Agent, OpenClaw, Codex, Claude Code, Claude Desktop, and Cursor remain the agent runtimes. HBF is the tool/body layer those agents can call, plus the local human control surface for managing real-world access.
 
 ## Product Principles
 
@@ -49,23 +70,23 @@ Developer/operator and business/team use cases move mostly to hosted OpenTrust c
 
 The local Agent OS architecture should support those future sync paths without making cloud required.
 
-## Day-One Harnesses
+## Agent Harness Integrations
 
-The local control panel must treat harnesses as first-class. Day-one adapters:
+The local control panel should integrate with harnesses, but must not pretend to replace them. Day-one integrations:
 
 - Hermes Agent
 - OpenClaw
 - Codex
 - Claude Desktop / Claude Code
 
-Later adapters:
+Later integrations:
 
 - Cursor
 - ChatGPT desktop or app integrations if practical
 - Custom MCP runners
 - Hosted OpenTrust cloud agents
 
-Each harness adapter exposes the same minimal local interface:
+Each harness integration exposes the same minimal local interface:
 
 ```ts
 interface HarnessAdapter {
@@ -80,6 +101,23 @@ interface HarnessAdapter {
 ```
 
 Telemetry may be exact, parsed, estimated, or unavailable depending on the harness.
+
+HBF's responsibility is to:
+
+- expose MCP tools
+- configure local credentials
+- enforce HBF/OpenTrust permissions
+- write local events
+- show the human what agents are doing
+- provide launch/deep-link/helpful handoff where a harness supports it
+
+The harness's responsibility is to:
+
+- run the agent loop
+- choose model/provider
+- reason over tasks
+- call MCP tools
+- return work output
 
 ## Strategy Skill Integration
 
@@ -254,6 +292,7 @@ Capabilities:
 - Tunnels/webhooks
 - IPFS
 - Physical mail
+- Agent accounts and distribution channels
 
 Each capability card shows:
 
@@ -264,6 +303,90 @@ Each capability card shows:
 - configure/change provider
 - test button
 - delete/disable
+
+### Agent Accounts And Distribution Page
+
+Marketing and distribution are core real-world agent workflows. Many users will bring their own custom setup, but casual users need a standard path that hides developer tooling.
+
+Add an `Agent Accounts` or `Distribution` page for accounts the agent may use:
+
+- Google: Gmail, Calendar, Drive, YouTube where supported
+- GitHub
+- LinkedIn
+- Apple account/sign-in where supported
+- X/Twitter if supported later
+- Reddit, Discord, Slack, Telegram, WhatsApp, Signal, Matrix where supported by installed providers
+- Custom email/password account
+- Custom website login
+
+The page should separate:
+
+1. **Human owner account** - the user's personal account used to authorize access.
+2. **Agent social account** - a dedicated account the agent may operate, such as `sales@company.com` or a LinkedIn profile/page the owner controls.
+3. **Channel policy** - what the agent may do on that account.
+
+The UX should prefer OAuth when possible:
+
+- "Connect Google"
+- "Connect GitHub"
+- "Connect LinkedIn"
+- "Connect Apple"
+
+For users unfamiliar with developer tools, OAuth is the standard path. They should not need to create developer apps, copy callback URLs, or paste tokens unless the provider requires it.
+
+When OAuth is unavailable or not enough, support manual account records:
+
+- login URL
+- username/email
+- password reference
+- 2FA method
+- recovery notes
+- allowed actions
+- human approval requirements
+
+Manual login records must be treated as high-risk secrets, not ordinary config.
+
+### Channel Policy
+
+Each connected account gets a policy:
+
+```json
+{
+  "account_id": "string",
+  "provider": "google | github | linkedin | apple | custom",
+  "account_type": "owner | agent | business_page | inbox | custom",
+  "allowed_actions": ["read", "draft", "send", "reply", "post", "delete"],
+  "requires_approval": ["send", "post", "delete"],
+  "daily_action_cap": 25,
+  "daily_spend_cap": 0,
+  "mode_floor": "operator",
+  "mode_ceiling": "founder"
+}
+```
+
+Examples:
+
+- Gmail in Manager Mode: read and draft only; approval before send.
+- Gmail in Shopkeeper Mode: send replies for approved lead/customer categories.
+- LinkedIn in Operator Mode: draft posts and messages; approval before publish/send.
+- LinkedIn in Founder Mode: can run approved distribution experiments inside daily action caps.
+- GitHub in Shopkeeper Mode: create branches and PRs; approval before risky repo setting changes.
+
+### Distribution Workflows
+
+Standard workflows for casual users:
+
+- Find leads and draft outreach.
+- Send approved outreach from a connected inbox.
+- Track replies and classify leads.
+- Draft social posts from mission progress.
+- Publish approved posts.
+- Create marketplace/job posts on OpenTrust.
+- List MCP servers or tools in the registry.
+- Request or update passports.
+- Ask for reviews after successful tool/job interactions.
+
+These workflows should appear as templates in mission creation and loading states.
 
 ### Env Import
 
@@ -389,6 +512,28 @@ If the UI grows too large, move it to a separate workspace package later. For v1
 }
 ```
 
+### Agent Account
+
+```json
+{
+  "account_id": "string",
+  "provider": "google | github | linkedin | apple | custom",
+  "display_name": "string",
+  "account_type": "owner | agent | business_page | inbox | custom",
+  "auth_type": "oauth | api_key | password | browser_session | manual",
+  "secret_ref": "secret://local/account_id",
+  "scopes": ["string"],
+  "requires_2fa": true,
+  "two_factor_policy": "ask_human | totp_seed_opt_in | passkey_external | not_supported",
+  "status": "ready | needs_reauth | missing_2fa | disabled | revoked",
+  "channel_policy_id": "string",
+  "created_at": "ISO date",
+  "updated_at": "ISO date"
+}
+```
+
+The account record stores metadata and a secret reference only. Raw tokens, passwords, cookies, wallet keys, and TOTP seeds must not be returned by the local API.
+
 ### Event
 
 ```json
@@ -452,6 +597,59 @@ V1 can use HBF's existing local configuration patterns with a wrapper that isola
 
 Provider setup should save only after validation or explicit "save without test."
 
+### Agent Credential Vault
+
+Agent social logins and distribution accounts need stronger handling than basic env vars. The goal is that compromise of an HBF server, browser UI, or cloud service should not automatically give an attacker enough material to log into social accounts, drain wallets, or move bank/card money.
+
+Principles:
+
+- Prefer OAuth over passwords.
+- Prefer provider-scoped tokens over broad account access.
+- Prefer short-lived access tokens with refresh tokens stored in the vault.
+- Prefer dedicated agent/business accounts over the user's primary personal accounts.
+- Never sync raw local secrets to OpenTrust cloud without explicit user action.
+- Do not store secrets in browser localStorage.
+- Do not write secrets into logs, events, strategy state, or exported bundles.
+
+Local storage requirements:
+
+- Encrypt every secret at rest.
+- Use OS-backed protection where possible: Windows DPAPI/Credential Manager, macOS Keychain, Linux Secret Service/libsecret.
+- Use envelope encryption for portable local vault files: a vault data key encrypts records; the data key is protected by the OS keychain or a user passphrase.
+- Store OAuth access tokens, refresh tokens, API keys, passwords, cookies, TOTP seeds, and wallet keys under separate secret references.
+- Support per-provider revocation and deletion.
+- Support "lock vault" and "unlock vault" states for sensitive actions.
+
+Two-factor and passkey handling:
+
+- Default policy is `ask_human` for 2FA.
+- TOTP seed storage is opt-in, labeled high risk, and encrypted separately.
+- Passkeys/WebAuthn should remain outside HBF when possible; HBF should request human approval or browser interaction instead of exporting passkey secrets.
+- Backup codes should not be stored by default.
+
+Wallet and money handling:
+
+- Wallet private keys are never treated like ordinary account secrets.
+- Payment/card/bank-capable credentials require separate risk class, spend caps, and emergency disable controls.
+- Founder Mode can use money only inside explicit mission budgets and provider limits.
+- Bank account credentials should be avoided in local v1 unless a provider offers safe OAuth/limited-scope access.
+
+Hosted/cloud safety requirements for later:
+
+- Hosted OpenTrust must not use the same trust assumptions as local HBF.
+- Use tenant-isolated vaults, KMS/HSM-backed envelope encryption, short-lived worker leases, scoped tokens, and audit logs.
+- Keep wallet signing local or hardware-backed when possible.
+- For highly sensitive providers, use bring-your-own-vault or local connector patterns instead of storing secrets in OpenTrust cloud.
+- If a hosted HBF worker is compromised, the attacker should see only short-lived scoped credentials for the current authorized action, not reusable master credentials.
+
+Compromise response:
+
+- One-click revoke all connected accounts.
+- One-click disable payments/cards/wallet signing.
+- Show provider revocation links.
+- Rotate local vault key.
+- Export audit timeline for incident review without secrets.
+
 ### Kill Switch
 
 The kill switch must be global and visible in every mission view.
@@ -508,6 +706,11 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Add guided forms for AgentMail, Twilio, SignalWire, JMP, GitHub, Moon, IPFS, PostScan/Earth Class Mail.
 - Add provider test endpoints.
 - Add local redaction and validation.
+- Add Agent Accounts / Distribution page.
+- Add standard OAuth-first account connection flows for Google, GitHub, LinkedIn, Apple, and future providers where possible.
+- Add manual high-risk account records for providers without OAuth.
+- Add channel policy controls for read, draft, send, reply, post, delete, spend, and approval behavior.
+- Add local credential-vault abstraction with secret references instead of raw values in API responses.
 
 ### Phase 3: Harness Adapters
 
@@ -551,6 +754,9 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Permission profile decisions per mode.
 - Env parser redaction and provider detection.
 - Provider config validation.
+- Agent account metadata never returns raw secret values.
+- Channel policy decisions for read/draft/send/post/delete by mode.
+- Vault record encryption/decryption and secret reference lookup.
 - Event append-only behavior.
 - Strategy store read/write.
 - Harness adapter contract tests with mocks.
@@ -559,6 +765,8 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 
 - Create mission -> classify -> create strategy record -> dispatch harness task.
 - Missing provider -> inline setup -> provider test -> capability ready.
+- Connect OAuth provider -> create agent account -> apply channel policy -> event logged.
+- Manual login record -> save encrypted secret refs -> 2FA policy required for use.
 - Tool call -> permission check -> approval required/allowed -> event logged.
 - Kill switch blocks tool execution in all modes.
 - Founder Mode continues without routine approval but still respects hard blocks.
@@ -567,6 +775,8 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 
 - First-run mission creation.
 - Capability setup from mission flow and from Capabilities page.
+- Agent Accounts page for OAuth and manual account setup.
+- Distribution workflow templates.
 - Approval queue.
 - Timeline event rendering.
 - Loading/empty state suggestions are contextual and dismissible.
@@ -576,6 +786,9 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Setup write routes reject missing local session token.
 - Secrets are not returned by API responses.
 - Secrets are not written to event logs.
+- OAuth tokens, passwords, cookies, TOTP seeds, and wallet keys are stored only behind secret references.
+- Exported bundles redact or omit secrets by default.
+- Compromise-response controls disable accounts, payments, cards, and wallet signing.
 - Control panel binds to loopback by default.
 - Cloud sync does not run unless explicitly enabled.
 
@@ -586,6 +799,8 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Perfect token accounting for every harness.
 - Public remote access to the local control panel.
 - Replacing all harnesses with an OpenTrust-built agent runner.
+- Becoming a social network management SaaS in local v1.
+- Storing unrestricted banking credentials.
 - Fully autonomous legal, medical, or regulated financial commitments.
 
 ## Open Questions For Implementation Planning
@@ -595,6 +810,9 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 3. Should UI assets be plain static HTML/TS first, or a small bundled app inside HBF?
 4. Should provider secrets move to OS keychain in v1 or after the local store wrapper exists?
 5. How much Strategy Skill state should be visible in the casual UI by default?
+6. Which providers can support first-party OAuth without users creating developer apps?
+7. Should TOTP seed storage be allowed at all in v1, or should 2FA always require human interaction?
+8. Which social providers should be treated as distribution templates on day one versus later?
 
 ## References
 
@@ -609,8 +827,12 @@ Sync must be explicit and explain what leaves the machine. The local control pan
 - Local works fully without login.
 - Optional OpenTrust login comes later for marketplace sync, passports, jobs, reviews, reputation, and hosted cloud.
 - Day-one harnesses include OpenClaw and Hermes Agent.
+- HBF is not the harness; it is the npm MCP server/tool layer plus local control panel.
 - Use autonomy names: Manager, Operator, Shopkeeper, Founder.
 - Founder Mode is a core meme/name and should stay.
 - Strategy Skill ships day one for hands-off and founder-style missions.
+- Add agent social login/account management for distribution workflows.
+- Prefer OAuth for Google, GitHub, LinkedIn, Apple, and future social/account providers.
+- Store account credentials locally through a compromise-aware vault model.
 - Loading states may promote OpenTrust registry, jobs, passports, reviews, marketplace, and tool listings.
 - Cloud should not be repeatedly advertised inside local Agent OS.
