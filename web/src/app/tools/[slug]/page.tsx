@@ -135,6 +135,13 @@ export default async function ToolPage({ params }: { params: Promise<{ slug: str
               <User className="h-3.5 w-3.5" aria-hidden="true" />
               Claim this tool
             </Link>
+            <Link
+              href="/gateway"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-moss bg-green-50 px-3 py-1.5 text-xs font-medium text-moss transition hover:bg-green-100"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              Use through OpenTrust Gateway
+            </Link>
           </div>
         </div>
 
