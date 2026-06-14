@@ -34,3 +34,6 @@ jobs:
       # hands-body-and-feet has native deps (better-sqlite3), so install WITH scripts.
       # Tests are self-contained (no network/secrets) via msw/supertest mocks.
       - run: cd packages/hands-body-and-feet && npm ci && npm run typecheck && npm test
+      - name: Gateway lockfile registry check
+        run: npx lockfile-lint --path packages/opentrust-gateway/package-lock.json --type npm --allowed-hosts npm --validate-https
+      - run: cd packages/opentrust-gateway && npm ci && npm run typecheck && npm test && npm run build
