@@ -70,6 +70,15 @@ export function decideSpendWithinCaps(
     return { allowed: false, reason: 'Amount must be positive.', remainingDaily, remainingMission };
   }
 
+  if (amount > 0 && caps.perCall <= 0 && caps.daily <= 0 && caps.missionTotal <= 0) {
+    return {
+      allowed: false,
+      reason: 'No hard spend budget configured.',
+      remainingDaily,
+      remainingMission,
+    };
+  }
+
   if (caps.perCall > 0 && amount > caps.perCall) {
     return { allowed: false, reason: 'Amount exceeds per-call hard cap.', remainingDaily, remainingMission };
   }

@@ -81,7 +81,7 @@ describe('phone capability', () => {
     const { phone } = getCapabilityStatuses({
       SIGNALWIRE_SPACE_URL: 'https://example.signalwire.com',
       SIGNALWIRE_PROJECT_ID: 'proj',
-      SIGNALWIRE_API_KEY: 'key',
+      SIGNALWIRE_AUTH_TOKEN: 'key',
     });
     expect(phone.availableProviders).toContain('signalwire');
   });
@@ -136,15 +136,10 @@ describe('wallet capability', () => {
     expect(wallet.ready).toBe(false);
   });
 
-  it('detects ethereum wallet via WALLET_PRIVATE_KEY', () => {
-    const { wallet } = getCapabilityStatuses({ WALLET_PRIVATE_KEY: '0xdeadbeef' });
+  it('detects local wallet via HANDS_BODY_AND_FEET_PASSPHRASE', () => {
+    const { wallet } = getCapabilityStatuses({ HANDS_BODY_AND_FEET_PASSPHRASE: 'passphrase' });
     expect(wallet.ready).toBe(true);
-    expect(wallet.availableProviders).toContain('ethereum-wallet');
-  });
-
-  it('detects ethereum wallet via ETH_PRIVATE_KEY', () => {
-    const { wallet } = getCapabilityStatuses({ ETH_PRIVATE_KEY: '0xdeadbeef' });
-    expect(wallet.availableProviders).toContain('ethereum-wallet');
+    expect(wallet.availableProviders).toContain('local-wallet');
   });
 
   it('detects coinbase-commerce via key id + secret', () => {
@@ -162,7 +157,7 @@ describe('wallet capability', () => {
 
   it('never returns raw key values', () => {
     const key = '0xprivatekeyvalue';
-    const { wallet } = getCapabilityStatuses({ WALLET_PRIVATE_KEY: key });
+    const { wallet } = getCapabilityStatuses({ HANDS_BODY_AND_FEET_PASSPHRASE: key });
     expect(JSON.stringify(wallet)).not.toContain(key);
   });
 });
@@ -174,20 +169,26 @@ describe('virtualCards capability', () => {
     expect(virtualCards.ready).toBe(false);
   });
 
-  it('detects Moon via MOON_API_KEY', () => {
-    const { virtualCards } = getCapabilityStatuses({ MOON_API_KEY: 'moon-key' });
+  it('detects Moon when consumer key and secret are set', () => {
+    const { virtualCards } = getCapabilityStatuses({
+      MOON_CONSUMER_KEY: 'moon-key',
+      MOON_CONSUMER_SECRET: 'moon-secret',
+    });
     expect(virtualCards.ready).toBe(true);
     expect(virtualCards.availableProviders).toContain('moon');
   });
 
-  it('detects Moon via MOON_SECRET_KEY', () => {
-    const { virtualCards } = getCapabilityStatuses({ MOON_SECRET_KEY: 'moon-secret' });
-    expect(virtualCards.ready).toBe(true);
+  it('does not detect Moon with only one credential', () => {
+    const { virtualCards } = getCapabilityStatuses({ MOON_CONSUMER_KEY: 'moon-key' });
+    expect(virtualCards.ready).toBe(false);
   });
 
   it('never returns raw key values', () => {
     const key = 'moon-secret-abc123';
-    const { virtualCards } = getCapabilityStatuses({ MOON_API_KEY: key });
+    const { virtualCards } = getCapabilityStatuses({
+      MOON_CONSUMER_KEY: 'moon-key',
+      MOON_CONSUMER_SECRET: key,
+    });
     expect(JSON.stringify(virtualCards)).not.toContain(key);
   });
 });
@@ -272,15 +273,18 @@ describe('physicalMail capability', () => {
     expect(physicalMail.ready).toBe(false);
   });
 
-  it('detects PostScan via POSTSCAN_API_KEY', () => {
-    const { physicalMail } = getCapabilityStatuses({ POSTSCAN_API_KEY: 'ps-key' });
+  it('detects PostScan via POSTSCAN_API_KEY and POSTSCAN_ACCOUNT_ID', () => {
+    const { physicalMail } = getCapabilityStatuses({
+      POSTSCAN_API_KEY: 'ps-key',
+      POSTSCAN_ACCOUNT_ID: 'acct_123',
+    });
     expect(physicalMail.ready).toBe(true);
     expect(physicalMail.availableProviders).toContain('postscan');
   });
 
-  it('detects PostScan via POSTSCANMAIL_API_KEY', () => {
-    const { physicalMail } = getCapabilityStatuses({ POSTSCANMAIL_API_KEY: 'ps-key' });
-    expect(physicalMail.availableProviders).toContain('postscan');
+  it('does not detect PostScan with only the API key', () => {
+    const { physicalMail } = getCapabilityStatuses({ POSTSCAN_API_KEY: 'ps-key' });
+    expect(physicalMail.availableProviders).not.toContain('postscan');
   });
 
   it('detects Earth Class Mail via EARTH_CLASS_MAIL_API_KEY', () => {
@@ -295,7 +299,7 @@ describe('physicalMail capability', () => {
 
   it('never returns raw key values', () => {
     const key = 'postscan-secret-key-xyz';
-    const { physicalMail } = getCapabilityStatuses({ POSTSCAN_API_KEY: key });
+    const { physicalMail } = getCapabilityStatuses({ POSTSCAN_API_KEY: key, POSTSCAN_ACCOUNT_ID: 'acct_123' });
     expect(JSON.stringify(physicalMail)).not.toContain(key);
   });
 });

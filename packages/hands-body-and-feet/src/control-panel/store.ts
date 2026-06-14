@@ -148,6 +148,17 @@ export function listMissions(): Mission[] {
   return rows.map((row) => getMission(row.mission_id)).filter((mission): mission is Mission => mission !== null);
 }
 
+export function setMissionStrategyGoal(missionId: string, strategyGoalId: string): Mission | null {
+  ensureControlPanelSchema();
+  const updatedAt = nowIso();
+  openDb().prepare(`
+    UPDATE agent_os_missions
+       SET strategy_goal_id = ?, updated_at = ?
+     WHERE mission_id = ?
+  `).run(strategyGoalId, updatedAt, missionId);
+  return getMission(missionId);
+}
+
 export function appendEvent(input: EventInput): AgentOsEvent {
   ensureControlPanelSchema();
   const event: AgentOsEvent = {

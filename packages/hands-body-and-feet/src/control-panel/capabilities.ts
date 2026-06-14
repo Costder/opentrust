@@ -36,7 +36,7 @@ function detectEmail(env: NodeJS.ProcessEnv): CapabilityStatus {
     ready: true,
     provider: provider ?? 'local-smtp',
     availableProviders: available,
-    note: provider ? `Configured via ${provider}` : 'Local SMTP only — add API key to enable cloud provider',
+    note: provider ? `Configured via ${provider}` : 'Local SMTP only - add API key to enable cloud provider',
   };
 }
 
@@ -46,7 +46,7 @@ function detectPhone(env: NodeJS.ProcessEnv): CapabilityStatus {
   if (hasKey(env, 'TWILIO_ACCOUNT_SID') && hasKey(env, 'TWILIO_AUTH_TOKEN')) {
     available.push('twilio');
   }
-  if (hasKey(env, 'SIGNALWIRE_SPACE_URL') && hasKey(env, 'SIGNALWIRE_PROJECT_ID') && hasKey(env, 'SIGNALWIRE_API_KEY')) {
+  if (hasKey(env, 'SIGNALWIRE_SPACE_URL') && hasKey(env, 'SIGNALWIRE_PROJECT_ID') && hasKey(env, 'SIGNALWIRE_AUTH_TOKEN')) {
     available.push('signalwire');
   }
   if (hasKey(env, 'JMP_PASSWORD') || (hasKey(env, 'XMPP_JID') && hasKey(env, 'XMPP_PASSWORD'))) {
@@ -59,7 +59,7 @@ function detectPhone(env: NodeJS.ProcessEnv): CapabilityStatus {
     availableProviders: available,
     note: available.length > 0
       ? `Phone/SMS via ${available.join(', ')}`
-      : 'No provider configured — set TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN, SIGNALWIRE_*, or JMP_PASSWORD',
+      : 'No provider configured - set TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN, SIGNALWIRE_PROJECT_ID/SIGNALWIRE_AUTH_TOKEN/SIGNALWIRE_SPACE_URL, or JMP_PASSWORD',
   };
 }
 
@@ -76,8 +76,8 @@ function detectGitHub(env: NodeJS.ProcessEnv): CapabilityStatus {
 function detectWallet(env: NodeJS.ProcessEnv): CapabilityStatus {
   const available: string[] = [];
 
-  if (hasKey(env, 'WALLET_PRIVATE_KEY') || hasKey(env, 'ETH_PRIVATE_KEY')) {
-    available.push('ethereum-wallet');
+  if (hasKey(env, 'HANDS_BODY_AND_FEET_PASSPHRASE')) {
+    available.push('local-wallet');
   }
   if (hasKey(env, 'COINBASE_BUSINESS_API_KEY_ID') && hasKey(env, 'COINBASE_BUSINESS_API_KEY_SECRET')) {
     available.push('coinbase-commerce');
@@ -93,17 +93,17 @@ function detectWallet(env: NodeJS.ProcessEnv): CapabilityStatus {
     availableProviders: deduped,
     note: deduped.length > 0
       ? `Payments via ${deduped.join(', ')}`
-      : 'No wallet configured — set WALLET_PRIVATE_KEY or COINBASE_* credentials',
+      : 'No wallet configured - set HANDS_BODY_AND_FEET_PASSPHRASE or COINBASE_* credentials',
   };
 }
 
 function detectVirtualCards(env: NodeJS.ProcessEnv): CapabilityStatus {
-  const ready = hasKey(env, 'MOON_API_KEY') || hasKey(env, 'MOON_SECRET_KEY');
+  const ready = hasKey(env, 'MOON_CONSUMER_KEY') && hasKey(env, 'MOON_CONSUMER_SECRET');
   return {
     ready,
     provider: ready ? 'moon' : undefined,
     availableProviders: ready ? ['moon'] : [],
-    note: ready ? 'Moon virtual card credentials present' : 'Set MOON_API_KEY to enable virtual card issuance',
+    note: ready ? 'Moon virtual card credentials present' : 'Set MOON_CONSUMER_KEY and MOON_CONSUMER_SECRET to enable virtual card issuance',
   };
 }
 
@@ -118,7 +118,7 @@ function detectDocker(env: NodeJS.ProcessEnv): CapabilityStatus {
     availableProviders: ready ? ['docker'] : [],
     note: ready
       ? hasDockerHost ? 'Docker via DOCKER_HOST' : 'Docker via /var/run/docker.sock'
-      : 'Docker socket not found — install Docker or set DOCKER_HOST',
+      : 'Docker socket not found - install Docker or set DOCKER_HOST',
   };
 }
 
@@ -135,7 +135,7 @@ function detectTunnel(env: NodeJS.ProcessEnv): CapabilityStatus {
     availableProviders: available,
     note: available.includes('ngrok')
       ? 'Tunnels via ngrok (authenticated) and cloudflared'
-      : 'Tunnels via cloudflared (unauthenticated) — set NGROK_AUTHTOKEN for ngrok',
+      : 'Tunnels via cloudflared (unauthenticated) - set NGROK_AUTHTOKEN for ngrok',
   };
 }
 
@@ -156,14 +156,14 @@ function detectIpfs(env: NodeJS.ProcessEnv): CapabilityStatus {
     availableProviders: available,
     note: available.includes('web3.storage')
       ? 'IPFS via web3.storage (pinning service) and local Kubo'
-      : 'IPFS via local Kubo node — set WEB3_STORAGE_TOKEN for pinning',
+      : 'IPFS via local Kubo node - set WEB3_STORAGE_TOKEN for pinning',
   };
 }
 
 function detectPhysicalMail(env: NodeJS.ProcessEnv): CapabilityStatus {
   const available: string[] = [];
 
-  if (hasKey(env, 'POSTSCAN_API_KEY') || hasKey(env, 'POSTSCANMAIL_API_KEY')) {
+  if (hasKey(env, 'POSTSCAN_API_KEY') && hasKey(env, 'POSTSCAN_ACCOUNT_ID')) {
     available.push('postscan');
   }
   if (hasKey(env, 'EARTH_CLASS_MAIL_API_KEY') || hasKey(env, 'ECM_API_KEY')) {
@@ -176,7 +176,7 @@ function detectPhysicalMail(env: NodeJS.ProcessEnv): CapabilityStatus {
     availableProviders: available,
     note: available.length > 0
       ? `Physical mail via ${available.join(', ')}`
-      : 'No physical mail provider — set POSTSCAN_API_KEY or EARTH_CLASS_MAIL_API_KEY',
+      : 'No physical mail provider - set POSTSCAN_API_KEY/POSTSCAN_ACCOUNT_ID or EARTH_CLASS_MAIL_API_KEY',
   };
 }
 
