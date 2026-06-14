@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/spend-policy.schema.json",
+  "$id": "https://opentrust.sh/schemas/spend-policy.schema.json",
   "title": "Agent Spend Policy",
   "description": "The buyer-side payment contract. Declares what an agent is authorized to spend and under what conditions. Operators configure this; agents enforce it at runtime. IMPORTANT: Tools that check spend policy must extract it from the verified X-OpenTrust-Agent-Identity JWT (the spend_policy field), not from the standalone X-OpenTrust-Spend-Policy header. The header is a convenience hint for tools that do a quick pre-flight check; the JWT-embedded copy is the authoritative, signed version. A standalone header not backed by the JWT must be treated as unauthenticated.",
 
@@ -127,7 +127,7 @@
                 "type": "object",
                 "description": "Identifies which sub-agent(s) this allocation applies to. At least one of agent_id or agent_slug must be provided.",
                 "properties": {
-                  "agent_id": { "type": "string", "description": "Exact agent_id match (e.g., 'opentrust.dev/acme/research-agent')." },
+                  "agent_id": { "type": "string", "description": "Exact agent_id match (e.g., 'opentrust.sh/acme/research-agent')." },
                   "agent_slug": { "type": "string", "description": "Slug-only match — applies to any agent with this slug regardless of registry or org." }
                 },
                 "additionalProperties": false

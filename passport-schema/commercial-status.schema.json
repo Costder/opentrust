@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/commercial-status.schema.json",
+  "$id": "https://opentrust.sh/schemas/commercial-status.schema.json",
   "title": "Commercial Status",
   "description": "Machine-readable payment contract for AI agent tool access. An agent reads this to discover cost, send payment, and prove it paid — all without a human in the loop.",
   "type": "object",

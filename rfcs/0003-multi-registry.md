@@ -10,7 +10,7 @@ Defines how multiple OpenTrust registries coexist, how agents discover and trust
 
 ## Motivation
 
-OpenTrust is open source. The moment it ships, people will self-host it. Enterprises will run private registries. Ecosystem communities will run specialized registries (e.g., a security-tools-only registry run by a security firm). The canonical registry at `registry.opentrust.dev` cannot be the only trusted source — that would make this a centralized platform, not an open standard.
+OpenTrust is open source. The moment it ships, people will self-host it. Enterprises will run private registries. Ecosystem communities will run specialized registries (e.g., a security-tools-only registry run by a security firm). The canonical registry at `opentrust.sh` cannot be the only trusted source — that would make this a centralized platform, not an open standard.
 
 But "anyone can run a registry" creates a trust problem: if anyone can sign passports, the signature means nothing. The multi-registry model solves this with a delegated trust hierarchy.
 
@@ -18,7 +18,7 @@ But "anyone can run a registry" creates a trust problem: if anyone can sign pass
 
 ### Three registry types
 
-**Root registries** are fully trusted. Their signing keys are hardcoded in reference implementations. There is one root registry at launch (`registry.opentrust.dev`). Additional root registries require an RFC.
+**Root registries** are fully trusted. Their signing keys are hardcoded in reference implementations. There is one root registry at launch (`opentrust.sh`). Additional root registries require an RFC.
 
 **Delegated registries** are trusted by reference from a root. The root registry signs the delegated registry's public key. Agents verify the delegation chain before trusting passport signatures from a delegated registry. Any organization can apply for delegated registry status via an RFC.
 
@@ -28,7 +28,7 @@ But "anyone can run a registry" creates a trust problem: if anyone can sign pass
 
 Root registries publish a registry list at:
 ```
-GET https://registry.opentrust.dev/.well-known/opentrust-registries.json
+GET https://opentrust.sh/.well-known/opentrust-registries.json
 ```
 
 This list includes all known delegated registries with their delegation signatures. Agents cache this list (1-hour TTL) and use it to verify passport signatures from non-root registries.
@@ -45,14 +45,14 @@ Each passport includes a `registry_url` field (added to `agent_access`) declarin
 
 ```json
 "agent_access": {
-  "api_url": "https://registry.opentrust.dev/api/v1/tools/my-tool",
-  "registry_url": "https://registry.opentrust.dev"
+  "api_url": "https://opentrust.sh/api/v1/tools/my-tool",
+  "registry_url": "https://opentrust.sh"
 }
 ```
 
 ## Alternatives Considered
 
-**Single canonical registry (status quo):** Rejected. Makes OpenTrust a centralized platform, not a standard. Enterprises can't run private instances. Standard becomes fragile if `opentrust.dev` goes down.
+**Single canonical registry (status quo):** Rejected. Makes OpenTrust a centralized platform, not a standard. Enterprises can't run private instances. Standard becomes fragile if `opentrust.sh` goes down.
 
 **Flat trust (all registries equal):** Rejected. If any self-hosted registry can issue trusted signatures, the signature means nothing. A malicious registry could sign a backdoored tool as `security_checked`.
 

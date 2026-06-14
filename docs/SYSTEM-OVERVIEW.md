@@ -288,7 +288,7 @@ TLS 1.2 minimum on all protocol communications. TLS 1.3 recommended. HSTS requir
 
 Every passport is signed by the registry using Ed25519. The signature covers a SHA-256 hash of the canonical passport JSON (keys sorted, whitespace stripped, `security.registry_signature` excluded). Agents verify offline without trusting the network path.
 
-Registry public keys: `https://opentrust.dev/.well-known/opentrust-keys.json`
+Registry public keys: `https://opentrust.sh/.well-known/opentrust-keys.json`
 
 ### Layer 3 — Reviewer attestations
 
@@ -307,11 +307,11 @@ For `access_config.type = "transaction_proof"`, tools verify the txHash against 
 4. Token contract is canonical USDC/USDT for the network
 5. txHash not previously used (registry nonce-check endpoint)
 
-Canonical token contract addresses: `https://opentrust.dev/.well-known/token-contracts.json`
+Canonical token contract addresses: `https://opentrust.sh/.well-known/token-contracts.json`
 
 ### Revocation
 
-`revocation.revoked = true` is the emergency path — immediate, no review required. Canonical list at `https://opentrust.dev/.well-known/revoked-passports.json` (5-minute TTL).
+`revocation.revoked = true` is the emergency path — immediate, no review required. Canonical list at `https://opentrust.sh/.well-known/revoked-passports.json` (5-minute TTL).
 
 Agents **must** check revocation:
 - Before using any cached passport past its `cache_ttl_seconds`
@@ -333,7 +333,7 @@ Anyone can run an OpenTrust registry. Three trust levels:
 | `private` | Trusted within one org; not trusted by external agents by default. |
 | `untrusted` | Known but not trusted. |
 
-Registry discovery: `https://opentrust.dev/.well-known/opentrust-registries.json`
+Registry discovery: `https://opentrust.sh/.well-known/opentrust-registries.json`
 
 When a slug is ambiguous across registries, agents use the `resolution_order` array to pick.
 
@@ -447,7 +447,7 @@ At level 1 (`auto_generated_draft`), any tool can be imported. The claim process
 ## Missing Protocol Definitions
 
 ### 9. No spec version in schema $id paths
-All `$id` URIs are `https://opentrust.dev/schemas/passport.schema.json` with no version number. When the spec needs a breaking change there is no migration path built in — agents will have no way to know which version of the schema a passport conforms to. **Fix:** Add `/v1/` to all schema `$id`s now (while zero tools exist in production) and add a top-level `spec_version` field to passports.
+All `$id` URIs are `https://opentrust.sh/schemas/passport.schema.json` with no version number. When the spec needs a breaking change there is no migration path built in — agents will have no way to know which version of the schema a passport conforms to. **Fix:** Add `/v1/` to all schema `$id`s now (while zero tools exist in production) and add a top-level `spec_version` field to passports.
 
 ### 10. No protocol version header
 When an agent fetches a passport from a registry, there is no response header indicating which version of the OpenTrust protocol the registry speaks. A future v2 registry serving a v1 agent will fail silently. **Fix:** Require `X-OpenTrust-Protocol-Version` on all registry API responses.

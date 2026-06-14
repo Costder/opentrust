@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/v0.2/permissions.schema.json",
+  "$id": "https://opentrust.sh/schemas/v0.2/permissions.schema.json",
   "title": "Permission Manifest v0.2",
   "description": "Granular, machine-enforceable permission scopes for AI agent tools. Each permission can be declared as a boolean (coarse) or as a structured scope object (granular). Boolean true is shorthand for unrestricted access to that surface — agents should treat it as maximally permissive and apply extra scrutiny. Validators and runtimes that support v0.2 should prefer structured scopes.",
   "type": "object",

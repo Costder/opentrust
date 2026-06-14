@@ -133,7 +133,7 @@
             "outcome": "human_arbitration",
             "triggers": ["scope_creep_claimed", "expectation_mismatch"],
             "resolution_sla_seconds": 172800,
-            "arbitration_endpoint": "https://registry.opentrust.dev/api/v1/disputes"
+            "arbitration_endpoint": "https://opentrust.sh/api/v1/disputes"
           }
         ]
       },

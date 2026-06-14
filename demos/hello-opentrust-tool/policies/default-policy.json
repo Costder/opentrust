@@ -1,5 +1,5 @@
 {
-  "$schema": "https://opentrust.dev/schemas/spend-policy.schema.json",
+  "$schema": "https://opentrust.sh/schemas/spend-policy.schema.json",
   "description": "Default agent spend policy for the OpenTrust hello-weather demo. Allows free and low-cost tools with safe permissions only.",
   "max_cost_per_call_usdc": 0.10,
   "max_cost_per_session_usdc": 1.00,

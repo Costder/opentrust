@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent OS — Control Panel</title>
+  <link rel="stylesheet" href="/control-panel/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="panel-header">
+      <div class="header-brand">
+        <span class="logo">&#9651;</span>
+        <h1>Agent OS <span class="version">Control Panel</span></h1>
+      </div>
+      <div class="header-actions">
+        <button id="kill-switch" class="btn btn-danger" data-testid="kill-switch" title="Emergency stop — halts all agent activity">
+          &#9646;&#9646; Kill Switch
+        </button>
+      </div>
+    </header>
+
+    <!-- Mission Prompt -->
+    <section class="section" id="mission-section" data-testid="mission-section">
+      <h2>What do you want done?</h2>
+      <p class="section-desc">Define the agent's real-world mission. This is the top-level directive for all autonomous activity.</p>
+      <textarea id="mission-prompt" class="mission-input" rows="4"
+        placeholder="e.g. You are an autonomous operator tasked with growing the OpenTrust marketplace. Validate new tool passports, onboard sellers, and surface high-quality tools to buyers."
+        data-testid="mission-prompt"
+      ></textarea>
+      <div class="mission-actions">
+        <button class="btn btn-primary" id="save-mission">Save Mission</button>
+        <button class="btn btn-secondary" id="clear-mission">Clear</button>
+      </div>
+    </section>
+
+    <!-- Operator Roles -->
+    <section class="section" id="roles-section" data-testid="roles-section">
+      <h2>Operator Role</h2>
+      <p class="section-desc">Select the primary role that shapes the agent's decision-making posture.</p>
+      <div class="role-grid">
+        <label class="role-card" data-role="manager" data-testid="role-manager">
+          <input type="radio" name="operator-role" value="manager" />
+          <div class="role-icon">&#128203;</div>
+          <div class="role-name">Manager</div>
+          <div class="role-desc">Delegates tasks, tracks OKRs, coordinates sub-agents and human teams.</div>
+        </label>
+        <label class="role-card" data-role="operator" data-testid="role-operator">
+          <input type="radio" name="operator-role" value="operator" />
+          <div class="role-icon">&#9881;</div>
+          <div class="role-name">Operator</div>
+          <div class="role-desc">Runs infrastructure, monitors systems, executes scheduled jobs.</div>
+        </label>
+        <label class="role-card" data-role="shopkeeper" data-testid="role-shopkeeper">
+          <input type="radio" name="operator-role" value="shopkeeper" checked />
+          <div class="role-icon">&#128722;</div>
+          <div class="role-name">Shopkeeper</div>
+          <div class="role-desc">Manages marketplace listings, processes buyer requests, maintains passport reviews.</div>
+        </label>
+        <label class="role-card" data-role="founder" data-testid="role-founder">
+          <input type="radio" name="operator-role" value="founder" />
+          <div class="role-icon">&#128640;</div>
+          <div class="role-name">Founder</div>
+          <div class="role-desc">Full autonomy — strategy, product, revenue, team-building. Use with high spend caps.</div>
+        </label>
+      </div>
+    </section>
+
+    <!-- Spend Caps -->
+    <section class="section" id="spend-caps-section" data-testid="spend-caps-section">
+      <h2>Spend Caps</h2>
+      <p class="section-desc">Hard limits on autonomous spending. The agent cannot exceed these without human approval.</p>
+      <div class="spend-grid">
+        <div class="spend-field">
+          <label for="spend-per-call">Per-call limit (USDC)</label>
+          <input type="number" id="spend-per-call" class="spend-input" min="0" step="0.01" value="1.00"
+            data-testid="spend-per-call" />
+        </div>
+        <div class="spend-field">
+          <label for="spend-daily">Daily cap (USDC)</label>
+          <input type="number" id="spend-daily" class="spend-input" min="0" step="1" value="25"
+            data-testid="spend-daily" />
+        </div>
+        <div class="spend-field">
+          <label for="spend-monthly">Monthly cap (USDC)</label>
+          <input type="number" id="spend-monthly" class="spend-input" min="0" step="10" value="200"
+            data-testid="spend-monthly" />
+        </div>
+      </div>
+      <button class="btn btn-primary" id="save-spend-caps">Apply Caps</button>
+    </section>
+
+    <!-- Strategy Skill -->
+    <section class="section" id="strategy-section" data-testid="strategy-section">
+      <h2>Strategy Skill</h2>
+      <p class="section-desc">
+        The Strategy Skill guides long-horizon planning. Enable it to let the agent reason about multi-step goals,
+        market positioning, and resource allocation before taking action.
+      </p>
+      <div class="toggle-row">
+        <label class="toggle-label" for="strategy-enabled">Enable Strategy Skill</label>
+        <label class="toggle">
+          <input type="checkbox" id="strategy-enabled" data-testid="strategy-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="strategy-config" class="sub-config hidden">
+        <label for="strategy-horizon">Planning horizon</label>
+        <select id="strategy-horizon" data-testid="strategy-horizon">
+          <option value="daily">Daily (24 h)</option>
+          <option value="weekly" selected>Weekly (7 d)</option>
+          <option value="monthly">Monthly (30 d)</option>
+          <option value="quarterly">Quarterly (90 d)</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Harnesses -->
+    <section class="section" id="harnesses-section" data-testid="harnesses-section">
+      <h2>Agent Harnesses</h2>
+      <p class="section-desc">Harnesses are the execution environments the agent can spawn sub-agents into.</p>
+
+      <div class="harness-list">
+
+        <!-- Hermes -->
+        <div class="harness-card" id="harness-hermes" data-testid="harness-hermes">
+          <div class="harness-header">
+            <span class="harness-icon">&#9641;</span>
+            <div class="harness-meta">
+              <div class="harness-name">Hermes Agent</div>
+              <div class="harness-desc">Messaging bridge — Telegram, Discord, Slack, XMPP. Real-time comms and social automation.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="harness-toggle" data-harness="hermes" data-testid="harness-hermes-toggle" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="harness-flags">
+            <span class="flag flag-day-one">Day-one</span>
+            <span class="flag flag-unattended">Unattended OK</span>
+            <span class="flag flag-social">Social automation</span>
+          </div>
+        </div>
+
+        <!-- OpenClaw -->
+        <div class="harness-card" id="harness-openclaw" data-testid="harness-openclaw">
+          <div class="harness-header">
+            <span class="harness-icon">&#128274;</span>
+            <div class="harness-meta">
+              <div class="harness-name">OpenClaw</div>
+              <div class="harness-desc">Browser automation and web scraping harness. Handles interactive web tasks.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="harness-toggle" data-harness="openclaw" data-testid="harness-openclaw-toggle" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="harness-flags">
+            <span class="flag flag-day-one">Day-one</span>
+            <span class="flag flag-unattended">Unattended OK</span>
+            <span class="flag flag-social">Social automation</span>
+          </div>
+        </div>
+
+        <!-- Codex -->
+        <div class="harness-card" id="harness-codex" data-testid="harness-codex">
+          <div class="harness-header">
+            <span class="harness-icon">&#128196;</span>
+            <div class="harness-meta">
+              <div class="harness-name">Codex</div>
+              <div class="harness-desc">OpenAI Codex CLI — code generation, editing, and repository-aware tasks.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="harness-toggle" data-harness="codex" data-testid="harness-codex-toggle" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="harness-flags">
+            <span class="flag flag-day-one">Day-one</span>
+            <span class="flag flag-unattended">Unattended OK</span>
+            <span class="flag flag-social">Social automation</span>
+          </div>
+        </div>
+
+        <!-- Claude -->
+        <div class="harness-card" id="harness-claude" data-testid="harness-claude">
+          <div class="harness-header">
+            <span class="harness-icon">&#9670;</span>
+            <div class="harness-meta">
+              <div class="harness-name">Claude</div>
+              <div class="harness-desc">Anthropic Claude Code — deep reasoning, long-context analysis, agentic coding.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="harness-toggle" data-harness="claude" data-testid="harness-claude-toggle" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="harness-flags">
+            <span class="flag flag-day-one">Day-one</span>
+            <span class="flag flag-unattended">Unattended OK</span>
+            <span class="flag flag-social flag-social-off" title="Social automation is disabled for Claude">Social automation: off</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Local Mode -->
+    <section class="section" id="local-mode-section" data-testid="local-mode-section">
+      <h2>Local Mode</h2>
+      <p class="section-desc">Run entirely on your machine — no cloud login required. Useful for air-gapped, privacy-sensitive, or offline deployments.</p>
+      <div class="toggle-row">
+        <label class="toggle-label" for="local-mode-enabled">Enable local-only mode (no login)</label>
+        <label class="toggle">
+          <input type="checkbox" id="local-mode-enabled" data-testid="local-mode-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <p class="hint" id="local-mode-hint">
+        In local mode the agent uses SQLite, local SMTP, and the local Kubo IPFS node. External APIs are disabled unless explicitly re-enabled.
+      </p>
+    </section>
+
+    <!-- OpenTrust Integration -->
+    <section class="section" id="opentrust-section" data-testid="opentrust-section">
+      <h2>OpenTrust Integration</h2>
+      <p class="section-desc">
+        OpenTrust provides verifiable trust for agent tools. Connect to the marketplace to browse passports,
+        post jobs, and submit reviews.
+      </p>
+
+      <div class="opentrust-grid">
+
+        <div class="ot-card" data-testid="ot-marketplace">
+          <div class="ot-card-icon">&#127978;</div>
+          <div class="ot-card-title">Marketplace</div>
+          <div class="ot-card-desc">Browse and install verified tool passports. Filter by trust level, cost, and capability.</div>
+          <div class="ot-registry-row">
+            <label for="ot-registry-url">Registry URL</label>
+            <input type="url" id="ot-registry-url" class="ot-input" value="https://opentrust.sh/api/v1"
+              data-testid="ot-registry-url" />
+          </div>
+          <button class="btn btn-secondary btn-sm" id="browse-marketplace">Browse Marketplace</button>
+        </div>
+
+        <div class="ot-card" data-testid="ot-passport">
+          <div class="ot-card-icon">&#128196;</div>
+          <div class="ot-card-title">Passport</div>
+          <div class="ot-card-desc">Claim, validate, and publish a passport for tools you own or operate.</div>
+          <div class="ot-prompt-block">
+            <p class="prompt-label">Agent prompt for passport workflow:</p>
+            <blockquote class="agent-prompt" data-testid="passport-prompt">
+              Inspect the tool at the given URL, validate its schema against the OpenTrust passport standard,
+              claim ownership via GitHub OAuth, and submit for community review.
+            </blockquote>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="run-passport-flow">Run Passport Flow</button>
+        </div>
+
+        <div class="ot-card" data-testid="ot-jobs">
+          <div class="ot-card-icon">&#128188;</div>
+          <div class="ot-card-title">Jobs</div>
+          <div class="ot-card-desc">Post tasks for the agent economy — tool audits, integrations, research, and more.</div>
+          <div class="ot-prompt-block">
+            <p class="prompt-label">Agent prompt for job posting:</p>
+            <blockquote class="agent-prompt" data-testid="jobs-prompt">
+              Draft a clear job description, set a USDC budget within the daily spend cap, publish to the
+              OpenTrust job board, and monitor applications.
+            </blockquote>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="post-job">Post a Job</button>
+        </div>
+
+        <div class="ot-card" data-testid="ot-reviews">
+          <div class="ot-card-icon">&#11088;</div>
+          <div class="ot-card-title">Reviews</div>
+          <div class="ot-card-desc">Submit community reviews to elevate tool trust levels and earn reviewer reputation.</div>
+          <div class="ot-prompt-block">
+            <p class="prompt-label">Agent prompt for review workflow:</p>
+            <blockquote class="agent-prompt" data-testid="reviews-prompt">
+              Audit the tool's source code, test its advertised capabilities in a sandbox, document findings,
+              and submit a signed review to the OpenTrust registry.
+            </blockquote>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="run-review">Submit Review</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Status bar -->
+    <footer class="status-bar" id="status-bar" data-testid="status-bar">
+      <span id="status-text">Ready</span>
+      <span class="status-dot active" id="status-dot"></span>
+    </footer>
+  </div>
+
+  <script src="/control-panel/app.js"></script>
+</body>
+</html>

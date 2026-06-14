@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opentrust.dev/schemas/security.schema.json",
+  "$id": "https://opentrust.sh/schemas/security.schema.json",
   "title": "Passport Security",
   "description": "Cryptographic integrity fields for Agent Tool Passports. Covers registry signatures (tamper-proof passports), reviewer attestation format (verifiable review claims), and webhook signatures (payment callback authenticity). All communications must use TLS 1.2+.",
 
@@ -8,7 +8,7 @@
 
     "RegistrySignature": {
       "type": "object",
-      "description": "Signature produced by the OpenTrust registry over the canonical passport content. Allows any agent to verify a passport offline without trusting the serving endpoint. Registry public keys are published at https://opentrust.dev/.well-known/opentrust-keys.json",
+      "description": "Signature produced by the OpenTrust registry over the canonical passport content. Allows any agent to verify a passport offline without trusting the serving endpoint. Registry public keys are published at https://opentrust.sh/.well-known/opentrust-keys.json",
       "required": ["key_id", "algorithm", "signature", "signed_at", "payload_hash"],
       "properties": {
         "key_id": {

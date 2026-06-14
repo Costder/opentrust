@@ -37,7 +37,7 @@ Thank you for the support &mdash; stay safe out there.
 
 [![Watch the OpenTrust demo](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo-thumb.jpg)](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4)
 
-> **Live:** [opentrust.sh](https://opentrust.sh) · [API](https://api.opentrust.sh/api/v1/health)
+> **Live:** [opentrust.sh](https://opentrust.sh) · [API](https://opentrust.sh/api/v1/health)
 
 ---
 
@@ -215,7 +215,7 @@ OpenTrust is live. The reference registry, frontend, and all four agent verifica
 
 | | |
 |---|---|
-| **Registry API** | https://api.opentrust.sh/api/v1/health |
+| **Registry API** | https://opentrust.sh/api/v1/health |
 | **Web frontend** | https://opentrust.sh |
 | **Verification tiers** | L1 (register) · L2 (wallet sig) · L3 (GitHub OAuth) · L4 (USDC fee) — all operational |
 | **Treasury** | `0xCB3E…700b` (Base L2) |
@@ -253,7 +253,7 @@ OpenTrust is live. The reference registry, frontend, and all four agent verifica
 ### Live (no setup)
 
 ```
-API:  https://api.opentrust.sh/api/v1/health
+API:  https://opentrust.sh/api/v1/health
 Web:  https://opentrust.sh
 ```
 

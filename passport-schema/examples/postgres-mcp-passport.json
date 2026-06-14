@@ -1,5 +1,5 @@
 {
-  "$schema": "https://opentrust.dev/schemas/passport/v1.json",
+  "$schema": "https://opentrust.sh/schemas/passport/v1.json",
   "passport_version": "1.0",
   "tool_id": "npm:@modelcontextprotocol/server-postgres",
   "name": "@modelcontextprotocol/server-postgres",

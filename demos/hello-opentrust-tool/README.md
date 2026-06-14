@@ -183,5 +183,5 @@ demos/hello-opentrust-tool/
 
 - All keys in this demo are generated locally at build time and are **test keys only**
 - The unsafe passport is intentionally malicious for demonstration purposes
-- In production, registry keys would be published at `https://opentrust.dev/.well-known/keys.json`
-- Revocation lists would be checked periodically from `https://opentrust.dev/.well-known/revoked-passports.json`
+- In production, registry keys would be published at `https://opentrust.sh/.well-known/keys.json`
+- Revocation lists would be checked periodically from `https://opentrust.sh/.well-known/revoked-passports.json`

@@ -47,6 +47,7 @@ import { CLAUDE_TOOLS } from './capabilities/claude/index.js';
 import { HELP_TOOLS } from './capabilities/help/index.js';
 import type { PassportClaims } from './types.js';
 import { dispatchTool } from './dispatch.js';
+import { registerControlPanelRoutes } from './control-panel/routes.js';
 
 export interface ServerOptions {
   registryUrl: string;
@@ -1162,6 +1163,8 @@ export function createApp(options: ServerOptions): express.Application {
 
   // RSS feed routes — public, no auth required
   registerRssRoutes(app);
+
+  registerControlPanelRoutes(app, { registryUrl: options.registryUrl });
 
   // Auth middleware
   app.use(async (req: AuthedRequest, res: Response, next: NextFunction) => {
