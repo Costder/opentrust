@@ -59,3 +59,19 @@ async def test_gateway_policy_simulation_requires_approval_for_payment(client):
     assert resp.json()["allowed"] is False
     assert resp.json()["approval_required"] is True
     assert resp.json()["reason"] == "approval_required_for_wallet.spend"
+
+
+async def test_local_connector_registration_contract(client):
+    resp = await client.post(
+        "/api/v1/gateway/local-connectors/register",
+        json={
+            "machine_name": "joshua-laptop",
+            "connector_version": "0.1.0",
+            "supported_modes": ["stdio_mcp", "filesystem", "browser"],
+        },
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["connector_id"].startswith("lc_")
+    assert body["status"] == "registered"

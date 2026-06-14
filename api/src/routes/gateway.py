@@ -1,5 +1,7 @@
+from uuid import uuid4
+
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from api.src.schemas.gateway import (
     GatewayCallContext,
@@ -29,6 +31,17 @@ class GatewayPolicySimulationRequest(BaseModel):
     tool: GatewayToolSpec
     policy: GatewayPolicy
     context: GatewayCallContext
+
+
+class LocalConnectorRegisterRequest(BaseModel):
+    machine_name: str = Field(min_length=1)
+    connector_version: str = Field(min_length=1)
+    supported_modes: list[str]
+
+
+class LocalConnectorRegisterResponse(BaseModel):
+    connector_id: str
+    status: str
 
 
 SEED_CONNECTORS = [
@@ -82,3 +95,13 @@ async def list_gateway_connectors() -> GatewayConnectorList:
 @router.post("/policy/simulate", response_model=GatewayPolicyDecision)
 async def simulate_gateway_policy(request: GatewayPolicySimulationRequest) -> GatewayPolicyDecision:
     return evaluate_gateway_policy(tool=request.tool, policy=request.policy, context=request.context)
+
+
+@router.post("/local-connectors/register", response_model=LocalConnectorRegisterResponse)
+async def register_local_connector(
+    request: LocalConnectorRegisterRequest,
+) -> LocalConnectorRegisterResponse:
+    return LocalConnectorRegisterResponse(
+        connector_id=f"lc_{uuid4().hex[:16]}",
+        status="registered",
+    )
