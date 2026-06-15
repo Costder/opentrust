@@ -1,7 +1,7 @@
 {
   "name": "@infinitestudios/opentrust-client",
   "version": "1.0.2",
-  "description": "TypeScript SDK for verifying and auditing MCP tool passports \u2014 OpenTrust trust registry client",
+  "description": "TypeScript SDK for verifying and auditing MCP tool passports — OpenTrust trust registry client",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -24,9 +24,9 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "tsup": "^8.3.0",
-    "typescript": "^5.4.0",
-    "vitest": "^2.0.0"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
   },
   "license": "MIT",
   "homepage": "https://github.com/Costder/opentrust#readme",
@@ -58,5 +58,8 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
   }
 }

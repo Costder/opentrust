@@ -29,22 +29,28 @@ const {
 // ---------------------------------------------------------------------------
 
 vi.mock('twilio', () => {
-  const incomingPhoneNumbersInstance = vi.fn(() => ({
-    remove: mockTwilioIncomingRemove,
-  })) as ReturnType<typeof vi.fn> & { create: ReturnType<typeof vi.fn> };
+  const incomingPhoneNumbersInstance = vi.fn(function () {
+    return {
+      remove: mockTwilioIncomingRemove,
+    };
+  }) as ReturnType<typeof vi.fn> & { create: ReturnType<typeof vi.fn> };
   incomingPhoneNumbersInstance.create = mockTwilioIncomingCreate;
 
   const twilioClient = {
-    availablePhoneNumbers: vi.fn(() => ({
-      local: { list: mockTwilioAvailableList },
-    })),
+    availablePhoneNumbers: vi.fn(function () {
+      return {
+        local: { list: mockTwilioAvailableList },
+      };
+    }),
     incomingPhoneNumbers: incomingPhoneNumbersInstance,
     messages: {
       create: mockTwilioMessagesCreate,
       list: mockTwilioMessagesList,
     },
   };
-  const ctor = vi.fn(() => twilioClient);
+  const ctor = vi.fn(function () {
+    return twilioClient;
+  });
   return { default: ctor };
 });
 
@@ -61,7 +67,7 @@ vi.stubGlobal('fetch', mockFetch);
 // SQLite mock — in-memory DB
 vi.mock('better-sqlite3', () => {
   let db: import('better-sqlite3').Database | null = null;
-  const Ctor = vi.fn((_path: string) => {
+  const Ctor = vi.fn(function (_path: string) {
     if (!db) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
       const RealDB = (require('better-sqlite3') as any) as new (path: string) => import('better-sqlite3').Database;

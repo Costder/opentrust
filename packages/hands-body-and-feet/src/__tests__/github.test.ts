@@ -19,18 +19,20 @@ const {
 }));
 
 vi.mock('@octokit/rest', () => {
-  const MockOctokit = vi.fn().mockImplementation(() => ({
-    rest: {
-      repos: {
-        createForAuthenticatedUser: mockCreateForAuthenticatedUser,
-        createOrUpdateFileContents: mockCreateOrUpdateFileContents,
-        listForAuthenticatedUser: mockListForAuthenticatedUser,
+  const MockOctokit = vi.fn().mockImplementation(function () {
+    return {
+      rest: {
+        repos: {
+          createForAuthenticatedUser: mockCreateForAuthenticatedUser,
+          createOrUpdateFileContents: mockCreateOrUpdateFileContents,
+          listForAuthenticatedUser: mockListForAuthenticatedUser,
+        },
+        pulls: {
+          create: mockPullsCreate,
+        },
       },
-      pulls: {
-        create: mockPullsCreate,
-      },
-    },
-  }));
+    };
+  });
   return { Octokit: MockOctokit };
 });
 

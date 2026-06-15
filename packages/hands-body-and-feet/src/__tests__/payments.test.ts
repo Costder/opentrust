@@ -29,7 +29,9 @@ vi.mock('ethers', () => {
   };
   return {
     ethers: {
-      JsonRpcProvider: vi.fn(() => mockProvider),
+      JsonRpcProvider: vi.fn(function () {
+        return mockProvider;
+      }),
       __mockProvider: mockProvider,
     },
   };

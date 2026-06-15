@@ -23,7 +23,7 @@ vi.mock('../config.js', () => ({
 
 vi.mock('better-sqlite3', () => {
   let db: import('better-sqlite3').Database | null = null;
-  const Ctor = vi.fn((_path: string) => {
+  const Ctor = vi.fn(function (_path: string) {
     if (!db) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
       const RealDB = (require('better-sqlite3') as any) as new (path: string) => import('better-sqlite3').Database;
@@ -57,9 +57,11 @@ vi.mock('../keystore.js', () => ({
 // ethers mock — just needs Wallet to return a fixed address
 vi.mock('ethers', () => ({
   ethers: {
-    Wallet: vi.fn((_pk: string) => ({
-      address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
-    })),
+    Wallet: vi.fn(function (_pk: string) {
+      return {
+        address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+      };
+    }),
   },
 }));
 

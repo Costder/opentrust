@@ -14,12 +14,14 @@ const mockPatch = vi.fn();
 const mockDelete = vi.fn();
 
 vi.mock('../capabilities/cards/moon-client.js', () => ({
-  MoonClient: vi.fn().mockImplementation(() => ({
-    get: mockGet,
-    post: mockPost,
-    patch: mockPatch,
-    delete: mockDelete,
-  })),
+  MoonClient: vi.fn().mockImplementation(function () {
+    return {
+      get: mockGet,
+      post: mockPost,
+      patch: mockPatch,
+      delete: mockDelete,
+    };
+  }),
 }));
 
 // Mock config to control sandbox flag
