@@ -1,0 +1,33 @@
+# OpenTrust — MCP Tool Trust & Security Passport Service
+
+## What is OpenTrust?
+OpenTrust is an open standard and registry for AI agent tool trust.
+- Can I trust this MCP tool?
+- What data does it access, and is that safe?
+- How does trust flow when an agent spawns sub-agents?
+
+## Service: MCP Security Passport — $20 USDC (Base)
+
+We produce a cryptographically-signed security passport for any MCP server. Delivered in 24h.
+
+### What you receive:
+- passport.json: full capability map, permission flags, trust level
+- badge.svg: embeddable trust badge for your README
+- Registry listing on costder.github.io/opentrust/
+
+### How to order:
+Open a GitHub issue: https://github.com/Costder/opentrust/issues/new
+Title: Passport request: [your-tool-name]
+Pay 20 USDC to: 0x0FDD9B72Be53D9b9b70C45B45cDADad679362342 (Base network)
+
+## Live examples
+- discord-mcp: https://github.com/Costder/opentrust/blob/main/passport-schema/examples/discord-mcp-passport.json
+- mcp-use: https://github.com/Costder/opentrust/blob/main/passport-schema/examples/mcp-use-passport.json
+- stripe: https://github.com/Costder/opentrust/blob/main/passport-schema/examples/stripe-mcp-passport.json
+
+## Security report
+https://costder.github.io/opentrust/mcp-security-report.html
+
+## SDK
+Python: pip install opentrust-sdk
+TypeScript: npm install @infinitestudios/opentrust-client
