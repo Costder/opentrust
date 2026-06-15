@@ -17,11 +17,13 @@ const {
 
 // Mock dockerode default export
 vi.mock('dockerode', () => {
-  const MockDocker = vi.fn(() => ({
-    createContainer: mockCreateContainer,
-    getContainer: mockGetContainer,
-    listContainers: mockListContainers,
-  }));
+  const MockDocker = vi.fn(function () {
+    return {
+      createContainer: mockCreateContainer,
+      getContainer: mockGetContainer,
+      listContainers: mockListContainers,
+    };
+  });
   return { default: MockDocker };
 });
 

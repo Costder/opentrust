@@ -9,20 +9,20 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "lucide-react": "^1.16.0",
-    "next": "16.2.6",
-    "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "lucide-react": "^1.18.0",
+    "next": "16.2.9",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
   },
   "devDependencies": {
-    "@types/node": "^25.8.0",
-    "@types/react": "19.2.15",
+    "@types/node": "^25.9.3",
+    "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "autoprefixer": "^10.4.19",
+    "autoprefixer": "^10.5.0",
     "eslint": "^9.39.4",
-    "eslint-config-next": "16.2.6",
-    "postcss": "^8.5.10",
-    "tailwindcss": "^3.4.3",
+    "eslint-config-next": "16.2.9",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
     "typescript": "6.0.3"
   },
   "overrides": {

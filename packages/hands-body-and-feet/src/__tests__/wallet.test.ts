@@ -29,8 +29,12 @@ vi.mock('ethers', () => {
         createRandom: vi.fn(() => mockWallet),
         // Also allow "new ethers.Wallet(key)" and "new ethers.Wallet(key, provider)"
       },
-      JsonRpcProvider: vi.fn(() => mockProvider),
-      Contract: vi.fn(() => mockContract),
+      JsonRpcProvider: vi.fn(function () {
+        return mockProvider;
+      }),
+      Contract: vi.fn(function () {
+        return mockContract;
+      }),
       formatEther: vi.fn(() => '1.0'),
       formatUnits: vi.fn(() => '10.0'),
       parseUnits: vi.fn(() => BigInt('10000000')),
@@ -67,7 +71,9 @@ import { ethers } from 'ethers';
 const mockWalletInstance = (ethers as unknown as { __mockWallet: { address: string; privateKey: string; signMessage: ReturnType<typeof vi.fn> } }).__mockWallet;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (ethers as unknown as any).Wallet = Object.assign(
-  vi.fn(() => mockWalletInstance),
+  vi.fn(function () {
+    return mockWalletInstance;
+  }),
   { createRandom: vi.fn(() => mockWalletInstance) },
 );
 

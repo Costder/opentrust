@@ -1,7 +1,7 @@
 {
   "name": "@infinitestudios/hands-body-and-feet",
   "version": "2.3.1",
-  "description": "Give AI agents real-world capabilities via MCP \u00e2\u20ac\u201d email, phone, wallet, payments, virtual cards, and more",
+  "description": "Give AI agents real-world capabilities via MCP â€” email, phone, wallet, payments, virtual cards, and more",
   "type": "module",
   "bin": {
     "hands-body-and-feet": "bin/hands-body-and-feet.js"
@@ -25,46 +25,46 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@inquirer/prompts": "^7.0.0",
-    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@inquirer/prompts": "^7.10.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@ngrok/ngrok": "^1.7.0",
     "@octokit/rest": "^22.0.1",
     "@xmpp/client": "^0.14.0",
-    "agentmail": "^0.5.8",
-    "better-sqlite3": "^11.0.0",
+    "agentmail": "^0.5.12",
+    "better-sqlite3": "^11.10.0",
     "cloudflared": "^0.7.1",
     "dockerode": "^5.0.0",
-    "ethers": "^6.13.0",
-    "express": "^4.21.0",
-    "kubo-rpc-client": "^7.0.0",
+    "ethers": "^6.16.0",
+    "express": "^4.22.2",
+    "kubo-rpc-client": "^7.1.0",
     "mailparser": "^3.9.9",
     "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.10",
+    "nodemailer": "^8.0.11",
     "oauth-1.0a": "^2.2.6",
-    "postmark": "^4.0.5",
-    "resend": "^4.0.0",
+    "postmark": "^4.0.7",
+    "resend": "^4.8.0",
     "rss": "^1.2.2",
     "smtp-server": "^3.18.5",
-    "twilio": "^5.3.0",
+    "twilio": "^5.13.1",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.11",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/dockerode": "^4.0.1",
-    "@types/express": "^4.17.21",
-    "@types/mailparser": "^3.4.4",
-    "@types/node": "^20.0.0",
+    "@types/express": "^4.17.25",
+    "@types/mailparser": "^3.4.6",
+    "@types/node": "^20.19.43",
     "@types/node-cron": "^3.0.11",
-    "@types/nodemailer": "^6.4.15",
+    "@types/nodemailer": "^6.4.24",
     "@types/rss": "^0.0.32",
-    "@types/smtp-server": "^3.5.10",
-    "@types/supertest": "^6.0.2",
-    "@types/yargs": "^17.0.33",
-    "msw": "^2.4.0",
-    "supertest": "^7.0.0",
-    "tsup": "^8.3.0",
-    "typescript": "^5.4.0",
-    "vitest": "^2.0.0"
+    "@types/smtp-server": "^3.5.13",
+    "@types/supertest": "^6.0.3",
+    "@types/yargs": "^17.0.35",
+    "msw": "^2.14.6",
+    "supertest": "^7.2.2",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
   },
   "license": "MIT",
   "homepage": "https://github.com/Costder/opentrust#readme",
@@ -94,6 +94,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "overrides": {
-    "ws": "^8.20.1"
+    "ws": "^8.20.1",
+    "esbuild": "^0.28.1"
   }
 }

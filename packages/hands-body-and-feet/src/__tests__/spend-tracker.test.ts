@@ -11,7 +11,7 @@ vi.mock('better-sqlite3', () => {
   // We use a lazy singleton so the same in-memory DB is returned each call
   // until the test suite explicitly calls Database.reset()
   let db: import('better-sqlite3').Database | null = null;
-  const Ctor = vi.fn((_path: string) => {
+  const Ctor = vi.fn(function (_path: string) {
     if (!db) {
       // Dynamic import of the real module inside the factory
       // We can't use await here — use synchronous require-style via createRequire

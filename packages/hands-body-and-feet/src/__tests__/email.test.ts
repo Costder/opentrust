@@ -26,10 +26,12 @@ vi.mock('../config.js', () => ({
 
 // Mock smtp-server — stub start/stop only, no real socket
 vi.mock('smtp-server', () => {
-  const SMTPServer = vi.fn(() => ({
-    listen: vi.fn((_port: number, cb: (err?: Error) => void) => cb()),
-    close: vi.fn((cb: () => void) => cb()),
-  }));
+  const SMTPServer = vi.fn(function () {
+    return {
+      listen: vi.fn((_port: number, cb: (err?: Error) => void) => cb()),
+      close: vi.fn((cb: () => void) => cb()),
+    };
+  });
   return { SMTPServer };
 });
 
@@ -49,24 +51,28 @@ vi.mock('nodemailer', () => ({
 
 // Mock postmark
 vi.mock('postmark', () => ({
-  ServerClient: vi.fn(() => ({
-    sendEmail: vi.fn().mockResolvedValue({ MessageID: 'postmark-msg-id-001' }),
-  })),
+  ServerClient: vi.fn(function () {
+    return {
+      sendEmail: vi.fn().mockResolvedValue({ MessageID: 'postmark-msg-id-001' }),
+    };
+  }),
 }));
 
 // Mock resend
 vi.mock('resend', () => ({
-  Resend: vi.fn(() => ({
-    emails: {
-      send: vi.fn().mockResolvedValue({ data: { id: 'resend-msg-id-001' }, error: null }),
-    },
-  })),
+  Resend: vi.fn(function () {
+    return {
+      emails: {
+        send: vi.fn().mockResolvedValue({ data: { id: 'resend-msg-id-001' }, error: null }),
+      },
+    };
+  }),
 }));
 
 // SQLite mock — in-memory DB singleton
 vi.mock('better-sqlite3', () => {
   let db: import('better-sqlite3').Database | null = null;
-  const Ctor = vi.fn((_path: string) => {
+  const Ctor = vi.fn(function (_path: string) {
     if (!db) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
       const RealDB = (require('better-sqlite3') as any) as new (path: string) => import('better-sqlite3').Database;
@@ -603,9 +609,11 @@ describe('email capability', () => {
 
       const { ServerClient } = await import('postmark');
       const mockSendEmail = vi.fn().mockResolvedValue({ MessageID: 'pm-msg-id-001' });
-      vi.mocked(ServerClient).mockImplementation(() => ({
-        sendEmail: mockSendEmail,
-      }) as unknown as InstanceType<typeof ServerClient>);
+      vi.mocked(ServerClient).mockImplementation(function () {
+        return {
+          sendEmail: mockSendEmail,
+        } as unknown as InstanceType<typeof ServerClient>;
+      });
 
       const transport = new PostmarkTransport();
       const result = await transport.sendEmail({
@@ -674,9 +682,11 @@ describe('email capability', () => {
 
       const { Resend } = await import('resend');
       const mockSend = vi.fn().mockResolvedValue({ data: { id: 'rs-msg-id-001' }, error: null });
-      vi.mocked(Resend).mockImplementation(() => ({
-        emails: { send: mockSend },
-      }) as unknown as InstanceType<typeof Resend>);
+      vi.mocked(Resend).mockImplementation(function () {
+        return {
+          emails: { send: mockSend },
+        } as unknown as InstanceType<typeof Resend>;
+      });
 
       const transport = new ResendTransport();
       const result = await transport.sendEmail({
@@ -701,9 +711,11 @@ describe('email capability', () => {
 
       const { ServerClient } = await import('postmark');
       const mockSendEmail = vi.fn().mockResolvedValue({ MessageID: 'pm-routed-id' });
-      vi.mocked(ServerClient).mockImplementation(() => ({
-        sendEmail: mockSendEmail,
-      }) as unknown as InstanceType<typeof ServerClient>);
+      vi.mocked(ServerClient).mockImplementation(function () {
+        return {
+          sendEmail: mockSendEmail,
+        } as unknown as InstanceType<typeof ServerClient>;
+      });
 
       const result = await sendEmail(
         { from: 'a@example.com', to: 'b@example.com', subject: 'Routed', body: 'Body' },

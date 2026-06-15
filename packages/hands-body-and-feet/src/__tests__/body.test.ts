@@ -9,7 +9,7 @@ vi.mock('../config.js', () => ({
 }));
 vi.mock('better-sqlite3', () => {
   let db: import('better-sqlite3').Database | null = null;
-  const Ctor = vi.fn(() => {
+  const Ctor = vi.fn(function () {
     if (!db) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
       const RealDB = (require('better-sqlite3') as any) as new (p: string) => import('better-sqlite3').Database;
