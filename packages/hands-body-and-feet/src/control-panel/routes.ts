@@ -1,4 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
+import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -9,13 +10,31 @@ import { createStrategyRecord } from './strategy.js';
 import {
   appendEvent,
   createMission,
+  getMission,
+  listAgents,
+  listAllDecisions,
+  listDecisions,
   listEvents,
   listMissions,
   listStrategyRecords,
   saveStrategyRecord,
   setMissionStrategyGoal,
+  updateMissionStatus,
 } from './store.js';
+import type { MissionStatus } from './types.js';
 import { isPaused, pause, resume } from '../state.js';
+
+const MISSION_STATUSES: MissionStatus[] = [
+  'draft', 'starting', 'running', 'waiting_approval', 'blocked', 'done', 'failed', 'stopped',
+];
+
+// Browser-bound setup secret: used to authorize local write routes when no
+// HBF_LOCAL_SESSION_TOKEN is configured. Injected into the served HTML so the
+// loopback control panel can authenticate writes without a cloud login.
+const GENERATED_SESSION_TOKEN = randomUUID();
+function activeSessionToken(): string {
+  return process.env['HBF_LOCAL_SESSION_TOKEN'] || GENERATED_SESSION_TOKEN;
+}
 
 interface ControlPanelOptions {
   registryUrl: string;
@@ -29,10 +48,9 @@ function readUiFile(fileName: string): string {
 }
 
 function requireLocalSession(req: Request, res: Response, next: NextFunction): void {
-  const configuredToken = process.env['HBF_LOCAL_SESSION_TOKEN'];
   const provided = req.header('x-hbf-local-session');
 
-  if (configuredToken && provided === configuredToken) {
+  if (provided && provided === activeSessionToken()) {
     next();
     return;
   }
@@ -44,7 +62,12 @@ function requireLocalSession(req: Request, res: Response, next: NextFunction): v
 }
 
 function sendIndex(_req: Request, res: Response): void {
-  res.type('html').send(readUiFile('index.html'));
+  const html = readUiFile('index.html').replaceAll('__HBF_SESSION_TOKEN__', activeSessionToken());
+  res.type('html').send(html);
+}
+
+function missionTitleMap(): Map<string, string> {
+  return new Map(listMissions().map((m) => [m.missionId, m.title]));
 }
 
 export function registerControlPanelRoutes(
@@ -88,10 +111,15 @@ export function registerControlPanelRoutes(
       return;
     }
 
+    const requestedStatus = typeof req.body?.status === 'string' && MISSION_STATUSES.includes(req.body.status as MissionStatus)
+      ? (req.body.status as MissionStatus)
+      : undefined;
+
     let mission = createMission({
       title: typeof req.body?.title === 'string' ? req.body.title : undefined,
       objective,
       mode,
+      status: requestedStatus,
       budget: typeof req.body?.budget === 'object' ? req.body.budget : undefined,
       forbiddenActions: Array.isArray(req.body?.forbiddenActions) ? req.body.forbiddenActions : undefined,
     });
@@ -124,6 +152,54 @@ export function registerControlPanelRoutes(
     res.json({
       events: listEvents(req.params.missionId),
       strategies: listStrategyRecords(req.params.missionId),
+    });
+  });
+
+  // Full mission detail in one call: mission + plan + timeline + decisions + agents.
+  app.get('/api/local/missions/:missionId/detail', (req, res) => {
+    const mission = getMission(req.params.missionId);
+    if (!mission) {
+      res.status(404).json({ error: 'MISSION_NOT_FOUND' });
+      return;
+    }
+    res.json({
+      mission,
+      strategies: listStrategyRecords(mission.missionId),
+      events: listEvents(mission.missionId),
+      decisions: listDecisions(mission.missionId),
+      agents: listAgents(mission.missionId),
+    });
+  });
+
+  // Per-mission status change (pause/resume/stop) — distinct from the global kill switch.
+  app.post('/api/local/missions/:missionId/status', requireLocalSession, (req, res) => {
+    const status = typeof req.body?.status === 'string' ? req.body.status : '';
+    if (!MISSION_STATUSES.includes(status as MissionStatus)) {
+      res.status(400).json({ error: 'INVALID_STATUS' });
+      return;
+    }
+    const mission = updateMissionStatus(req.params.missionId, status as MissionStatus);
+    if (!mission) {
+      res.status(404).json({ error: 'MISSION_NOT_FOUND' });
+      return;
+    }
+    appendEvent({ missionId: mission.missionId, type: 'mission', summary: `Mission status set to ${status}.` });
+    res.json({ mission });
+  });
+
+  // Decision ledger across all missions (mission title attached for display).
+  app.get('/api/local/decisions', (_req, res) => {
+    const titles = missionTitleMap();
+    res.json({
+      decisions: listAllDecisions().map((d) => ({ ...d, missionTitle: titles.get(d.missionId) ?? d.missionId })),
+    });
+  });
+
+  // Agent roster across all missions (mission title attached for display).
+  app.get('/api/local/agents', (_req, res) => {
+    const titles = missionTitleMap();
+    res.json({
+      agents: listAgents().map((a) => ({ ...a, missionTitle: a.missionId ? titles.get(a.missionId) ?? a.missionId : null })),
     });
   });
 

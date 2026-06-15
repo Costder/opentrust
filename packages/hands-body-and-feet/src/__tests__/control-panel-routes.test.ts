@@ -52,7 +52,7 @@ describe('Agent OS control panel routes', () => {
 
     const control = await request(app).get('/control');
     expect(control.status).toBe(200);
-    expect(control.text).toMatch(/What do you want done/i);
+    expect(control.text).toMatch(/Mission Control|Agent OS/i);
 
     const setup = await request(app).get('/setup');
     expect(setup.status).toBe(200);
@@ -110,5 +110,75 @@ describe('Agent OS control panel routes', () => {
     expect(events.status).toBe(200);
     expect(events.body.events.length).toBeGreaterThanOrEqual(2);
     expect(events.body.strategies).toHaveLength(1);
+  });
+
+  it('serves mission detail, decisions, and agents from the live store', async () => {
+    const app = createApp(APP_OPTIONS);
+    await request(app).get('/api/local/status');
+    resetAgentOsTables();
+
+    const created = await request(app)
+      .post('/api/local/missions')
+      .set('x-hbf-local-session', 'test')
+      .send({ objective: 'Grow the marketplace and onboard sellers.', mode: 'shopkeeper', status: 'running' });
+    const missionId = created.body.mission.missionId;
+
+    // seed a decision + an agent directly through the store
+    const { createDecision, upsertAgent } = await import('../control-panel/store.js');
+    createDecision({
+      missionId, trigger: 'assumption_invalidated', title: 'Pivot to warm intros',
+      rationale: 'Cold email got no replies.',
+      alternatives: [{ option: 'Keep cold emailing', rejectedBecause: '0% reply rate' }],
+      approvedBy: 'autonomous',
+    });
+    upsertAgent({
+      agentId: 'agent-claude-01', missionId, harness: 'claude', model: 'claude-opus-4-8',
+      status: 'running', currentTaskId: 'drafting', processId: null, sessionRef: null,
+      telemetryQuality: 'exact', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+
+    const detail = await request(app).get(`/api/local/missions/${missionId}/detail`);
+    expect(detail.status).toBe(200);
+    expect(detail.body.mission.missionId).toBe(missionId);
+    expect(detail.body.decisions).toHaveLength(1);
+    expect(detail.body.agents).toHaveLength(1);
+
+    const decisions = await request(app).get('/api/local/decisions');
+    expect(decisions.status).toBe(200);
+    expect(decisions.body.decisions[0].title).toBe('Pivot to warm intros');
+    expect(decisions.body.decisions[0].missionTitle).toBeTruthy();
+
+    const agents = await request(app).get('/api/local/agents');
+    expect(agents.status).toBe(200);
+    expect(agents.body.agents[0].agentId).toBe('agent-claude-01');
+    expect(agents.body.agents[0].missionTitle).toBeTruthy();
+  });
+
+  it('updates mission status with a session header and rejects without one', async () => {
+    const app = createApp(APP_OPTIONS);
+    await request(app).get('/api/local/status');
+    resetAgentOsTables();
+
+    const created = await request(app)
+      .post('/api/local/missions')
+      .set('x-hbf-local-session', 'test')
+      .send({ objective: 'Quick task to pause.', mode: 'manager', status: 'running' });
+    const missionId = created.body.mission.missionId;
+
+    const noAuth = await request(app).post(`/api/local/missions/${missionId}/status`).send({ status: 'stopped' });
+    expect(noAuth.status).toBe(403);
+
+    const ok = await request(app)
+      .post(`/api/local/missions/${missionId}/status`)
+      .set('x-hbf-local-session', 'test')
+      .send({ status: 'stopped' });
+    expect(ok.status).toBe(200);
+    expect(ok.body.mission.status).toBe('stopped');
+
+    const bad = await request(app)
+      .post(`/api/local/missions/${missionId}/status`)
+      .set('x-hbf-local-session', 'test')
+      .send({ status: 'not-a-status' });
+    expect(bad.status).toBe(400);
   });
 });

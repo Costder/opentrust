@@ -48,6 +48,7 @@ import { HELP_TOOLS } from './capabilities/help/index.js';
 import type { PassportClaims } from './types.js';
 import { dispatchTool } from './dispatch.js';
 import { registerControlPanelRoutes } from './control-panel/routes.js';
+import { seedControlPanelDemoIfEmpty } from './control-panel/seed.js';
 
 export interface ServerOptions {
   registryUrl: string;
@@ -1224,6 +1225,7 @@ export function startServer(options: ServerOptions): Promise<import('http').Serv
   return new Promise((resolve) => {
     const httpServer = app.listen(port, () => {
       console.log(`Hands Body and Feet MCP server listening on http://localhost:${port}/mcp`);
+      seedControlPanelDemoIfEmpty();
       startLocalTransportIfConfigured().catch((err) => {
         console.error('Failed to start local SMTP transport:', err);
       });

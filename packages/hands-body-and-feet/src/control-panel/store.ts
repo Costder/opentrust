@@ -2,7 +2,10 @@ import { randomUUID } from 'crypto';
 import { openDb } from '../spend-tracker.js';
 import { defaultSpendCaps } from './permissions.js';
 import type {
+  AgentInstance,
   AgentOsEvent,
+  DecisionInput,
+  DecisionRecord,
   EventInput,
   Mission,
   MissionInput,
@@ -67,6 +70,33 @@ export function ensureControlPanelSchema(): void {
     CREATE TABLE IF NOT EXISTS agent_os_harness_status (
       harness_id TEXT PRIMARY KEY,
       status_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS agent_os_decisions (
+      decision_id TEXT PRIMARY KEY,
+      mission_id TEXT NOT NULL,
+      agent_id TEXT,
+      title TEXT NOT NULL,
+      rationale TEXT NOT NULL,
+      alternatives_json TEXT NOT NULL DEFAULT '[]',
+      trigger TEXT NOT NULL,
+      cost REAL NOT NULL DEFAULT 0,
+      reversible INTEGER NOT NULL DEFAULT 1,
+      approved_by TEXT NOT NULL DEFAULT 'autonomous',
+      superseded_by TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS agent_os_agents (
+      agent_id TEXT PRIMARY KEY,
+      mission_id TEXT,
+      harness TEXT NOT NULL,
+      model TEXT NOT NULL,
+      status TEXT NOT NULL,
+      current_task_id TEXT,
+      process_id INTEGER,
+      session_ref TEXT,
+      telemetry_quality TEXT NOT NULL,
+      created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
   `);
@@ -146,6 +176,14 @@ export function listMissions(): Mission[] {
     SELECT mission_id FROM agent_os_missions ORDER BY created_at DESC
   `).all() as Array<{ mission_id: string }>;
   return rows.map((row) => getMission(row.mission_id)).filter((mission): mission is Mission => mission !== null);
+}
+
+export function updateMissionStatus(missionId: string, status: Mission['status']): Mission | null {
+  ensureControlPanelSchema();
+  openDb().prepare(`
+    UPDATE agent_os_missions SET status = ?, updated_at = ? WHERE mission_id = ?
+  `).run(status, nowIso(), missionId);
+  return getMission(missionId);
 }
 
 export function setMissionStrategyGoal(missionId: string, strategyGoalId: string): Mission | null {
@@ -246,4 +284,151 @@ export function listStrategyRecords(missionId: string): StrategyRecord[] {
     createdAt: String(row['created_at']),
     updatedAt: String(row['updated_at']),
   }));
+}
+
+// ── Decisions ────────────────────────────────────────────────────────────────
+function rowToDecision(row: Record<string, unknown>): DecisionRecord {
+  return {
+    decisionId: String(row['decision_id']),
+    missionId: String(row['mission_id']),
+    agentId: row['agent_id'] ? String(row['agent_id']) : null,
+    title: String(row['title']),
+    rationale: String(row['rationale']),
+    alternatives: parseJson(String(row['alternatives_json']), []),
+    trigger: row['trigger'] as DecisionRecord['trigger'],
+    cost: Number(row['cost']) || 0,
+    reversible: Number(row['reversible']) === 1,
+    approvedBy: row['approved_by'] as DecisionRecord['approvedBy'],
+    supersededBy: row['superseded_by'] ? String(row['superseded_by']) : null,
+    createdAt: String(row['created_at']),
+  };
+}
+
+export function createDecision(input: DecisionInput): DecisionRecord {
+  ensureControlPanelSchema();
+  const decision: DecisionRecord = {
+    decisionId: randomUUID(),
+    missionId: input.missionId,
+    agentId: input.agentId ?? null,
+    title: input.title,
+    rationale: input.rationale,
+    alternatives: input.alternatives ?? [],
+    trigger: input.trigger,
+    cost: input.cost ?? 0,
+    reversible: input.reversible ?? true,
+    approvedBy: input.approvedBy ?? 'autonomous',
+    supersededBy: null,
+    createdAt: nowIso(),
+  };
+
+  openDb().prepare(`
+    INSERT INTO agent_os_decisions (
+      decision_id, mission_id, agent_id, title, rationale, alternatives_json,
+      trigger, cost, reversible, approved_by, superseded_by, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    decision.decisionId,
+    decision.missionId,
+    decision.agentId,
+    decision.title,
+    decision.rationale,
+    JSON.stringify(decision.alternatives),
+    decision.trigger,
+    decision.cost,
+    decision.reversible ? 1 : 0,
+    decision.approvedBy,
+    decision.supersededBy,
+    decision.createdAt,
+  );
+
+  appendEvent({
+    missionId: decision.missionId,
+    agentId: decision.agentId,
+    type: 'strategy',
+    summary: `Decision: ${decision.title}`,
+    data: { decisionId: decision.decisionId, trigger: decision.trigger },
+  });
+
+  return decision;
+}
+
+// Append-only revision: a new decision supersedes an earlier one.
+export function supersedeDecision(decisionId: string, supersededBy: string): void {
+  ensureControlPanelSchema();
+  openDb().prepare(`
+    UPDATE agent_os_decisions SET superseded_by = ? WHERE decision_id = ?
+  `).run(supersededBy, decisionId);
+}
+
+export function listDecisions(missionId: string): DecisionRecord[] {
+  ensureControlPanelSchema();
+  const rows = openDb().prepare(`
+    SELECT * FROM agent_os_decisions WHERE mission_id = ? ORDER BY created_at DESC
+  `).all(missionId) as Array<Record<string, unknown>>;
+  return rows.map(rowToDecision);
+}
+
+export function listAllDecisions(): DecisionRecord[] {
+  ensureControlPanelSchema();
+  const rows = openDb().prepare(`
+    SELECT * FROM agent_os_decisions ORDER BY created_at DESC
+  `).all() as Array<Record<string, unknown>>;
+  return rows.map(rowToDecision);
+}
+
+// ── Agents ───────────────────────────────────────────────────────────────────
+function rowToAgent(row: Record<string, unknown>): AgentInstance {
+  return {
+    agentId: String(row['agent_id']),
+    missionId: row['mission_id'] ? String(row['mission_id']) : null,
+    harness: row['harness'] as AgentInstance['harness'],
+    model: String(row['model']),
+    status: row['status'] as AgentInstance['status'],
+    currentTaskId: row['current_task_id'] ? String(row['current_task_id']) : null,
+    processId: row['process_id'] != null ? Number(row['process_id']) : null,
+    sessionRef: row['session_ref'] ? String(row['session_ref']) : null,
+    telemetryQuality: row['telemetry_quality'] as AgentInstance['telemetryQuality'],
+    createdAt: String(row['created_at']),
+    updatedAt: String(row['updated_at']),
+  };
+}
+
+export function upsertAgent(agent: AgentInstance): AgentInstance {
+  ensureControlPanelSchema();
+  openDb().prepare(`
+    INSERT INTO agent_os_agents (
+      agent_id, mission_id, harness, model, status, current_task_id,
+      process_id, session_ref, telemetry_quality, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(agent_id) DO UPDATE SET
+      mission_id = excluded.mission_id,
+      status = excluded.status,
+      current_task_id = excluded.current_task_id,
+      process_id = excluded.process_id,
+      session_ref = excluded.session_ref,
+      telemetry_quality = excluded.telemetry_quality,
+      updated_at = excluded.updated_at
+  `).run(
+    agent.agentId,
+    agent.missionId,
+    agent.harness,
+    agent.model,
+    agent.status,
+    agent.currentTaskId,
+    agent.processId,
+    agent.sessionRef,
+    agent.telemetryQuality,
+    agent.createdAt,
+    agent.updatedAt,
+  );
+  return agent;
+}
+
+export function listAgents(missionId?: string): AgentInstance[] {
+  ensureControlPanelSchema();
+  const db = openDb();
+  const rows = (missionId
+    ? db.prepare(`SELECT * FROM agent_os_agents WHERE mission_id = ? ORDER BY updated_at DESC`).all(missionId)
+    : db.prepare(`SELECT * FROM agent_os_agents ORDER BY updated_at DESC`).all()) as Array<Record<string, unknown>>;
+  return rows.map(rowToAgent);
 }
