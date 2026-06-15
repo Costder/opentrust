@@ -1,0 +1,16 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      apiUrl:
+        type: string
+        description: OpenTrust registry API URL
+        default: https://costder.github.io/opentrust
+    required: []
+  commandFunction: |-
+    (config) => ({
+      command: "uvx",
+      args: ["--from", "opentrust-sdk[mcp]==1.0.1", "opentrust-mcp"],
+      env: { ...(config.apiUrl ? { OPENTRUST_API_URL: config.apiUrl } : {}) }
+    })
