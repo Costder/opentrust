@@ -1,0 +1,20 @@
+name: Post VoltAgent Comment
+
+on:
+  workflow_dispatch:
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post OpenTrust comment on VoltAgent issue 1166
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh issue comment VoltAgent/voltagent#1166 --body "Hey @uchibeke -- OpenTrust implements exactly what this issue describes.
+
+We built an open standard for MCP tool passports: signed JSON that encodes permissions, cost constraints, and trust level so agents can run deterministic pre-call verification before a tool fires.
+
+We already wrote a VoltAgent passport + integration spec: https://costder.github.io/opentrust/voltagent.html
+
+Happy to help wire this into VoltAgent's tool-call hook layer. The integration path is in the passport file."
