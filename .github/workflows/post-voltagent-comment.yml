@@ -11,29 +11,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          COMMENT="Hey @uchibeke -- OpenTrust implements exactly what this issue describes.
+          COMMENT="Hey @uchibeke -- saw you are building Open Agent Passport at Aporth. OpenTrust is an open-source MCP passport standard that implements the same pre-call tool verification this issue describes.
 
-We built an open standard for MCP tool passports: signed JSON that encodes permissions, cost constraints, and trust level so agents can run deterministic pre-call verification before a tool fires.
+We already wrote a VoltAgent integration spec: https://costder.github.io/opentrust/voltagent.html
 
-We already wrote a VoltAgent passport + integration spec: https://costder.github.io/opentrust/voltagent.html
-
-Happy to help wire this into VoltAgent's tool-call hook layer. The integration path is in the passport file."
+Not competing -- OAP and OpenTrust could be complementary. Happy to compare notes or help wire the passport format into VoltAgent's before_tool_call hook. The $20 passport service at costder.github.io/opentrust/passport-service.html can get any MCP tool covered quickly."
 
           if [ -z "$GH_TOKEN" ]; then
             {
-              echo "## Ready to post — paste this at VoltAgent/voltagent#1166"
+              echo "## Ready to post -- paste this at VoltAgent/voltagent#1166"
               echo ""
-              echo "**Target:** https://github.com/VoltAgent/voltagent/issues/1166"
+              echo "**Step 1:** Go to https://github.com/settings/tokens/new?scopes=public_repo&description=opentrust-voltagent"
+              echo "**Step 2:** Generate token, copy it"
+              echo "**Step 3:** Go to https://github.com/Costder/opentrust/settings/secrets/actions/new -- Name: GH_TOKEN, Value: paste token, Save"
+              echo "**Step 4:** Come back here and click Re-run"
               echo ""
-              echo "**Copy this comment:**"
+              echo "**OR paste this comment manually at https://github.com/VoltAgent/voltagent/issues/1166 :**"
               echo ""
-              echo '''
               echo "$COMMENT"
-              echo '''
-              echo ""
-              echo "*(Add GH_TOKEN secret at Settings > Secrets > Actions to auto-post next run.)*"
             } >> "$GITHUB_STEP_SUMMARY"
-            echo "No GH_TOKEN set -- comment text written to Job Summary above."
+            echo "GH_TOKEN not set. Instructions written to Job Summary above."
             exit 0
           fi
 
