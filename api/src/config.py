@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     opentrust_byo_wallet_enabled: bool = True
     opentrust_embedded_wallet_enabled: bool = False
     opentrust_custodial_wallets_enabled: bool = False
-    opentrust_escrow_enabled: bool = False
+    opentrust_escrow_enabled: bool = False  # set True only when ESCROW_WALLET_PRIVATE_KEY + ESCROW_WALLET_ADDRESS are set
     opentrust_marketplace_fee_enabled: bool = False
     opentrust_reputation_gate_enabled: bool = True
 
