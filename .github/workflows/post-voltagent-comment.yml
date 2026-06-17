@@ -11,10 +11,34 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh issue comment VoltAgent/voltagent#1166 --body "Hey @uchibeke -- OpenTrust implements exactly what this issue describes.
+          COMMENT="Hey @uchibeke -- OpenTrust implements exactly what this issue describes.
 
 We built an open standard for MCP tool passports: signed JSON that encodes permissions, cost constraints, and trust level so agents can run deterministic pre-call verification before a tool fires.
 
 We already wrote a VoltAgent passport + integration spec: https://costder.github.io/opentrust/voltagent.html
 
 Happy to help wire this into VoltAgent's tool-call hook layer. The integration path is in the passport file."
+
+          if [ -z "$GH_TOKEN" ]; then
+            echo ""
+            echo "========================================="
+            echo "ACTION NEEDED: GH_TOKEN secret not set"
+            echo "========================================="
+            echo ""
+            echo "To fix - go to:"
+            echo "https://github.com/Costder/opentrust/settings/secrets/actions/new"
+            echo ""
+            echo "  Name:  GH_TOKEN"
+            echo "  Value: your GitHub PAT (needs public_repo scope)"
+            echo ""
+            echo "Then click Re-run workflow. Done."
+            echo ""
+            echo "--- OR PASTE THIS MANUALLY AT github.com/VoltAgent/voltagent/issues/1166 ---"
+            printf "%s
+" "$COMMENT"
+            echo "--- END ---"
+            exit 1
+          fi
+
+          gh issue comment VoltAgent/voltagent#1166 --body "$COMMENT"
+          echo "Comment posted successfully!"
