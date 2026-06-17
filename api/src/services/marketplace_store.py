@@ -443,8 +443,15 @@ class MarketplaceStore:
             raise KeyError("escrow does not exist")
         if escrow.status != EscrowStatus.delivered:
             raise ValueError("escrow must be delivered before release")
+        seller_wallet = self.wallets.get(escrow.seller_wallet_id)
+        if seller_wallet is None:
+            raise KeyError("seller wallet not found — cannot send settlement transfer")
         escrow.status = EscrowStatus.release_pending
-        result = (provider or get_escrow_provider()).release_funds(escrow_id)
+        result = (provider or get_escrow_provider()).release_funds(
+            escrow_id,
+            recipient_address=seller_wallet.address,
+            amount_usdc=escrow.amount_usdc,
+        )
         escrow.status = EscrowStatus.released
         escrow.settlement_tx_hash = result.transaction_hash
         self._accrue_outcome(escrow, "released")
@@ -457,8 +464,15 @@ class MarketplaceStore:
             raise KeyError("escrow does not exist")
         if escrow.status not in {EscrowStatus.funded, EscrowStatus.disputed}:
             raise ValueError("escrow can only be refunded after funding or dispute")
+        buyer_wallet = self.wallets.get(escrow.buyer_wallet_id)
+        if buyer_wallet is None:
+            raise KeyError("buyer wallet not found — cannot send refund transfer")
         escrow.status = EscrowStatus.refund_pending
-        result = (provider or get_escrow_provider()).refund_buyer(escrow_id)
+        result = (provider or get_escrow_provider()).refund_buyer(
+            escrow_id,
+            recipient_address=buyer_wallet.address,
+            amount_usdc=escrow.amount_usdc,
+        )
         escrow.status = EscrowStatus.refunded
         escrow.refund_tx_hash = result.transaction_hash
         self._accrue_outcome(escrow, "refunded")
