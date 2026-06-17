@@ -9,6 +9,7 @@ import type {
   EventInput,
   Mission,
   MissionInput,
+  SpendCaps,
   StrategyRecord,
 } from './types.js';
 
@@ -184,6 +185,59 @@ export function updateMissionStatus(missionId: string, status: Mission['status']
     UPDATE agent_os_missions SET status = ?, updated_at = ? WHERE mission_id = ?
   `).run(status, nowIso(), missionId);
   return getMission(missionId);
+}
+
+export interface MissionUpdate {
+  title?: string;
+  objective?: string;
+  mode?: Mission['mode'];
+  status?: Mission['status'];
+  budget?: Partial<SpendCaps>;
+  forbiddenActions?: string[];
+}
+
+export function updateMission(missionId: string, patch: MissionUpdate): Mission | null {
+  ensureControlPanelSchema();
+  const existing = getMission(missionId);
+  if (!existing) return null;
+  const merged: Mission = {
+    ...existing,
+    title: patch.title ?? existing.title,
+    objective: patch.objective ?? existing.objective,
+    mode: patch.mode ?? existing.mode,
+    status: patch.status ?? existing.status,
+    budget: patch.budget ? { ...existing.budget, ...patch.budget } : existing.budget,
+    forbiddenActions: patch.forbiddenActions ?? existing.forbiddenActions,
+    updatedAt: nowIso(),
+  };
+  openDb().prepare(`
+    UPDATE agent_os_missions
+       SET title = ?, objective = ?, mode = ?, status = ?,
+           budget_json = ?, forbidden_actions_json = ?, updated_at = ?
+     WHERE mission_id = ?
+  `).run(
+    merged.title,
+    merged.objective,
+    merged.mode,
+    merged.status,
+    JSON.stringify(merged.budget),
+    JSON.stringify(merged.forbiddenActions),
+    merged.updatedAt,
+    missionId,
+  );
+  return getMission(missionId);
+}
+
+export function deleteMission(missionId: string): boolean {
+  ensureControlPanelSchema();
+  const db = openDb();
+  if (!getMission(missionId)) return false;
+  db.prepare(`DELETE FROM agent_os_events WHERE mission_id = ?`).run(missionId);
+  db.prepare(`DELETE FROM agent_os_decisions WHERE mission_id = ?`).run(missionId);
+  db.prepare(`DELETE FROM agent_os_strategy_records WHERE mission_id = ?`).run(missionId);
+  db.prepare(`DELETE FROM agent_os_agents WHERE mission_id = ?`).run(missionId);
+  db.prepare(`DELETE FROM agent_os_missions WHERE mission_id = ?`).run(missionId);
+  return true;
 }
 
 export function setMissionStrategyGoal(missionId: string, strategyGoalId: string): Mission | null {

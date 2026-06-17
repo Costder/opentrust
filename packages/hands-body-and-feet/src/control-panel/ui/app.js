@@ -436,7 +436,7 @@
     const m = d.mission; const strat = (d.strategies && d.strategies[0]) || null;
     const spent = (d.events || []).filter((e) => e.type === 'spend').reduce((t, e) => t + (Number(e.data && e.data.amount) || 0), 0);
     return { id: m.missionId, title: m.title, objective: m.objective, mode: m.mode, status: m.status,
-      spent: Math.round(spent * 100) / 100, cap: capOf(m.budget),
+      spent: Math.round(spent * 100) / 100, cap: capOf(m.budget), budget: m.budget || {},
       milestones: strat ? strat.milestones.map((t) => [t, 'todo']) : [],
       assumptions: strat ? strat.assumptions : [], exitRules: strat ? strat.exitRules : [],
       agents: (d.agents || []).map((a) => cap(a.harness)), decisions: (d.decisions || []).map((x) => ({ title: x.title })), _live: true };
@@ -495,20 +495,47 @@
     const exits = m.exitRules.length ? m.exitRules.map((a) => '<div class="chip-row exit">' + esc(a) + '</div>').join('') : '<div class="chip-row">None.</div>';
     const decs = m.decisions || DECISIONS.filter((d) => d.mission === m.title);
     const decHtml = decs.length ? decs.map((d) => '<div class="milestone"><span class="ms-box"></span><span class="ms-text">' + esc(d.title) + '</span></div>').join('') : '<div class="chip-row">No decisions yet.</div>';
+    const bg = m.budget || {};
+    const bPerCall = bg.perCall != null ? bg.perCall : 0;
+    const bDaily = bg.daily != null ? bg.daily : (m.cap || 0);
+    const bTotal = bg.missionTotal != null ? bg.missionTotal : (m.cap || 0);
+    const modeOpts = ['manager', 'operator', 'shopkeeper', 'founder']
+      .map((v) => '<option value="' + v + '"' + (v === m.mode ? ' selected' : '') + '>' + cap(v) + '</option>').join('');
     el.innerHTML =
-      '<div class="md-head"><h2 class="md-title">' + esc(m.title) + '</h2><span class="pill pill-' + m.status + '">' + (STATUS_LABEL[m.status] || m.status) + '</span></div>'
+      '<div class="md-head"><h2 class="md-title">' + esc(m.title) + '</h2><span class="mc-mode">' + m.mode + '</span><span class="pill pill-' + m.status + '">' + (STATUS_LABEL[m.status] || m.status) + '</span></div>'
       + '<div class="md-obj">' + esc(m.objective) + '</div>'
-      + '<div class="md-controls"><button class="btn btn-secondary btn-sm" data-mc="pause">' + (m.status === 'running' ? 'Pause' : 'Resume') + '</button>'
-      + '<button class="btn btn-secondary btn-sm" data-mc="stop">Stop mission</button><span style="flex:1"></span><span class="mc-mode">mode: ' + m.mode + '</span></div>'
+      + '<div class="md-controls">'
+      + '<button class="btn btn-secondary btn-sm" data-mc="pause">' + (m.status === 'running' ? 'Pause' : 'Resume') + '</button>'
+      + '<button class="btn btn-secondary btn-sm" data-mc="stop">Stop</button>'
+      + '<button class="btn btn-secondary btn-sm" id="md-edit-btn">Edit</button>'
+      + '<span style="flex:1"></span>'
+      + '<button class="btn btn-danger btn-sm" id="md-kill"><span class="kill-ico">&#9608;</span> Kill mission</button></div>'
+      + '<div class="md-edit hidden" id="md-edit">'
+      + '<p class="md-section-title">Edit mission</p>'
+      + '<label class="ed-label" for="ed-objective">Objective</label>'
+      + '<textarea class="ed-input" id="ed-objective" rows="3">' + esc(m.objective) + '</textarea>'
+      + '<label class="ed-label" for="ed-mode">Autonomy mode</label>'
+      + '<select class="ed-input ed-select" id="ed-mode">' + modeOpts + '</select>'
+      + '<label class="ed-label">Spend caps (USDC)</label>'
+      + '<div class="ed-caps">'
+      + '<div class="ed-cap"><span>Per-call</span><input type="number" min="0" step="0.01" id="ed-percall" value="' + bPerCall + '"></div>'
+      + '<div class="ed-cap"><span>Daily</span><input type="number" min="0" step="1" id="ed-daily" value="' + bDaily + '"></div>'
+      + '<div class="ed-cap"><span>Mission total</span><input type="number" min="0" step="10" id="ed-total" value="' + bTotal + '"></div>'
+      + '</div>'
+      + '<div class="ed-actions"><button class="btn btn-primary btn-sm" id="ed-save">Save changes</button><button class="btn btn-secondary btn-sm" id="ed-cancel">Cancel</button></div>'
+      + '</div>'
       + '<div class="md-grid"><div class="md-main">'
       + '<div class="panel"><p class="md-section-title">Strategy plan · milestones</p>' + milestones + '</div>'
       + '<div class="panel"><p class="md-section-title">Decisions on this mission</p>' + decHtml + '</div></div>'
       + '<div class="md-side">'
-      + '<div class="panel"><p class="md-section-title">Spend</p><div class="stat-value" style="font-size:1.2rem">$' + m.spent + ' <span class="stat-of">/ $' + m.cap + '</span></div><div class="meter-bar"><span style="width:' + pct + '%"></span></div></div>'
+      + '<div class="panel"><p class="md-section-title">Spend</p><div class="stat-value" style="font-size:1.2rem">$' + m.spent + ' <span class="stat-of">/ $' + m.cap + '</span></div><div class="meter-bar"><span style="width:' + pct + '%"></span></div>'
+      + '<div class="ed-caps-read">per-call $' + bPerCall + ' · daily $' + bDaily + ' · total $' + bTotal + '</div></div>'
       + '<div class="panel"><p class="md-section-title">Assumptions</p><div class="chip-list">' + assumptions + '</div></div>'
       + '<div class="panel"><p class="md-section-title">Exit rules</p><div class="chip-list">' + exits + '</div></div>'
       + '<div class="panel"><p class="md-section-title">Agents</p><div class="chip-list">' + (m.agents.map((a) => '<div class="chip-row">' + esc(a) + '</div>').join('') || '<div class="chip-row">None.</div>') + '</div></div>'
       + '</div></div>';
+
+    // Pause / Stop
     el.querySelectorAll('[data-mc]').forEach((b) => b.addEventListener('click', async () => {
       const act = b.getAttribute('data-mc');
       const next = act === 'stop' ? 'stopped' : (m.status === 'running' ? 'stopped' : 'running');
@@ -527,6 +554,54 @@
       logEvent('mission', m.title + ' → ' + m.status + '.', m.status === 'stopped' ? 'warn' : 'ok');
       renderMissionDetail(m);
     }));
+
+    // Edit toggle / cancel
+    if ($('md-edit-btn')) $('md-edit-btn').addEventListener('click', () => {
+      const p = $('md-edit'); if (p) { p.classList.toggle('hidden'); if (!p.classList.contains('hidden')) p.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    });
+    if ($('ed-cancel')) $('ed-cancel').addEventListener('click', () => { const p = $('md-edit'); if (p) p.classList.add('hidden'); });
+
+    // Save edits
+    if ($('ed-save')) $('ed-save').addEventListener('click', async () => {
+      const objective = $('ed-objective').value.trim();
+      const mode = $('ed-mode').value;
+      const perCall = parseFloat($('ed-percall').value) || 0;
+      const daily = parseFloat($('ed-daily').value) || 0;
+      const missionTotal = parseFloat($('ed-total').value) || 0;
+      if (!objective) { toast('Objective required', 'Give the mission an objective.', 'warn'); return; }
+      const patch = { objective, mode, budget: { perCall, daily, missionTotal } };
+      if (m._live) {
+        try {
+          await api('/api/local/missions/' + encodeURIComponent(m.id), { method: 'PATCH', body: JSON.stringify(patch) });
+          toast('Mission updated', m.title);
+          logEvent('mission', m.title + ' settings updated.', 'info');
+          openMission(m.id);
+          return;
+        } catch (e) { /* fall through to optimistic */ }
+      }
+      Object.assign(m, { objective, mode, cap: missionTotal || daily, budget: { perCall, daily, missionTotal } });
+      const seed = MISSIONS.find((x) => x.id === m.id); if (seed) Object.assign(seed, { objective, mode, cap: m.cap });
+      toast('Mission updated', m.title);
+      renderMissionDetail(m);
+    });
+
+    // Kill (delete) mission
+    if ($('md-kill')) $('md-kill').addEventListener('click', async () => {
+      if (!window.confirm('Kill mission "' + m.title + '"? This permanently deletes it and its history.')) return;
+      if (m._live) {
+        try {
+          await api('/api/local/missions/' + encodeURIComponent(m.id), { method: 'DELETE' });
+          toast('Mission killed', m.title, 'danger');
+          logEvent('mission', m.title + ' killed (deleted).', 'crit');
+          setView('missions');
+          refreshOverviewMissions();
+          return;
+        } catch (e) { /* fall through to optimistic */ }
+      }
+      const i = MISSIONS.findIndex((x) => x.id === m.id); if (i >= 0) MISSIONS.splice(i, 1);
+      toast('Mission killed', m.title, 'danger');
+      setView('missions');
+    });
   }
 
   async function renderDecisions() {

@@ -10,6 +10,7 @@ import { createStrategyRecord } from './strategy.js';
 import {
   appendEvent,
   createMission,
+  deleteMission,
   getMission,
   listAgents,
   listAllDecisions,
@@ -19,9 +20,11 @@ import {
   listStrategyRecords,
   saveStrategyRecord,
   setMissionStrategyGoal,
+  updateMission,
   updateMissionStatus,
+  type MissionUpdate,
 } from './store.js';
-import type { MissionStatus } from './types.js';
+import type { MissionStatus, SpendCaps } from './types.js';
 import { isPaused, pause, resume } from '../state.js';
 
 const MISSION_STATUSES: MissionStatus[] = [
@@ -169,6 +172,66 @@ export function registerControlPanelRoutes(
       decisions: listDecisions(mission.missionId),
       agents: listAgents(mission.missionId),
     });
+  });
+
+  // Edit a mission — objective, mode, and spend caps.
+  app.patch('/api/local/missions/:missionId', requireLocalSession, (req, res) => {
+    const body = req.body ?? {};
+    const patch: MissionUpdate = {};
+
+    if (typeof body.title === 'string') patch.title = body.title.trim();
+    if (typeof body.objective === 'string') patch.objective = body.objective.trim();
+
+    if (typeof body.mode === 'string') {
+      if (!AUTONOMY_MODES.some((item) => item.mode === body.mode)) {
+        res.status(400).json({ error: 'INVALID_MODE' });
+        return;
+      }
+      patch.mode = body.mode as MissionUpdate['mode'];
+    }
+
+    if (typeof body.status === 'string') {
+      if (!MISSION_STATUSES.includes(body.status as MissionStatus)) {
+        res.status(400).json({ error: 'INVALID_STATUS' });
+        return;
+      }
+      patch.status = body.status as MissionStatus;
+    }
+
+    if (body.budget && typeof body.budget === 'object') {
+      const budget: Partial<SpendCaps> = {};
+      for (const key of ['perCall', 'daily', 'missionTotal'] as const) {
+        if (body.budget[key] !== undefined) {
+          const n = Number(body.budget[key]);
+          if (!Number.isFinite(n) || n < 0) {
+            res.status(400).json({ error: 'INVALID_BUDGET' });
+            return;
+          }
+          budget[key] = n;
+        }
+      }
+      patch.budget = budget;
+    }
+
+    if (Array.isArray(body.forbiddenActions)) patch.forbiddenActions = body.forbiddenActions;
+
+    const mission = updateMission(req.params.missionId, patch);
+    if (!mission) {
+      res.status(404).json({ error: 'MISSION_NOT_FOUND' });
+      return;
+    }
+    appendEvent({ missionId: mission.missionId, type: 'mission', summary: 'Mission settings updated.' });
+    res.json({ mission });
+  });
+
+  // Kill a mission — permanently delete it and its events/decisions/strategy/agents.
+  app.delete('/api/local/missions/:missionId', requireLocalSession, (req, res) => {
+    const deleted = deleteMission(req.params.missionId);
+    if (!deleted) {
+      res.status(404).json({ error: 'MISSION_NOT_FOUND' });
+      return;
+    }
+    res.json({ deleted: true });
   });
 
   // Per-mission status change (pause/resume/stop) — distinct from the global kill switch.

@@ -474,6 +474,31 @@ body {
 .chip-row::before { content: '·'; position: absolute; left: 2px; color: var(--accent); }
 .chip-row.exit::before { content: '⊘'; color: var(--hazard); font-size: 0.7rem; }
 
+/* Mission edit panel */
+.md-edit {
+  background: var(--surface); border: 1px solid var(--border-glow); border-radius: var(--radius-lg);
+  padding: 18px 20px; margin-bottom: 18px;
+}
+.ed-label { display: block; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin: 12px 0 6px; }
+.ed-label:first-of-type { margin-top: 4px; }
+.ed-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border-2); border-radius: var(--radius);
+  color: var(--text); font-family: var(--font-mono); font-size: 0.82rem; padding: 9px 11px; resize: vertical;
+}
+.ed-input:focus { outline: none; border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ed-select { cursor: pointer; max-width: 220px; }
+.ed-caps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ed-cap { display: flex; flex-direction: column; gap: 5px; }
+.ed-cap span { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+.ed-cap input {
+  background: var(--bg); border: 1px solid var(--border-2); border-radius: var(--radius);
+  color: var(--text); font-family: var(--font-mono); font-size: 0.92rem; padding: 8px 10px;
+}
+.ed-cap input:focus { outline: none; border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ed-actions { display: flex; gap: 9px; margin-top: 16px; }
+.ed-caps-read { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-faint); margin-top: 10px; }
+@media (max-width: 640px) { .ed-caps { grid-template-columns: 1fr; } }
+
 /* ── Decision ledger ─────────────────────────────────── */
 .decision-list { display: flex; flex-direction: column; gap: 12px; }
 .decision-card { background: linear-gradient(180deg, var(--surface), var(--bg-2)); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; position: relative; }

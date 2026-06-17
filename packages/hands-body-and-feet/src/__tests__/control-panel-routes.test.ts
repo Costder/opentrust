@@ -154,6 +154,73 @@ describe('Agent OS control panel routes', () => {
     expect(agents.body.agents[0].missionTitle).toBeTruthy();
   });
 
+  it('edits a mission objective, mode, and spend caps', async () => {
+    const app = createApp(APP_OPTIONS);
+    await request(app).get('/api/local/status');
+    resetAgentOsTables();
+
+    const created = await request(app)
+      .post('/api/local/missions')
+      .set('x-hbf-local-session', 'test')
+      .send({ objective: 'Original objective.', mode: 'manager', budget: { perCall: 1, daily: 10, missionTotal: 50 } });
+    const missionId = created.body.mission.missionId;
+
+    const noAuth = await request(app).patch(`/api/local/missions/${missionId}`).send({ objective: 'x' });
+    expect(noAuth.status).toBe(403);
+
+    const edited = await request(app)
+      .patch(`/api/local/missions/${missionId}`)
+      .set('x-hbf-local-session', 'test')
+      .send({ objective: 'Updated objective.', mode: 'shopkeeper', budget: { daily: 99, missionTotal: 250 } });
+    expect(edited.status).toBe(200);
+    expect(edited.body.mission.objective).toBe('Updated objective.');
+    expect(edited.body.mission.mode).toBe('shopkeeper');
+    expect(edited.body.mission.budget.daily).toBe(99);
+    expect(edited.body.mission.budget.missionTotal).toBe(250);
+    expect(edited.body.mission.budget.perCall).toBe(1); // unchanged
+
+    const badMode = await request(app)
+      .patch(`/api/local/missions/${missionId}`)
+      .set('x-hbf-local-session', 'test')
+      .send({ mode: 'nope' });
+    expect(badMode.status).toBe(400);
+
+    const badBudget = await request(app)
+      .patch(`/api/local/missions/${missionId}`)
+      .set('x-hbf-local-session', 'test')
+      .send({ budget: { daily: -5 } });
+    expect(badBudget.status).toBe(400);
+  });
+
+  it('kills (deletes) a mission and its history', async () => {
+    const app = createApp(APP_OPTIONS);
+    await request(app).get('/api/local/status');
+    resetAgentOsTables();
+
+    const created = await request(app)
+      .post('/api/local/missions')
+      .set('x-hbf-local-session', 'test')
+      .send({ objective: 'Mission to kill and grow revenue.', mode: 'founder' });
+    const missionId = created.body.mission.missionId;
+
+    const noAuth = await request(app).delete(`/api/local/missions/${missionId}`);
+    expect(noAuth.status).toBe(403);
+
+    const killed = await request(app)
+      .delete(`/api/local/missions/${missionId}`)
+      .set('x-hbf-local-session', 'test');
+    expect(killed.status).toBe(200);
+    expect(killed.body.deleted).toBe(true);
+
+    const detail = await request(app).get(`/api/local/missions/${missionId}/detail`);
+    expect(detail.status).toBe(404);
+
+    const missing = await request(app)
+      .delete(`/api/local/missions/${missionId}`)
+      .set('x-hbf-local-session', 'test');
+    expect(missing.status).toBe(404);
+  });
+
   it('updates mission status with a session header and rejects without one', async () => {
     const app = createApp(APP_OPTIONS);
     await request(app).get('/api/local/status');
