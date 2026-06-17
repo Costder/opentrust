@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     opentrust_registry_treasury_address: str = ""  # USDC recipient for $10 verification fees
     opentrust_verification_fee_usdc: str = "10.00"
 
+    # Escrow treasury wallet — operator secret, never commit to repo
+    # Set OPENTRUST_ESCROW_ENABLED=true only when both are provided.
+    escrow_wallet_private_key: str = ""
+    escrow_wallet_address: str = ""
+
     # Coinbase Commerce
     coinbase_business_api_key_id: str = ""
     coinbase_business_api_key_secret: str = ""
@@ -229,6 +234,22 @@ def _check_payment_config() -> None:
         )
 
 
+def _check_escrow_wallet_config() -> None:
+    """In production with escrow enabled, both wallet key and address are required."""
+    if not settings.opentrust_escrow_enabled:
+        return
+    if not settings.escrow_wallet_private_key.strip():
+        _ERRORS.append(
+            "OPENTRUST_ESCROW_ENABLED=true but ESCROW_WALLET_PRIVATE_KEY is empty. "
+            "Set the treasury wallet private key in .env (never commit it)."
+        )
+    if not settings.escrow_wallet_address.strip():
+        _ERRORS.append(
+            "OPENTRUST_ESCROW_ENABLED=true but ESCROW_WALLET_ADDRESS is empty. "
+            "Set the treasury wallet address (0x…) in .env."
+        )
+
+
 def _check_trusted_proxies() -> None:
     """Warn if rate limiting is on in production without a trusted-proxy list, in
     which case the real client IP can't be derived behind a proxy/edge."""
@@ -257,6 +278,7 @@ def run_config_validation() -> None:
     _check_jwt_secret()
     _check_admin_token()
     _check_payment_config()
+    _check_escrow_wallet_config()
     _check_trusted_proxies()
     _check_db_url()
     _check_cors_origins()

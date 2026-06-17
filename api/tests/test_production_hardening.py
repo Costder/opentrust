@@ -372,3 +372,67 @@ class TestMiddlewareIntegration:
         assert limiter._check("test") is True
         # This next call should exceed the limit of 1
         assert limiter._check("test") is False
+
+
+class TestEscrowWalletConfig:
+    def test_escrow_enabled_without_wallet_key_is_an_error(self):
+        """Escrow enabled but no wallet key = startup error in production."""
+        from api.src.config import Settings, run_config_validation, _ERRORS
+        s = Settings(
+            environment="production",
+            jwt_secret="a" * 64,
+            registry_admin_token="tok",
+            opentrust_escrow_enabled=True,
+            escrow_wallet_private_key="",  # missing
+            escrow_wallet_address="0x" + "a" * 40,
+        )
+        # Patch the global settings object for the duration of this call
+        import api.src.config as cfg
+        orig = cfg.settings
+        cfg.settings = s
+        try:
+            with pytest.raises(SystemExit):
+                run_config_validation()
+            assert any("ESCROW_WALLET_PRIVATE_KEY" in e for e in _ERRORS), \
+                f"expected error about ESCROW_WALLET_PRIVATE_KEY, got: {_ERRORS}"
+        finally:
+            cfg.settings = orig
+
+    def test_escrow_enabled_without_wallet_address_is_an_error(self):
+        import api.src.config as cfg
+        from api.src.config import Settings, run_config_validation, _ERRORS
+        s = Settings(
+            environment="production",
+            jwt_secret="a" * 64,
+            registry_admin_token="tok",
+            opentrust_escrow_enabled=True,
+            escrow_wallet_private_key="0x" + "a" * 64,
+            escrow_wallet_address="",  # missing
+        )
+        orig = cfg.settings
+        cfg.settings = s
+        try:
+            with pytest.raises(SystemExit):
+                run_config_validation()
+            assert any("ESCROW_WALLET_ADDRESS" in e for e in _ERRORS)
+        finally:
+            cfg.settings = orig
+
+    def test_escrow_disabled_does_not_require_wallet_keys(self):
+        import api.src.config as cfg
+        from api.src.config import Settings, run_config_validation, _ERRORS
+        s = Settings(
+            environment="production",
+            jwt_secret="a" * 64,
+            registry_admin_token="tok",
+            opentrust_escrow_enabled=False,
+            escrow_wallet_private_key="",
+            escrow_wallet_address="",
+        )
+        orig = cfg.settings
+        cfg.settings = s
+        try:
+            run_config_validation()
+            assert not any("ESCROW_WALLET" in e for e in _ERRORS)
+        finally:
+            cfg.settings = orig
