@@ -177,10 +177,13 @@ async def _retrieve_wallet_private_key(db: Database, wallet_id: str, owner: str)
     Raises ValueError if the owner does not match (tamper detection).
     This is internal — never exposed via an API endpoint.
     """
+    from ..services.custody import decrypt_private_key
+
     records = await db.load_objects("wallet_key")
     for record in records:
         if record.get("wallet_id") == wallet_id:
-            from ..services.custody import decrypt_private_key
+            if record.get("owner") != owner:
+                raise ValueError("owner does not match stored record")
             return decrypt_private_key(
                 record["encrypted_key"],
                 settings.wallet_encryption_secret,

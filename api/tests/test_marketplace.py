@@ -524,3 +524,24 @@ class TestEmbeddedWalletKeyPersistence:
         assert retrieved_key is not None
         assert retrieved_key.startswith("0x")
         assert len(retrieved_key) == 66  # 0x + 64 hex chars
+
+    async def test_retrieve_wallet_key_raises_on_wrong_owner(self, tmp_path):
+        """Wrong owner raises ValueError (explicit tamper detection)."""
+        from api.src.database import Database
+        from api.src.routes.marketplace import _retrieve_wallet_private_key
+        import api.src.config as cfg_mod
+        from unittest.mock import patch as mpatch
+
+        test_db = Database()
+        cfg_mod.settings.sqlite_path = str(tmp_path / "owner_test.db")
+        await test_db.init()
+        # Manually insert a wallet_key record with owner "alice"
+        await test_db.save_object("wallet_key", "emb_test123", {
+            "wallet_id": "emb_test123",
+            "encrypted_key": "some_encrypted_blob",
+            "owner": "alice",
+        })
+
+        with pytest.raises(ValueError, match="owner does not match"):
+            with mpatch.object(cfg_mod.settings, "wallet_encryption_secret", "a" * 32):
+                await _retrieve_wallet_private_key(test_db, "emb_test123", "bob")
