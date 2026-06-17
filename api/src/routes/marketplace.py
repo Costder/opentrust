@@ -149,9 +149,7 @@ async def generate_embedded_wallet(request: _GenerateWalletRequest, db: Database
         raise HTTPException(status_code=503, detail="WALLET_ENCRYPTION_SECRET is not configured")
     from ..services.custody import encrypt_private_key, generate_wallet
     wallet_data = generate_wallet()
-    encrypt_private_key(wallet_data["private_key"], settings.wallet_encryption_secret, request.owner)
-    # NOTE: In production, store encrypted_key in the database with wallet_id as key.
-    # For now (in-memory dev mode) we only store the public wallet account, not the private key.
+    encrypted_key = encrypt_private_key(wallet_data["private_key"], settings.wallet_encryption_secret, request.owner)
     account = WalletAccount(
         wallet_id=f"emb_{wallet_data['address'][-8:]}",
         owner=request.owner,
@@ -161,9 +159,34 @@ async def generate_embedded_wallet(request: _GenerateWalletRequest, db: Database
     )
     store.wallets[account.wallet_id] = account
     await db.save_object("wallet", account.wallet_id, _jsonable(account))
+    # Store encrypted key separately — never returned in API responses.
+    await db.save_object("wallet_key", account.wallet_id, {
+        "wallet_id": account.wallet_id,
+        "encrypted_key": encrypted_key,
+        "owner": request.owner,
+    })
     # The registry generated and controls this key, so ownership is implicit —
     # issue a session token directly.
     return WalletConnectResponse(**account.model_dump(), session_token=mint_wallet_token(account.wallet_id))
+
+
+async def _retrieve_wallet_private_key(db: Database, wallet_id: str, owner: str) -> str | None:
+    """Retrieve and decrypt an embedded wallet's private key for server-side signing.
+
+    Returns None if the wallet_id is not found or was not an embedded wallet.
+    Raises ValueError if the owner does not match (tamper detection).
+    This is internal — never exposed via an API endpoint.
+    """
+    records = await db.load_objects("wallet_key")
+    for record in records:
+        if record.get("wallet_id") == wallet_id:
+            from ..services.custody import decrypt_private_key
+            return decrypt_private_key(
+                record["encrypted_key"],
+                settings.wallet_encryption_secret,
+                owner,
+            )
+    return None
 
 
 async def _hydrate_listings(db: Database) -> None:

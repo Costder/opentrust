@@ -453,3 +453,74 @@ class TestCoinbaseCheckoutRoute:
 
         assert resp.status_code == 502
         assert "503" in resp.json()["detail"]
+
+
+class TestEmbeddedWalletKeyPersistence:
+    @pytest.fixture(autouse=True)
+    def reset(self):
+        store.reset()
+        yield
+        store.reset()
+
+    async def test_generate_wallet_persists_encrypted_key_in_db(self, client):
+        """The encrypted private key must be stored in the DB after wallet generation."""
+        from unittest.mock import patch as mpatch
+
+        with mpatch("api.src.routes.marketplace.settings") as ms:
+            ms.opentrust_embedded_wallet_enabled = True
+            ms.wallet_encryption_secret = "a" * 32
+            resp = await client.post(
+                "/api/v1/wallets/generate",
+                json={"owner": "user_test"},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        # Public fields present
+        assert data["address"].startswith("0x")
+        assert data["wallet_id"].startswith("emb_")
+        # Private key MUST NOT appear in the response
+        assert "private_key" not in data
+        assert "encrypted_key" not in data
+        assert "key" not in data
+
+    async def test_encrypted_key_retrievable_from_db_for_internal_use(self, client):
+        """The helper can decrypt the key back for server-side signing."""
+        from unittest.mock import patch as mpatch
+        from api.src.routes.marketplace import _retrieve_wallet_private_key
+        from api.src.database import Database, get_db
+
+        # Capture the DB instance the client fixture already set up and overrode.
+        captured_db: list[Database] = []
+
+        orig_override = app.dependency_overrides.get(get_db)
+
+        async def _capture_override():
+            async for db in orig_override():
+                captured_db.append(db)
+                yield db
+
+        app.dependency_overrides[get_db] = _capture_override
+
+        secret = "b" * 32
+        try:
+            with mpatch("api.src.routes.marketplace.settings") as ms:
+                ms.opentrust_embedded_wallet_enabled = True
+                ms.wallet_encryption_secret = secret
+                resp = await client.post(
+                    "/api/v1/wallets/generate",
+                    json={"owner": "user_test"},
+                )
+                assert resp.status_code == 200
+                wallet_id = resp.json()["wallet_id"]
+
+                test_db = captured_db[0]
+                with mpatch("api.src.routes.marketplace.settings") as ms2:
+                    ms2.wallet_encryption_secret = secret
+                    retrieved_key = await _retrieve_wallet_private_key(test_db, wallet_id, "user_test")
+        finally:
+            app.dependency_overrides[get_db] = orig_override
+
+        assert retrieved_key is not None
+        assert retrieved_key.startswith("0x")
+        assert len(retrieved_key) == 66  # 0x + 64 hex chars
