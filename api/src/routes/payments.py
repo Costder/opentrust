@@ -21,6 +21,7 @@ from ..schemas.marketplace import (
     ProductCode,
 )
 from ..schemas.reputation import CounterpartyRating, CounterpartyRatingRequest
+from ..services.coinbase import CoinbaseError
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
 from ._durable import (
@@ -81,6 +82,8 @@ async def checkout(request: CheckoutRequest, db: Database = Depends(get_db)):
         result = store.create_checkout(request)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, CoinbaseError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     await persist_checkout(db, result)
     return result
 

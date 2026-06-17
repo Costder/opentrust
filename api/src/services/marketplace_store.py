@@ -115,14 +115,36 @@ class MarketplaceStore:
         if request.repo_id is not None and request.repo_id not in self.repos:
             raise KeyError("repo has not been verified")
         amount = PRODUCT_PRICES[request.product_code]()
+        provider = settings.payment_provider or "mock"
         checkout_id = f"chk_{uuid4().hex}"
+
+        if provider == "coinbase":
+            if not settings.coinbase_business_api_key_secret.strip():
+                raise ValueError("COINBASE_BUSINESS_API_KEY_SECRET is not configured")
+            from .coinbase import create_coinbase_charge
+            charge = create_coinbase_charge(
+                api_key=settings.coinbase_business_api_key_secret,
+                name=request.product_code.value.replace("_", " ").title(),
+                description=f"OpenTrust {request.product_code.value}",
+                amount_usdc=amount,
+                metadata={"checkout_id": checkout_id},
+                success_url=settings.coinbase_business_success_url,
+                cancel_url=settings.coinbase_business_cancel_url,
+            )
+            checkout_url = charge["hosted_url"]
+            status = PaymentStatus.created
+        else:
+            # mock provider: mark paid immediately so dev flows complete end-to-end
+            checkout_url = f"https://mock.opentrust.local/checkouts/{checkout_id}"
+            status = PaymentStatus.paid
+
         checkout = CheckoutResponse(
             checkout_id=checkout_id,
-            provider=settings.payment_provider or "mock",
+            provider=provider,
             product_code=request.product_code,
             amount_usdc=amount,
-            status=PaymentStatus.paid if (settings.payment_provider or "mock") == "mock" else PaymentStatus.created,
-            checkout_url=f"https://mock.opentrust.local/checkouts/{checkout_id}",
+            status=status,
+            checkout_url=checkout_url,
         )
         self.checkouts[checkout_id] = checkout
         return checkout

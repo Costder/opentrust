@@ -388,3 +388,68 @@ class TestOnchainPaymentVerificationEndpoint:
             headers=_wallet_auth(),
         )
         assert response.status_code == 422
+
+
+class TestCoinbaseCheckoutRoute:
+    @pytest.fixture(autouse=True)
+    def reset(self):
+        store.reset()
+        yield
+        store.reset()
+
+    async def test_coinbase_checkout_returns_real_hosted_url(self, client):
+        from unittest.mock import patch as mpatch
+
+        with mpatch("api.src.services.marketplace_store.settings") as ms, \
+             mpatch("api.src.services.coinbase.httpx.post") as mock_post:
+            ms.payment_provider = "coinbase"
+            ms.coinbase_business_api_key_secret = "test_key"
+            ms.coinbase_business_success_url = ""
+            ms.coinbase_business_cancel_url = ""
+            ms.opentrust_price_trust_report_usdc = "49.00"
+            ms.opentrust_price_verified_badge_usdc = "99.00"
+            ms.opentrust_price_monitoring_monthly_usdc = "29.00"
+            resp_mock = MagicMock()
+            resp_mock.json.return_value = {
+                "data": {"id": "ch_abc", "hosted_url": "https://commerce.coinbase.com/charges/ch_abc"}
+            }
+            resp_mock.raise_for_status = MagicMock()
+            mock_post.return_value = resp_mock
+
+            resp = await client.post(
+                "/api/v1/payments/coinbase/checkouts",
+                json={"product_code": "trust_report"},
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["checkout_url"] == "https://commerce.coinbase.com/charges/ch_abc"
+        assert resp.json()["status"] == "created"
+
+    async def test_coinbase_api_failure_returns_502(self, client):
+        import httpx as _httpx
+        from unittest.mock import patch as mpatch
+
+        with mpatch("api.src.services.marketplace_store.settings") as ms, \
+             mpatch("api.src.services.coinbase.httpx.post") as mock_post:
+            ms.payment_provider = "coinbase"
+            ms.coinbase_business_api_key_secret = "test_key"
+            ms.coinbase_business_success_url = ""
+            ms.coinbase_business_cancel_url = ""
+            ms.opentrust_price_trust_report_usdc = "49.00"
+            ms.opentrust_price_verified_badge_usdc = "99.00"
+            ms.opentrust_price_monitoring_monthly_usdc = "29.00"
+            err_resp = MagicMock()
+            err_resp.status_code = 503
+            err_resp.text = "Service Unavailable"
+            mock_post.return_value = err_resp
+            err_resp.raise_for_status.side_effect = _httpx.HTTPStatusError(
+                "503", request=MagicMock(), response=err_resp
+            )
+
+            resp = await client.post(
+                "/api/v1/payments/coinbase/checkouts",
+                json={"product_code": "trust_report"},
+            )
+
+        assert resp.status_code == 502
+        assert "503" in resp.json()["detail"]
