@@ -43,6 +43,64 @@ def _extract_address(topic: object, label: str) -> str:
     return "0x" + hex_topic[-40:]
 
 
+from eth_account import Account as EthAccount
+
+ERC20_TRANSFER_ABI = [
+    {
+        "name": "transfer",
+        "type": "function",
+        "stateMutability": "nonpayable",
+        "inputs": [
+            {"name": "to", "type": "address"},
+            {"name": "value", "type": "uint256"},
+        ],
+        "outputs": [{"name": "", "type": "bool"}],
+    }
+]
+
+
+class OnchainTransferError(Exception):
+    """Raised when broadcasting a USDC transfer fails."""
+
+
+def send_usdc_transfer(
+    *,
+    private_key: str,
+    recipient: str,
+    amount_usdc: Decimal,
+    rpc_url: str,
+    usdc_contract: str = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+) -> str:
+    """Sign and broadcast a USDC transfer on Base L2.
+
+    Returns the 0x-prefixed transaction hash.
+    Raises OnchainTransferError on any failure.
+    Never logs the private key.
+    """
+    try:
+        w3 = Web3(Web3.HTTPProvider(rpc_url))
+        account = EthAccount.from_key(private_key)
+        contract = w3.eth.contract(
+            address=Web3.to_checksum_address(usdc_contract),
+            abi=ERC20_TRANSFER_ABI,
+        )
+        amount_raw = int(amount_usdc * Decimal(10 ** USDC_DECIMALS))
+        nonce = w3.eth.get_transaction_count(account.address)
+        tx = contract.functions.transfer(
+            Web3.to_checksum_address(recipient),
+            amount_raw,
+        ).build_transaction({
+            "from": account.address,
+            "nonce": nonce,
+            "chainId": w3.eth.chain_id,
+        })
+        signed = account.sign_transaction(tx)
+        tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+        return _to_hex(tx_hash)
+    except Exception as exc:
+        raise OnchainTransferError(str(exc)) from exc
+
+
 class OnchainVerificationError(Exception):
     """Raised when a transaction cannot be verified as a valid USDC transfer."""
 

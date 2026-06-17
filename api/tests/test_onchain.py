@@ -149,3 +149,98 @@ class TestVerifyUsdcTransfer:
                 expected_amount_usdc=Decimal("25.00"),
                 rpc_url="https://mainnet.base.org",
             )
+
+
+class TestSendUsdcTransfer:
+    """send_usdc_transfer signs and broadcasts a USDC transfer on Base L2."""
+
+    PRIVATE_KEY = "0x" + "1" * 64   # deterministic fake key for mocking
+    RECIPIENT   = "0x" + "b" * 40
+    AMOUNT      = Decimal("25.00")
+    RPC_URL     = "https://mainnet.base.org"
+    USDC        = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    TX_HASH     = b"\xab" * 32
+
+    @pytest.fixture
+    def mock_web3_send(self):
+        """Patch Web3 so no real RPC calls are made."""
+        with patch("api.src.services.onchain.Web3") as mock_cls:
+            instance = MagicMock()
+            mock_cls.return_value = instance
+            mock_cls.HTTPProvider = MagicMock()
+            mock_cls.to_checksum_address = lambda addr: addr
+
+            # Simulate chain state
+            instance.eth.get_transaction_count.return_value = 0
+            instance.eth.chain_id = 8453  # Base L2
+
+            # build_transaction → returns a dict; sign → raw_transaction bytes
+            tx_dict = {"from": "0x" + "a" * 40, "nonce": 0, "chainId": 8453}
+            contract_mock = MagicMock()
+            transfer_fn = MagicMock()
+            transfer_fn.build_transaction.return_value = tx_dict
+            contract_mock.functions.transfer.return_value = transfer_fn
+            instance.eth.contract.return_value = contract_mock
+
+            signed = MagicMock()
+            signed.raw_transaction = b"\x00" * 32
+            with patch("api.src.services.onchain.EthAccount") as mock_account_cls:
+                mock_account = MagicMock()
+                mock_account.address = "0x" + "a" * 40
+                mock_account_cls.from_key.return_value = mock_account
+                mock_account.sign_transaction.return_value = signed
+                instance.eth.send_raw_transaction.return_value = self.TX_HASH
+                yield instance, mock_account, contract_mock
+
+    def test_returns_0x_prefixed_tx_hash(self, mock_web3_send):
+        from api.src.services.onchain import send_usdc_transfer
+        instance, _, _ = mock_web3_send
+        result = send_usdc_transfer(
+            private_key=self.PRIVATE_KEY,
+            recipient=self.RECIPIENT,
+            amount_usdc=self.AMOUNT,
+            rpc_url=self.RPC_URL,
+            usdc_contract=self.USDC,
+        )
+        assert result.startswith("0x")
+        assert len(result) == 66  # 0x + 64 hex chars
+
+    def test_converts_amount_to_usdc_decimals(self, mock_web3_send):
+        """25.00 USDC must be passed to transfer() as 25_000_000 (6 decimals)."""
+        from api.src.services.onchain import send_usdc_transfer
+        _, _, contract_mock = mock_web3_send
+        send_usdc_transfer(
+            private_key=self.PRIVATE_KEY,
+            recipient=self.RECIPIENT,
+            amount_usdc=self.AMOUNT,
+            rpc_url=self.RPC_URL,
+            usdc_contract=self.USDC,
+        )
+        args, _ = contract_mock.functions.transfer.call_args
+        assert args[1] == 25_000_000  # 25.00 * 10**6
+
+    def test_calls_transfer_with_correct_recipient(self, mock_web3_send):
+        from api.src.services.onchain import send_usdc_transfer
+        _, _, contract_mock = mock_web3_send
+        send_usdc_transfer(
+            private_key=self.PRIVATE_KEY,
+            recipient=self.RECIPIENT,
+            amount_usdc=self.AMOUNT,
+            rpc_url=self.RPC_URL,
+            usdc_contract=self.USDC,
+        )
+        args, _ = contract_mock.functions.transfer.call_args
+        assert args[0] == self.RECIPIENT
+
+    def test_raises_onchain_transfer_error_on_rpc_failure(self, mock_web3_send):
+        from api.src.services.onchain import send_usdc_transfer, OnchainTransferError
+        instance, _, _ = mock_web3_send
+        instance.eth.send_raw_transaction.side_effect = Exception("connection refused")
+        with pytest.raises(OnchainTransferError, match="connection refused"):
+            send_usdc_transfer(
+                private_key=self.PRIVATE_KEY,
+                recipient=self.RECIPIENT,
+                amount_usdc=self.AMOUNT,
+                rpc_url=self.RPC_URL,
+                usdc_contract=self.USDC,
+            )
