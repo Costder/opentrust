@@ -19,6 +19,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createMcpServer } from './server.js';
 import { validatePassport } from './auth.js';
 import { startLocalTransportIfConfigured } from './capabilities/email/index.js';
+import { ensureControlPanelServer } from './control-panel/http.js';
 import { loadActiveTasks } from './capabilities/tasks/index.js';
 import { loadActiveTriggers } from './capabilities/triggers/index.js';
 import { startPurgeJob } from './capabilities/webhook/index.js';
@@ -105,4 +106,18 @@ export async function startStdioServer(registryUrl: string): Promise<void> {
   startXmppIfConfigured().catch((err: unknown) => {
     console.error('Failed to start XMPP client:', err instanceof Error ? err.message : String(err));
   });
+
+  // Bring up the local control panel so it is reachable whenever the MCP server
+  // is running — even when launched over stdio by an MCP client. Best-effort:
+  // if the port is taken, another HBF instance already serves it. Set
+  // HBF_NO_CONTROL_PANEL=1 to opt out.
+  if (process.env['HBF_NO_CONTROL_PANEL'] !== '1') {
+    ensureControlPanelServer({ registryUrl })
+      .then((r) => {
+        if (r.started) console.error(`Agent OS control panel: ${r.url}`);
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to start control panel:', err instanceof Error ? err.message : String(err));
+      });
+  }
 }

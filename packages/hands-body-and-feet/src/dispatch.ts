@@ -27,6 +27,7 @@ import { busSend, busPoll, busWait } from './capabilities/bus/index.js';
 import { codexExec, codexOpenDesktop } from './capabilities/codex/index.js';
 import { claudeExec, claudeOpenDesktop } from './capabilities/claude/index.js';
 import { hbfHelp } from './capabilities/help/index.js';
+import { openControlPanel } from './capabilities/control-panel/index.js';
 import type { PassportClaims } from './types.js';
 
 export type DispatchResult = {
@@ -161,6 +162,7 @@ export async function dispatchTool(
     if (name === 'claude_open_desktop') return ok(await claudeOpenDesktop(args as { cwd?: string; prompt?: string }, claims));
 
     if (name === 'hbf_help')  return ok(await hbfHelp(args as { domain?: string }, claims));
+    if (name === 'open_control_panel') return ok(await openControlPanel(args as { open_browser?: boolean; registry_url?: string; port?: number }));
 
     return err(`Unknown tool: ${name}`);
   } catch (e) {

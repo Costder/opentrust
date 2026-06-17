@@ -1136,6 +1136,17 @@ export function createMcpServer(claims: PassportClaims): Server {
           },
         },
       },
+      // Control panel
+      {
+        name: 'open_control_panel',
+        description: 'Opens the Agent OS control panel (the local mission-control UI: missions, decisions, agents, spend caps, kill switch) in the user\'s browser, starting the local HTTP server if it is not already running. Use this whenever the user asks to open, show, or launch the control panel or dashboard. Requires L1 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            open_browser: { type: 'boolean', description: 'Open the browser automatically (default: true). Set false to just start the server and return the URL.' },
+          },
+        },
+      },
     ],
   }));
 

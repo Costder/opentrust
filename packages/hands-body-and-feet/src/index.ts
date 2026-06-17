@@ -12,6 +12,7 @@ const commands = [
   import('./cli/init.js'),
   import('./cli/serve.js'),
   import('./cli/stdio.js'),
+  import('./cli/open.js'),
   import('./cli/pause.js'),
   import('./cli/resume.js'),
   import('./cli/status.js'),

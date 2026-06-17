@@ -1,6 +1,7 @@
 import type { CommandModule } from 'yargs';
 import { readConfig } from '../config.js';
 import { startServer } from '../server.js';
+import { openUrl } from '../control-panel/open-browser.js';
 
 const serve: CommandModule = {
   command: 'serve',
@@ -16,6 +17,11 @@ const serve: CommandModule = {
         type: 'boolean',
         default: false,
         describe: 'Allow starting even if registry is unreachable',
+      })
+      .option('open', {
+        type: 'boolean',
+        default: true,
+        describe: 'Open the Agent OS control panel in your browser on start (use --no-open to disable)',
       }),
   handler: async (argv) => {
     const cfg = readConfig();
@@ -27,10 +33,17 @@ const serve: CommandModule = {
       );
     }
 
+    const port = argv['port'] as number;
     const httpServer = await startServer({
       registryUrl: cfg.registryUrl,
-      port: argv['port'] as number,
+      port,
     });
+
+    const controlPanelUrl = `http://localhost:${port}/control`;
+    console.log(`Agent OS control panel: ${controlPanelUrl}`);
+    if (argv['open'] !== false) {
+      openUrl(controlPanelUrl);
+    }
 
     // Graceful shutdown
     const shutdown = () => {
