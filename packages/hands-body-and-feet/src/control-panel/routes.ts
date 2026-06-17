@@ -17,6 +17,7 @@ import {
   listDecisions,
   listEvents,
   listMissions,
+  listRecentEvents,
   listStrategyRecords,
   saveStrategyRecord,
   setMissionStrategyGoal,
@@ -248,6 +249,13 @@ export function registerControlPanelRoutes(
     }
     appendEvent({ missionId: mission.missionId, type: 'mission', summary: `Mission status set to ${status}.` });
     res.json({ mission });
+  });
+
+  // Recent activity across all missions (newest first) — drives the Overview feed.
+  app.get('/api/local/events', (req, res) => {
+    const raw = Number(req.query['limit']);
+    const limit = Number.isFinite(raw) ? Math.min(100, Math.max(1, raw)) : 25;
+    res.json({ events: listRecentEvents(limit) });
   });
 
   // Decision ledger across all missions (mission title attached for display).

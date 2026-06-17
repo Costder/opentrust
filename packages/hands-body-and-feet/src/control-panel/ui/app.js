@@ -112,7 +112,7 @@
     if ($('view-sub')) $('view-sub').textContent = meta.sub;
     if (history.replaceState) history.replaceState(null, '', '#' + name);
     else location.hash = name;
-    if (name === 'overview') { refreshOverview(); refreshOverviewMissions(); }
+    if (name === 'overview') refreshOverview();
     if (name === 'missions') renderMissions();
     if (name === 'decisions') renderDecisions();
     if (name === 'agents') renderAgents();
@@ -138,52 +138,113 @@
     $('sb-toggle').addEventListener('click', () => shell.classList.toggle('nav-open'));
   }
 
-  // ── Overview sync ────────────────────────────────────────
-  function refreshOverview() {
-    if ($('stat-mode')) {
-      $('stat-mode').textContent = cap(state.role);
-      $('stat-mode-sub').textContent = MODE_META[state.role].sub;
-      $('stat-mode-dot').style.background = TIER_COLOR[state.role];
-      $('stat-mode-dot').style.boxShadow = '0 0 9px ' + TIER_COLOR[state.role];
-    }
-    if ($('stat-spend-cap')) $('stat-spend-cap').textContent = state.spendCaps.daily;
-    const online = Object.values(state.harnesses).filter(Boolean).length;
-    if ($('stat-harnesses')) $('stat-harnesses').textContent = online;
-    if ($('stat-harnesses-sub')) {
-      const names = Object.keys(state.harnesses).filter((h) => state.harnesses[h]).map(cap);
-      $('stat-harnesses-sub').textContent = names.length ? names.join(', ') + ' active' : 'none active';
-    }
+  // ── Overview (fully live — everything is read from the local store) ──────
+  function updateSystemToggles() {
     if ($('sys-local')) { $('sys-local').textContent = state.localMode ? 'on' : 'off'; $('sys-local').classList.toggle('off', !state.localMode); }
     if ($('sys-strategy')) { $('sys-strategy').textContent = state.strategyEnabled ? 'on' : 'off'; $('sys-strategy').classList.toggle('off', !state.strategyEnabled); }
-    if ($('sys-registry')) $('sys-registry').textContent = shortUrl(state.registryUrl);
   }
   function setMissionStat(label, running) {
     if ($('stat-mission')) $('stat-mission').textContent = label;
     if ($('stat-mission-dot')) $('stat-mission-dot').className = 'stat-dot ' + (running ? 'running' : 'idle');
   }
-  // Overview reflects the live mission portfolio (falls back to in-session state when offline).
-  async function refreshOverviewMissions() {
-    let missions;
-    try { missions = (await api('/api/local/missions')).missions || []; }
-    catch (e) { return; } // offline: leave whatever the in-session deploy flow set
-    const running = missions.filter((m) => m.status === 'running');
-    if ($('stat-mission')) $('stat-mission').textContent = running.length ? String(running.length) : (missions.length ? '0' : 'Idle');
-    if ($('stat-mission-dot')) $('stat-mission-dot').className = 'stat-dot ' + (running.length ? 'running' : 'idle');
-    if ($('stat-mission-sub')) $('stat-mission-sub').textContent = missions.length ? (running.length + ' running · ' + missions.length + ' total') : 'No mission deployed';
-    const empty = $('active-mission-empty'); const text = $('active-mission-text');
-    if (missions.length) {
-      if (empty) empty.classList.add('hidden');
-      if (text) {
-        text.classList.remove('hidden');
-        text.innerHTML = missions.slice(0, 5).map((m) =>
-          '<div class="om-row" data-mission="' + m.missionId + '"><span class="pill pill-' + m.status + '">' + (STATUS_LABEL[m.status] || m.status) + '</span><span class="om-title">' + esc(m.title) + '</span></div>'
-        ).join('');
-        text.querySelectorAll('.om-row').forEach((r) => r.addEventListener('click', () => openMission(r.getAttribute('data-mission'))));
-      }
-    } else {
-      if (empty) empty.classList.remove('hidden');
-      if (text) { text.classList.add('hidden'); text.innerHTML = ''; }
+
+  async function refreshOverview() {
+    updateSystemToggles();
+    let status = null, missions = null, events = null;
+    try { status = await api('/api/local/status'); } catch (e) { /* offline */ }
+    try { missions = (await api('/api/local/missions')).missions || []; } catch (e) { missions = null; }
+    try { events = (await api('/api/local/events')).events || []; } catch (e) { events = null; }
+
+    // Registry + harnesses (live, from /api/local/status)
+    if (status && $('sys-registry')) $('sys-registry').textContent = shortUrl(status.registryUrl || state.registryUrl);
+    if (status && status.harnesses) {
+      const hs = status.harnesses;
+      const detected = Object.keys(hs).filter((k) => hs[k] && hs[k].detected);
+      if ($('stat-harnesses')) $('stat-harnesses').textContent = detected.length;
+      if ($('stat-harnesses-sub')) $('stat-harnesses-sub').textContent = detected.length
+        ? detected.map((k) => hs[k].label || cap(k)).join(', ') : 'none detected';
     }
+
+    // Mission portfolio — Mode, Mission count, Active Mission list, Spend cap denominator
+    if (missions) {
+      const running = missions.filter((m) => m.status === 'running');
+      const pool = running.length ? running : missions;
+      const counts = {};
+      pool.forEach((m) => { counts[m.mode] = (counts[m.mode] || 0) + 1; });
+      const dominant = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+      if ($('stat-mode')) $('stat-mode').textContent = dominant ? cap(dominant) : '—';
+      if ($('stat-mode-sub')) $('stat-mode-sub').textContent = dominant ? ((MODE_META[dominant] && MODE_META[dominant].sub) || '') : 'No missions';
+      if ($('stat-mode-dot')) {
+        $('stat-mode-dot').className = 'stat-dot ' + (dominant ? '' : 'idle');
+        if (dominant) { $('stat-mode-dot').style.background = TIER_COLOR[dominant]; $('stat-mode-dot').style.boxShadow = '0 0 9px ' + TIER_COLOR[dominant]; }
+      }
+
+      if ($('stat-mission')) $('stat-mission').textContent = running.length ? String(running.length) : (missions.length ? '0' : 'Idle');
+      if ($('stat-mission-dot')) $('stat-mission-dot').className = 'stat-dot ' + (running.length ? 'running' : 'idle');
+      if ($('stat-mission-sub')) $('stat-mission-sub').textContent = missions.length ? (running.length + ' running · ' + missions.length + ' total') : 'No mission deployed';
+
+      const totalDaily = missions.reduce((t, m) => t + ((m.budget && m.budget.daily) || 0), 0);
+      if ($('stat-spend-cap')) $('stat-spend-cap').textContent = totalDaily;
+
+      const empty = $('active-mission-empty'); const text = $('active-mission-text');
+      if (missions.length) {
+        if (empty) empty.classList.add('hidden');
+        if (text) {
+          text.classList.remove('hidden');
+          text.innerHTML = missions.slice(0, 5).map((m) =>
+            '<div class="om-row" data-mission="' + m.missionId + '"><span class="pill pill-' + m.status + '">' + (STATUS_LABEL[m.status] || m.status) + '</span><span class="om-title">' + esc(m.title) + '</span></div>'
+          ).join('');
+          text.querySelectorAll('.om-row').forEach((r) => r.addEventListener('click', () => openMission(r.getAttribute('data-mission'))));
+        }
+      } else {
+        if (empty) empty.classList.remove('hidden');
+        if (text) { text.classList.add('hidden'); text.innerHTML = ''; }
+      }
+
+      renderApprovals(missions.filter((m) => m.status === 'waiting_approval'));
+    }
+
+    // Spend value (live, summed from spend events) + the activity feed
+    if (events) {
+      const spent = events.filter((e) => e.type === 'spend').reduce((t, e) => t + (Number(e.data && e.data.amount) || 0), 0);
+      if ($('stat-spend')) $('stat-spend').textContent = (Math.round(spent * 100) / 100).toFixed(2);
+      const spendCap = parseFloat($('stat-spend-cap') ? $('stat-spend-cap').textContent : '0') || 0;
+      if ($('stat-spend-bar')) $('stat-spend-bar').style.width = (spendCap > 0 ? Math.min(100, Math.round((spent / spendCap) * 100)) : 0) + '%';
+      renderActivity(events);
+    }
+  }
+
+  function renderActivity(events) {
+    const list = $('timeline'); if (!list) return;
+    if (!events.length) {
+      list.innerHTML = '<li class="tl-item" data-sev="info"><span class="tl-dot"></span><span class="tl-time">—</span><span class="tl-type">idle</span><span class="tl-text">No activity yet. Deploy a mission to get started.</span></li>';
+      return;
+    }
+    const sevMap = { info: 'info', warning: 'warn', critical: 'crit' };
+    list.innerHTML = events.slice(0, 12).map((e) => {
+      const sev = e.type === 'spend' ? 'spend' : (sevMap[e.severity] || 'info');
+      return '<li class="tl-item" data-sev="' + sev + '"><span class="tl-dot"></span><span class="tl-time">' + hm(e.createdAt) + '</span><span class="tl-type">' + esc(e.type) + '</span><span class="tl-text">' + esc(e.summary) + '</span></li>';
+    }).join('');
+  }
+
+  function renderApprovals(waiting) {
+    const list = $('approval-list'); if (!list) return;
+    const badge = $('approval-count'); const emptyEl = $('approval-empty');
+    list.innerHTML = waiting.map((m) =>
+      '<div class="approval-item" data-mission="' + m.missionId + '"><div class="ap-body"><div class="ap-title">' + esc(m.title) + '</div><div class="ap-meta">' + m.mode + ' · awaiting approval</div></div>'
+      + '<div class="ap-actions"><button class="ap-btn ap-deny" data-act="deny" title="Deny — stop the mission">&#10005;</button><button class="ap-btn ap-ok" data-act="approve" title="Approve — let it run">&#10003;</button></div></div>'
+    ).join('');
+    if (badge) { badge.textContent = waiting.length; badge.classList.toggle('zero', waiting.length === 0); }
+    if (emptyEl) emptyEl.classList.toggle('hidden', waiting.length !== 0);
+    list.querySelectorAll('.approval-item .ap-btn').forEach((btn) => btn.addEventListener('click', async () => {
+      const item = btn.closest('.approval-item'); const id = item.getAttribute('data-mission');
+      const approved = btn.getAttribute('data-act') === 'approve';
+      const title = item.querySelector('.ap-title') ? item.querySelector('.ap-title').textContent : 'Mission';
+      try { await api('/api/local/missions/' + encodeURIComponent(id) + '/status', { method: 'POST', body: JSON.stringify({ status: approved ? 'running' : 'stopped' }) }); } catch (e) { /* offline */ }
+      logEvent('approval', (approved ? 'Approved: ' : 'Denied: ') + title, approved ? 'ok' : 'warn');
+      toast(approved ? 'Approved' : 'Denied', title, approved ? 'info' : 'warn');
+      refreshOverview();
+    }));
   }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function shortUrl(u) { try { return new URL(u).host.replace(/^www\./, ''); } catch (e) { return u; } }
@@ -243,7 +304,7 @@
           });
         }
         renderMissions();
-        refreshOverviewMissions();
+        refreshOverview();
       })();
       if ($('mission-creator')) $('mission-creator').classList.add('hidden');
       if (missionInput) missionInput.value = '';
@@ -266,7 +327,6 @@
     input.addEventListener('change', function () {
       state.role = input.value;
       if ($('status-mode')) $('status-mode').textContent = 'MODE: ' + state.role.toUpperCase();
-      refreshOverview();
       logEvent('mode', 'Autonomy mode set to ' + cap(state.role) + '.', 'info');
       toast('Autonomy → ' + cap(state.role), MODE_META[state.role].sub);
       document.dispatchEvent(new CustomEvent('agent-os:role', { detail: { role: state.role } }));
@@ -280,7 +340,6 @@
       state.spendCaps.daily = parseFloat($('spend-daily') ? $('spend-daily').value : '25') || 25;
       state.spendCaps.monthly = parseFloat($('spend-monthly') ? $('spend-monthly').value : '200') || 200;
       setStatus('Spend caps applied', 'active');
-      refreshOverview();
       logEvent('budget', 'Spend caps updated — daily $' + state.spendCaps.daily + ', monthly $' + state.spendCaps.monthly + '.', 'info');
       toast('Spend caps applied', 'Daily $' + state.spendCaps.daily + ' · monthly $' + state.spendCaps.monthly + '. The agent cannot exceed these.');
       document.dispatchEvent(new CustomEvent('agent-os:spend-caps', { detail: { spendCaps: state.spendCaps } }));
@@ -293,7 +352,7 @@
     strategyToggle.addEventListener('change', function () {
       state.strategyEnabled = strategyToggle.checked;
       $('strategy-config').classList.toggle('hidden', !state.strategyEnabled);
-      refreshOverview();
+      updateSystemToggles();
       toast(state.strategyEnabled ? 'Strategy Skill on' : 'Strategy Skill off',
         state.strategyEnabled ? 'The agent will plan and reroute big goals.' : 'Direct execution only.');
       if (state.strategyEnabled) logEvent('strategy', 'Strategy Skill enabled (' + state.strategyHorizon + ' horizon).', 'info');
@@ -314,7 +373,6 @@
     tgl.addEventListener('change', function () {
       if (!harness) return;
       state.harnesses[harness] = tgl.checked;
-      refreshOverview();
       logEvent('harness', cap(harness) + ' harness ' + (tgl.checked ? 'online' : 'offline') + '.', 'info');
       toast(cap(harness) + (tgl.checked ? ' online' : ' offline'), tgl.checked ? 'Available as an agent runtime.' : 'Removed from rotation.');
       document.dispatchEvent(new CustomEvent('agent-os:harness', { detail: { harness, enabled: tgl.checked } }));
@@ -325,7 +383,7 @@
   if ($('local-mode-enabled')) {
     $('local-mode-enabled').addEventListener('change', function () {
       state.localMode = $('local-mode-enabled').checked;
-      refreshOverview();
+      updateSystemToggles();
       toast(state.localMode ? 'Local mode on' : 'Local mode off', state.localMode ? 'No cloud login. SQLite + local SMTP + Kubo.' : 'Cloud APIs available.');
       document.dispatchEvent(new CustomEvent('agent-os:local-mode', { detail: { localMode: state.localMode } }));
     });
@@ -335,7 +393,6 @@
   if ($('ot-registry-url')) {
     $('ot-registry-url').addEventListener('change', function () {
       state.registryUrl = $('ot-registry-url').value.trim();
-      refreshOverview();
     });
   }
   function otAction(action, label) {
@@ -349,27 +406,10 @@
   if ($('post-job')) $('post-job').addEventListener('click', () => otAction('post-job', 'Posting job'));
   if ($('run-review')) $('run-review').addEventListener('click', () => otAction('submit-review', 'Submitting review'));
 
-  // ── Approvals ────────────────────────────────────────────
-  function refreshApprovalCount() {
-    const list = $('approval-list');
-    const count = list ? list.querySelectorAll('.approval-item').length : 0;
-    const badge = $('approval-count');
-    if (badge) { badge.textContent = count; badge.classList.toggle('zero', count === 0); }
-    if ($('approval-empty')) $('approval-empty').classList.toggle('hidden', count !== 0);
-  }
-  document.querySelectorAll('.approval-item .ap-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      const item = btn.closest('.approval-item');
-      const approved = btn.getAttribute('data-act') === 'approve';
-      const title = item.querySelector('.ap-title') ? item.querySelector('.ap-title').textContent : 'Request';
-      item.remove();
-      refreshApprovalCount();
-      logEvent('approval', (approved ? 'Approved: ' : 'Denied: ') + title, approved ? 'ok' : 'warn');
-      toast(approved ? 'Approved' : 'Denied', title, approved ? 'info' : 'warn');
-    });
-  });
+  // Approvals on the Overview are rendered live by renderApprovals() from
+  // missions awaiting approval — see refreshOverview().
 
-  // ── Missions / Decisions / Agents (seeded; not yet wired to /api/local) ──
+  // ── Missions / Decisions / Agents (live, with offline seed fallback) ──
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   const STATUS_LABEL = { running: 'running', waiting_approval: 'waiting', blocked: 'blocked', done: 'done', failed: 'failed', stopped: 'stopped', draft: 'draft', idle: 'idle' };
 
@@ -594,7 +634,7 @@
           toast('Mission killed', m.title, 'danger');
           logEvent('mission', m.title + ' killed (deleted).', 'crit');
           setView('missions');
-          refreshOverviewMissions();
+          refreshOverview();
           return;
         } catch (e) { /* fall through to optimistic */ }
       }
@@ -664,6 +704,5 @@
   // ── Init ─────────────────────────────────────────────────
   const initView = (location.hash || '').replace('#', '');
   setView(VIEWS[initView] ? initView : 'overview');
-  refreshApprovalCount();
   setStatus('Ready', 'active');
 })();

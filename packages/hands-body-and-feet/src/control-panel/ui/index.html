@@ -97,18 +97,18 @@
           <div class="dash-grid">
             <div class="stat-card" data-testid="stat-mode">
               <div class="stat-label">Autonomy Mode</div>
-              <div class="stat-value"><span class="stat-dot" id="stat-mode-dot"></span><span id="stat-mode">Shopkeeper</span></div>
-              <div class="stat-sub" id="stat-mode-sub">Tier 3 · hands-off ops</div>
+              <div class="stat-value"><span class="stat-dot idle" id="stat-mode-dot"></span><span id="stat-mode">—</span></div>
+              <div class="stat-sub" id="stat-mode-sub">No missions</div>
             </div>
             <div class="stat-card" data-testid="stat-spend">
-              <div class="stat-label">Spend Today</div>
-              <div class="stat-value">$<span id="stat-spend">4.20</span> <span class="stat-of">/ $<span id="stat-spend-cap">25</span></span></div>
-              <div class="meter-bar"><span id="stat-spend-bar" style="width:17%"></span></div>
+              <div class="stat-label">Spend (recorded)</div>
+              <div class="stat-value">$<span id="stat-spend">0.00</span> <span class="stat-of">/ $<span id="stat-spend-cap">0</span></span></div>
+              <div class="meter-bar"><span id="stat-spend-bar" style="width:0%"></span></div>
             </div>
             <div class="stat-card" data-testid="stat-harnesses">
-              <div class="stat-label">Harnesses Online</div>
-              <div class="stat-value"><span id="stat-harnesses">1</span> <span class="stat-of">/ 4</span></div>
-              <div class="stat-sub" id="stat-harnesses-sub">Claude active</div>
+              <div class="stat-label">Harnesses Detected</div>
+              <div class="stat-value"><span id="stat-harnesses">0</span> <span class="stat-of">/ 4</span></div>
+              <div class="stat-sub" id="stat-harnesses-sub">—</div>
             </div>
             <div class="stat-card" data-testid="stat-mission">
               <div class="stat-label">Mission</div>
@@ -139,13 +139,7 @@
                   <h2>Activity</h2>
                   <span class="card-tag">live feed</span>
                 </div>
-                <ul class="timeline" id="timeline">
-                  <li class="tl-item" data-sev="info"><span class="tl-dot"></span><span class="tl-time">09:42</span><span class="tl-type">strategy</span><span class="tl-text">Strategy Skill drafted a 7-day plan with 4 milestones.</span></li>
-                  <li class="tl-item" data-sev="info"><span class="tl-dot"></span><span class="tl-time">09:43</span><span class="tl-type">task</span><span class="tl-text">Imported 128 leads from leads.csv.</span></li>
-                  <li class="tl-item" data-sev="spend"><span class="tl-dot"></span><span class="tl-time">09:51</span><span class="tl-type">spend</span><span class="tl-text">Spent $0.42 · lead enrichment (within cap).</span></li>
-                  <li class="tl-item" data-sev="info"><span class="tl-dot"></span><span class="tl-time">10:05</span><span class="tl-type">tool</span><span class="tl-text">Drafted 12 outreach emails, queued for review.</span></li>
-                  <li class="tl-item" data-sev="warn"><span class="tl-dot"></span><span class="tl-time">10:07</span><span class="tl-type">approval</span><span class="tl-text">Awaiting approval: new vendor &ldquo;Apollo&rdquo;.</span></li>
-                </ul>
+                <ul class="timeline" id="timeline"></ul>
               </div>
             </div>
 
@@ -153,31 +147,10 @@
               <div class="panel">
                 <div class="card-head">
                   <h2>Approvals</h2>
-                  <span class="badge" id="approval-count">2</span>
+                  <span class="badge zero" id="approval-count">0</span>
                 </div>
-                <div class="approval-list" id="approval-list">
-                  <div class="approval-item" data-approval="vendor-apollo">
-                    <div class="ap-body">
-                      <div class="ap-title">New vendor: Apollo.io</div>
-                      <div class="ap-meta">$49/mo · outside known vendors</div>
-                    </div>
-                    <div class="ap-actions">
-                      <button class="ap-btn ap-deny" data-act="deny" title="Deny">&#10005;</button>
-                      <button class="ap-btn ap-ok" data-act="approve" title="Approve">&#10003;</button>
-                    </div>
-                  </div>
-                  <div class="approval-item" data-approval="send-batch">
-                    <div class="ap-body">
-                      <div class="ap-title">Send 12 outreach emails</div>
-                      <div class="ap-meta">from sales@ · 12 recipients</div>
-                    </div>
-                    <div class="ap-actions">
-                      <button class="ap-btn ap-deny" data-act="deny" title="Deny">&#10005;</button>
-                      <button class="ap-btn ap-ok" data-act="approve" title="Approve">&#10003;</button>
-                    </div>
-                  </div>
-                </div>
-                <div class="approval-empty hidden" id="approval-empty">Inbox zero. No pending approvals.</div>
+                <div class="approval-list" id="approval-list"></div>
+                <div class="approval-empty" id="approval-empty">Inbox zero. No missions awaiting approval.</div>
               </div>
 
               <div class="panel">

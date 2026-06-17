@@ -299,6 +299,29 @@ export function listEvents(missionId: string): AgentOsEvent[] {
   }));
 }
 
+export interface RecentEvent extends AgentOsEvent {
+  missionTitle: string;
+}
+
+export function listRecentEvents(limit = 25): RecentEvent[] {
+  ensureControlPanelSchema();
+  const titles = new Map(listMissions().map((m) => [m.missionId, m.title]));
+  const rows = openDb().prepare(`
+    SELECT * FROM agent_os_events ORDER BY created_at DESC LIMIT ?
+  `).all(limit) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    eventId: String(row['event_id']),
+    missionId: String(row['mission_id']),
+    agentId: row['agent_id'] ? String(row['agent_id']) : null,
+    type: row['type'] as AgentOsEvent['type'],
+    severity: row['severity'] as AgentOsEvent['severity'],
+    summary: String(row['summary']),
+    data: parseJson(String(row['data_json']), {}),
+    createdAt: String(row['created_at']),
+    missionTitle: titles.get(String(row['mission_id'])) ?? '',
+  }));
+}
+
 export function saveStrategyRecord(record: StrategyRecord): StrategyRecord {
   ensureControlPanelSchema();
   openDb().prepare(`

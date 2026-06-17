@@ -17,6 +17,9 @@ import type { AgentInstance } from './types.js';
  */
 export function seedControlPanelDemoIfEmpty(): void {
   try {
+    // Opt out of demo data entirely — the panel then starts empty and shows
+    // only real missions/decisions/agents you create.
+    if (process.env['HBF_NO_DEMO_SEED'] === '1') return;
     if (listMissions().length > 0) return;
 
     const m1 = createMission({
