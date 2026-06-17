@@ -20,6 +20,7 @@
   ],
   "scripts": {
     "build": "tsup && node scripts/copy-control-panel-ui.mjs",
+    "prepare": "npm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "dev": "tsup --watch"
