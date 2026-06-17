@@ -20,28 +20,21 @@ We already wrote a VoltAgent passport + integration spec: https://costder.github
 Happy to help wire this into VoltAgent's tool-call hook layer. The integration path is in the passport file."
 
           if [ -z "$GH_TOKEN" ]; then
-            echo ""
-            echo "========================================="
-            echo "ACTION NEEDED: GH_TOKEN secret not set"
-            echo "========================================="
-            echo ""
-            echo "STEP 1 - Create a PAT (30 sec):"
-            echo "https://github.com/settings/tokens/new?scopes=public_repo&description=opentrust-voltagent"
-            echo "  -> Click Generate token -> Copy it"
-            echo ""
-            echo "STEP 2 - Add it as a secret:"
-            echo "https://github.com/Costder/opentrust/settings/secrets/actions/new"
-            echo "  Name:  GH_TOKEN"
-            echo "  Value: (paste from step 1)"
-            echo "  -> Click Add secret"
-            echo ""
-            echo "STEP 3 - Click Re-run workflow above. Comment posts."
-            echo ""
-            echo "--- OR PASTE THIS MANUALLY AT github.com/VoltAgent/voltagent/issues/1166 ---"
-            printf "%s
-" "$COMMENT"
-            echo "--- END ---"
-            exit 1
+            {
+              echo "## Ready to post — paste this at VoltAgent/voltagent#1166"
+              echo ""
+              echo "**Target:** https://github.com/VoltAgent/voltagent/issues/1166"
+              echo ""
+              echo "**Copy this comment:**"
+              echo ""
+              echo '''
+              echo "$COMMENT"
+              echo '''
+              echo ""
+              echo "*(Add GH_TOKEN secret at Settings > Secrets > Actions to auto-post next run.)*"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "No GH_TOKEN set -- comment text written to Job Summary above."
+            exit 0
           fi
 
           gh issue comment VoltAgent/voltagent#1166 --body "$COMMENT"
