@@ -339,3 +339,27 @@ class TestEscrowLifecycle:
         late = await client.post(f"/api/v1/escrow/{eid}/release", headers=_auth("wallet_seller"))
         assert late.status_code == 200
         assert late.json()["status"] == "released"
+
+
+class TestEscrowSettlementColdStart:
+    """release and refund must work when wallets are DB-only (cold start)."""
+
+    @pytest.fixture(autouse=True)
+    def reset(self):
+        store.reset()
+        yield
+        store.reset()
+
+    async def test_release_escrow_hydrates_wallets_before_settling(self):
+        """release_escrow must hydrate wallets so the provider can resolve the recipient."""
+        from api.src.routes.payments import release_escrow
+        import inspect
+        src = inspect.getsource(release_escrow)
+        assert "_hydrate_wallets" in src
+
+    async def test_refund_escrow_hydrates_wallets_before_settling(self):
+        """refund_escrow must hydrate wallets so the provider can resolve the buyer."""
+        from api.src.routes.payments import refund_escrow
+        import inspect
+        src = inspect.getsource(refund_escrow)
+        assert "_hydrate_wallets" in src

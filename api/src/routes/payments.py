@@ -23,7 +23,7 @@ from ..schemas.marketplace import (
 from ..schemas.reputation import CounterpartyRating, CounterpartyRatingRequest
 from ..services.coinbase import CoinbaseError
 from ..services.marketplace_store import store
-from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
+from ..services.onchain import OnchainTransferError, OnchainVerificationError, verify_usdc_transfer
 from ._durable import (
     claim_tx_hash,
     hydrate_checkout,
@@ -241,8 +241,12 @@ async def release_escrow(
             )
     await hydrate_reputation(db)  # accrual must build on existing history
     await hydrate_jobs(db)        # so a linked job can be completed
+    from ..routes.marketplace import _hydrate_wallets
+    await _hydrate_wallets(db)
     try:
         escrow = store.release_escrow(escrow_id)
+    except OnchainTransferError as exc:
+        raise HTTPException(status_code=502, detail=f"on-chain settlement failed: {exc}") from exc
     except (KeyError, PermissionError, ValueError) as exc:
         raise _map_escrow_store_error(exc) from exc
     await persist_settlement(db, escrow)
@@ -261,8 +265,12 @@ async def refund_escrow(
     if wallet_id != escrow.buyer_wallet_id:
         raise HTTPException(status_code=403, detail="only the buyer may request a refund")
     await hydrate_reputation(db)
+    from ..routes.marketplace import _hydrate_wallets
+    await _hydrate_wallets(db)
     try:
         escrow = store.refund_escrow(escrow_id)
+    except OnchainTransferError as exc:
+        raise HTTPException(status_code=502, detail=f"on-chain settlement failed: {exc}") from exc
     except (KeyError, PermissionError, ValueError) as exc:
         raise _map_escrow_store_error(exc) from exc
     await persist_settlement(db, escrow)
