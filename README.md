@@ -6,6 +6,8 @@ OpenTrust is an open standard and reference implementation for establishing veri
 
 A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an OpenAPI endpoint gets one passport. One trust status. One badge. Readable by any agent, any platform, any runtime.
 
+> **Project status — read this before you rely on it.** OpenTrust is **solo-built and AI-assisted** (openly disclosed). The passport **spec, registry API, and SDK are stable at `v1.0.x`** — schema frozen (no breaking changes without a 90-day migration window), governed, and tagged `v1.0.0`–`v1.0.2`. The [`hands-body-and-feet`](#hands-and-feet--agent-real-world-capabilities) capability server is on its own track at **`v2.3.1`**. What it is *not* yet: independently audited, or widely adopted. The design is security-minded (Ed25519-signed passports, revocation, spend caps, kill switch), but treat it as **stable-but-unaudited** — don't connect live funds or production credentials without your own review. — [@Costder](https://github.com/Costder)
+
 ## Get a Passport for Your MCP Server
 
 **$20 USDC** delivered within 24 hours. Includes: full passport JSON + SVG trust badge + public registry listing.
@@ -33,6 +35,20 @@ We are fully focused on building the actual open-source tools.
 
 Thank you for the support &mdash; stay safe out there.
 
+## Maintainer & Identity
+
+OpenTrust is built and maintained by **Joshua Herron** ([@Costder](https://github.com/Costder)), a solo developer (with AI assistance — see the disclosure in the Passport Service section).
+
+For full transparency, the packages ship under a couple of names that don't obviously read as "OpenTrust." **They're all me:**
+
+| Where | Name you'll see | What it is |
+|---|---|---|
+| GitHub | [@Costder](https://github.com/Costder) (Joshua Herron) | **canonical identity** |
+| npm | `@infinitestudios/*` | my own company's npm scope (I run a game studio) |
+| PyPI | `Joshua Herron` | author on the `opentrust-*` packages |
+
+**[@Costder](https://github.com/Costder) is the canonical identity** for OpenTrust — every official package and release traces back to this GitHub account. Anything that doesn't is not official (see the anti-token notice above).
+
 ## Demo
 
 
@@ -45,6 +61,16 @@ https://github.com/user-attachments/assets/31afd91c-9bbc-4bd8-95fd-0ca88bd02361
 ## Hands and Feet — Agent Real-World Capabilities
 
 [`packages/hands-body-and-feet`](packages/hands-body-and-feet/) is a local MCP server that gives AI agents real-world hands. Any MCP-compatible agent (Claude, Codex, Hermes, hyperagent, etc.) connects via Bearer token and gains the ability to send and receive email, provision phone numbers, manage crypto wallets, make USDC payments, issue virtual Visa cards, browse the web, manage infrastructure, and more — with no human-in-the-loop required after initial setup.
+
+> **HBF `v2.x` — the "Persistence Epic."** v2 turned Hands and Feet from a request-time tool bridge into a **persistent autonomous body**: it can be woken by external events, remember across sessions, hold its own stable identity, delegate bounded authority for unattended runs, and is driven from a local control panel. *(Heads up: the `V1` / `V2` / `V3` headers below are **capability generations** — a different axis from this package version.)*
+
+| Pillar | What it does | Status |
+|---|---|---|
+| **Being woken** | External events (cron, webhook, email, SMS, RSS) trigger real tool execution | Done |
+| **Persistence** | Durable KV memory that survives across runs | Done |
+| **Identity** | The agent's own stable wallet / email / phone bindings | Done |
+| **Bounded delegation** | Narrow, capped, time-bounded authority for unattended runs | Done |
+| **Agent OS Control Panel** | Local UI for missions, decisions, agents, spend caps, kill switch | Done (2.3.x) |
 
 **OpenTrust is the trust and identity layer underneath.** Every tool call is gated by the agent's OpenTrust passport trust level (L1–L7). Spend caps, a kill switch, and fail-closed secret loading are enforced throughout.
 
@@ -212,20 +238,23 @@ If and when traditional payment processors build APIs that work without human id
 
 ## Status
 
-OpenTrust is live. The reference registry, frontend, and all four agent verification tiers (L1–L4) are operational. GitHub OAuth owner-claim (L3) and on-chain USDC fee verification (L4) are newly live as of June 2026.
+**Two independent version tracks — don't conflate them:**
+
+- **OpenTrust protocol — `v1.0.x`, stable.** Passport spec frozen at `spec_version 1.0.0` (no breaking changes without a 90-day migration window). Reference registry, API, and frontend are live; all four agent verification tiers (L1–L4) are operational. Tagged `v1.0.0`–`v1.0.2`, with a written governance model and a CHANGELOG.
+- **Hands and Feet — `v2.3.1`.** The capability server is well past its `v2.0.0` "Persistence Epic" bump (see the Hands and Feet section). It versions independently of the protocol — that's why a v2 package sits alongside a v1 spec.
 
 | | |
 |---|---|
 | **Registry API** | https://opentrust.sh/api/v1/health |
 | **Web frontend** | https://opentrust.sh |
-| **Verification tiers** | L1 (register) · L2 (wallet sig) · L3 (GitHub OAuth) · L4 (USDC fee) — all operational |
+| **Verification tiers** | L1 (register) · L2 (wallet sig) · L3 (GitHub OAuth) · L4 (USDC fee) — operational |
 | **Treasury** | `0xCB3E…700b` (Base L2) |
-| **Database** | Turso (SQLite-compatible cloud, free tier) |
-| **Tests** | 694 passing (210 core + 377 hands-body-and-feet + 107 Python package tests) |
+| **Database** | Turso (SQLite-compatible cloud) |
+| **Tests** | 694 passing (210 core + 377 HBF + 107 Python) |
 | **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
-| **npm packages** | `@infinitestudios/hands-body-and-feet` v2.2.0 · `@infinitestudios/opentrust-client` v1.0.0 |
-| **PyPI packages** | `opentrust-sdk` v1.0.0 · `opentrust-cli` v1.0.0 · `opentrust-payment-contracts` v1.0.0 |
-| **Hands Body and Feet** | `@infinitestudios/hands-body-and-feet` v2.2.0 — V1/V2/V3 + persistence epic, stdio + HTTP transports, registry-backed trust, ~60 MCP tools |
+| **npm packages** | `@infinitestudios/hands-body-and-feet` v2.3.1 · `@infinitestudios/opentrust-client` v1.0.2 |
+| **PyPI packages** | `opentrust-sdk` 1.0.1 · `opentrust-cli` 1.0.1 · `opentrust-payment-contracts` 1.0.1 |
+| **Maturity** | Solo-built, AI-assisted, **not yet independently audited**, early adoption — see the status note at the top |
 
 ## Roadmap
 
@@ -436,4 +465,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). The short version: open an RFC for schem
 
 ## License
 
-MIT — [SoulForge](https://github.com/Costder) 2026
+MIT — [Joshua Herron](https://github.com/Costder) 2026
