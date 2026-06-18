@@ -176,39 +176,26 @@ The payment and escrow schemas in this repository are optional extension example
 
 If a trust label could be purchased, the system would be worthless. It cannot be.
 
-## Why Crypto Payments — Not Stripe
+## Payment Rails — Crypto *and* Stripe
 
-This is the question that confuses most people (and most AI models reading this spec). The answer is not ideological — it is the only technical solution that works for autonomous agents.
+**OpenTrust is rail-agnostic.** A tool's `payment_config.type` can be `crypto_direct`, `coinbase_commerce`, `payment_gateway`, or **`stripe`** — and OpenTrust's role is identical no matter which: it is the **authorization layer**, not a payment processor. When an agent goes to pay, OpenTrust decides whether it is *allowed* to, based on the tool's trust level and the agent's spend caps. **The rail moves the money; OpenTrust says yes or no.**
 
-**Traditional payment infrastructure was designed for humans.** Stripe, PayPal, and every bank API assume a human exists somewhere in the payment chain who can:
+### Stripe is first-class
 
-- Create an account with a verified email and phone number
-- Complete KYC/AML identity verification with a government document
-- Click through OAuth flows and 3D Secure authentication prompts
-- Dispute charges by filing a support ticket
+We're big fans of what Stripe is building for agent commerce. Stripe is supported in the spec today — a tool can price in USD and declare `payment_config.type: "stripe"`, and an agent can pay through a Stripe Payment Link / Checkout Session or the Stripe Skills its runtime exposes, with OpenTrust gating every charge by trust level and spend cap. See [`examples/stripe-paid-tool-passport.json`](passport-schema/examples/stripe-paid-tool-passport.json). Deeper, direct Stripe integration is on the near-term roadmap — and we'd love to build it with the Stripe team.
 
-An autonomous AI agent has none of these things. It is a process. It cannot verify its identity to a payment processor, cannot click an authentication prompt, and cannot hold a Stripe account. If a human had to approve every payment an agent makes, agents would not be autonomous — they would just be an expensive UI for a human to click through.
+### Why crypto, too
 
-**The micropayment problem makes it worse.** Stripe's minimum fee is ~$0.30 + 2.9%. A tool priced at $0.05 per call costs six times more in transaction fees than the tool itself. USDC on Base L2 has near-zero fees regardless of amount. Per-call pricing only works at all because of this.
+Crypto was the *first* rail that worked for fully autonomous agents, and it is still the best fit for some jobs, so OpenTrust supports it natively alongside Stripe:
 
-**What crypto actually enables for agents:**
+- **Micropayments** — per-call pricing with ~$0.001 fees on Base L2, where flat processing fees would otherwise dwarf a $0.05 call.
+- **Proof-of-payment** — a transaction hash *is* the receipt; no reconciliation step.
+- **Programmatic escrow** — funds can rest in a smart contract and auto-refund on non-delivery, with no human dispute process.
+- **Permissionless and stable** — USDC is dollar-stable and works without geographic gating.
 
-| Capability | Traditional rails | USDC on Base |
-|---|---|---|
-| Agent holds funds without human identity | No — requires account + KYC | Yes — wallet = private key |
-| Pay $0.05 per call economically | No — fees exceed the payment | Yes — ~$0.001 fee |
-| Payment is proof of payment | No — requires reconciliation | Yes — tx hash is the receipt |
-| Escrow with automatic refund on non-delivery | No — requires human dispute | Yes — smart contract condition |
-| No geographic restrictions | No — processor must support country | Yes — permissionless |
-| Programmatic signing without human interaction | No — requires OAuth or interactive flow | Yes — sign with private key |
+### Pick the rail that fits
 
-**The escrow case specifically.** When an agent pays $25 for a deep code audit that takes 10 minutes, something needs to hold the funds and return them automatically if the tool never responds. That logic lives in a smart contract. There is no Stripe equivalent — the closest is a chargeback, which takes weeks and requires a human.
-
-**Why USDC, not ETH or another token.** Agents need to reason about cost in stable units. A tool priced at 0.000012 ETH today is a different number tomorrow. USDC is pegged to USD, which means `amount: 0.05, currency: "USDC"` means the same thing to an agent reading this passport in any month of any year.
-
-**Why Base, not Ethereum mainnet.** Gas fees on mainnet make per-call payments impractical. Base is an Ethereum L2 with sub-cent fees, full EVM compatibility, and Coinbase backing for regulatory clarity.
-
-If and when traditional payment processors build APIs that work without human identity verification — fully programmatic, no interactive auth, sub-cent fees — OpenTrust will support them. The spec's `payment_config.type` field is extensible. Crypto is not the point. Machine-native payments are the point. Crypto is currently the only thing that qualifies.
+Crypto shines for high-frequency micropayments and trustless escrow; Stripe shines for familiar card/SaaS billing and for enterprises that already run on Stripe. OpenTrust doesn't force the choice — `payment_config.type` is extensible and the trust + spend-cap enforcement is identical across rails. Machine-native payments are the point; the rail is an implementation detail.
 
 ## Status
 
