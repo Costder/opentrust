@@ -29,9 +29,9 @@
         },
         "currency": {
           "type": "string",
-          "enum": ["USDC", "USDT", "ETH", "SOL"],
+          "enum": ["USDC", "USDT", "ETH", "SOL", "USD"],
           "default": "USDC",
-          "description": "Payment currency. USDC on Base is the default — stable, cheap, fast."
+          "description": "Payment currency. USDC on Base is the default — stable, cheap, fast. USD denotes a fiat price settled through a fiat rail such as Stripe (see payment_config.type = stripe)."
         },
         "free_tier": {
           "type": "object",
@@ -80,8 +80,8 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["crypto_direct", "coinbase_commerce", "payment_gateway"],
-          "description": "crypto_direct: agent sends USDC directly to a wallet address. coinbase_commerce: agent calls a Coinbase Commerce checkout URL. payment_gateway: agent calls a custom endpoint that returns a payment intent."
+          "enum": ["crypto_direct", "coinbase_commerce", "payment_gateway", "stripe"],
+          "description": "crypto_direct: agent sends USDC directly to a wallet address. coinbase_commerce: agent calls a Coinbase Commerce checkout URL. payment_gateway: agent calls a custom endpoint that returns a payment intent. stripe: agent pays through Stripe (a Stripe Payment Link/Checkout Session, or the Stripe Skill its runtime exposes); OpenTrust remains the authorization layer, gating the charge by trust level and spend caps."
         },
         "network": {
           "type": "string",
@@ -102,6 +102,11 @@
           "type": "string",
           "format": "uri",
           "description": "For payment_gateway: endpoint the agent POSTs to get a payment intent. Returns a payment_intent_id and destination."
+        },
+        "stripe_payment_link": {
+          "type": "string",
+          "format": "uri",
+          "description": "For stripe: a Stripe Payment Link or Checkout Session URL the agent completes (or the Stripe Skill its runtime exposes). For a server-created Stripe PaymentIntent, use gateway_url instead. OpenTrust authorizes the charge against the tool trust level and agent spend caps regardless of rail."
         },
         "supported_tokens": {
           "type": "array",

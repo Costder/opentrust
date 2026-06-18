@@ -1,0 +1,135 @@
+{
+  "_comment": "Example of a paid tool that accepts Stripe (a fiat rail). The agent reads commercial_status to discover the USD price, pays via the Stripe payment link (or a Stripe Skill its runtime exposes), and exchanges proof for an API key \u2014 with OpenTrust gating the charge by the tool trust level and the agent spend caps.",
+  "spec_version": "1.0.0",
+  "tool_identity": {
+    "name": "Market Data Feed",
+    "slug": "market-data-feed",
+    "type": "data",
+    "category": "data-analysis",
+    "source_url": "https://github.com/example-org/market-data-feed",
+    "license": "Commercial",
+    "maintainers": [
+      "example-org"
+    ]
+  },
+  "creator_identity": {
+    "creator": "Example Org",
+    "github": "example-org",
+    "domain": "example.dev",
+    "verification_state": "github_verified"
+  },
+  "trust_status": "security_checked",
+  "version_hash": {
+    "version": "1.4.0",
+    "commit": "a1b2c3d4",
+    "artifact_hash": "sha256:abc123def456"
+  },
+  "capabilities": [
+    "real-time equities and FX quotes",
+    "historical OHLCV data",
+    "symbol search"
+  ],
+  "permission_manifest": {
+    "file": false,
+    "terminal": false,
+    "browser": false,
+    "network": true,
+    "memory": false,
+    "wallet": false,
+    "api": true,
+    "camera": false,
+    "microphone": false,
+    "private_data": false,
+    "notes": "Calls the vendor market-data API over HTTPS. No file, terminal, or wallet access."
+  },
+  "source_formats": [
+    "mcp",
+    "openai_function"
+  ],
+  "format_manifests": {
+    "mcp": {
+      "server_command": "npx -y @example-org/market-data-mcp",
+      "transport": "stdio",
+      "tools": [
+        {
+          "name": "get_quote",
+          "description": "Get a real-time quote for a symbol",
+          "inputSchema": {
+            "type": "object",
+            "required": [
+              "symbol"
+            ],
+            "properties": {
+              "symbol": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "openai_function": {
+      "functions": [
+        {
+          "name": "get_quote",
+          "description": "Get a real-time quote for a symbol",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "symbol"
+            ],
+            "properties": {
+              "symbol": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "commercial_status": {
+    "status": "subscription",
+    "pricing": {
+      "model": "subscription_monthly",
+      "amount": 49,
+      "currency": "USD",
+      "notes": "$49/month for unlimited quotes, billed via Stripe."
+    },
+    "payment_config": {
+      "type": "stripe",
+      "stripe_payment_link": "https://buy.stripe.com/test_3cs5kq0Ab6Yd2pq8ww"
+    },
+    "access_config": {
+      "type": "api_key_issued",
+      "verification_endpoint": "https://api.example.dev/opentrust/exchange",
+      "token_scope": "monthly"
+    }
+  },
+  "risk_summary": {
+    "ai_generated_notes": "",
+    "human_reviewed_findings": [
+      "Network access limited to the vendor market-data API.",
+      "No access to files, terminal, or wallet."
+    ]
+  },
+  "review_history": [
+    {
+      "status": "creator_claimed",
+      "timestamp": "2026-04-01T10:00:00Z",
+      "reviewer": "example-org"
+    },
+    {
+      "status": "security_checked",
+      "timestamp": "2026-05-10T09:00:00Z",
+      "reviewer": "auditor-handle",
+      "signature": "ed25519:base64signaturehere",
+      "notes": "Dependency scan and permission audit passed."
+    }
+  ],
+  "agent_access": {
+    "api_url": "https://opentrust.sh/api/v1/tools/market-data-feed",
+    "mcp_readable": true,
+    "cli_command": "opentrust inspect market-data-feed"
+  }
+}
