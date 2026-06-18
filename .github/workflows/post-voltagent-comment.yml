@@ -10,29 +10,45 @@ jobs:
       - name: Post OpenTrust comment on VoltAgent issue 1166
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        shell: bash
         run: |
-          COMMENT="Hey @uchibeke -- saw you are building Open Agent Passport at Aporth. OpenTrust is an open-source MCP passport standard that implements the same pre-call tool verification this issue describes.
+          set +e
 
-We already wrote a VoltAgent integration spec: https://costder.github.io/opentrust/voltagent.html
+          if [ -z "${GH_TOKEN}" ]; then
+            printf "## GH_TOKEN not set
 
-Not competing -- OAP and OpenTrust could be complementary. Happy to compare notes or help wire the passport format into VoltAgent's before_tool_call hook. The $20 passport service at costder.github.io/opentrust/passport-service.html can get any MCP tool covered quickly."
+**1.** Create PAT (30 sec): https://github.com/settings/tokens/new?scopes=public_repo&description=opentrust-voltagent
 
-          if [ -z "$GH_TOKEN" ]; then
-            {
-              echo "## Ready to post -- paste this at VoltAgent/voltagent#1166"
-              echo ""
-              echo "**Step 1:** Go to https://github.com/settings/tokens/new?scopes=public_repo&description=opentrust-voltagent"
-              echo "**Step 2:** Generate token, copy it"
-              echo "**Step 3:** Go to https://github.com/Costder/opentrust/settings/secrets/actions/new -- Name: GH_TOKEN, Value: paste token, Save"
-              echo "**Step 4:** Come back here and click Re-run"
-              echo ""
-              echo "**OR paste this comment manually at https://github.com/VoltAgent/voltagent/issues/1166 :**"
-              echo ""
-              echo "$COMMENT"
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "GH_TOKEN not set. Instructions written to Job Summary above."
+**2.** Add secret: https://github.com/Costder/opentrust/settings/secrets/actions/new -- Name: **GH_TOKEN**, Value: paste token
+
+**3.** Click Re-run jobs above.
+" >> "${GITHUB_STEP_SUMMARY}"
+            echo "GH_TOKEN not set - instructions written to Job Summary."
             exit 0
           fi
 
-          gh issue comment VoltAgent/voltagent#1166 --body "$COMMENT"
-          echo "Comment posted successfully!"
+          BODY=$(python3 -c "
+import json
+comment = 'Hey @uchibeke -- saw you are building Open Agent Passport at Aporth. OpenTrust is an open-source MCP passport standard that implements the same pre-call tool verification this issue describes.
+
+We already wrote a VoltAgent integration spec: https://costder.github.io/opentrust/voltagent.html
+
+Not competing -- OAP and OpenTrust could be complementary. Happy to compare notes or help wire the passport format into VoltAgent before_tool_call hook.'
+print(json.dumps({'body': comment}))
+")
+
+          STATUS=$(curl -s -o /tmp/gh_response.json -w "%{http_code}"             -X POST             -H "Authorization: token ${GH_TOKEN}"             -H "Accept: application/vnd.github.v3+json"             -d "${BODY}"             "https://api.github.com/repos/VoltAgent/voltagent/issues/1166/comments")
+
+          echo "HTTP status: ${STATUS}"
+          cat /tmp/gh_response.json
+
+          if [ "${STATUS}" = "201" ]; then
+            printf "## Comment posted!
+https://github.com/VoltAgent/voltagent/issues/1166
+" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            printf "## Failed (HTTP %s)
+" "${STATUS}" >> "${GITHUB_STEP_SUMMARY}"
+            cat /tmp/gh_response.json >> "${GITHUB_STEP_SUMMARY}"
+            exit 1
+          fi
