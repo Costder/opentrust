@@ -33,6 +33,20 @@ We are fully focused on building the actual open-source tools.
 
 Thank you for the support &mdash; stay safe out there.
 
+## Maintainer & Identity
+
+OpenTrust is built and maintained by **Joshua Herron** ([@Costder](https://github.com/Costder)), a solo developer (with AI assistance — see the disclosure in the Passport Service section).
+
+For full transparency, the project currently ships under a few different publisher names. **They are all the same person — me:**
+
+| Where | Name you'll see | Status |
+|---|---|---|
+| GitHub | [@Costder](https://github.com/Costder) (Joshua Herron) | **canonical identity** |
+| npm | `@infinitestudios/*` | same maintainer (legacy scope) |
+| PyPI | `Novel Hut Studios` | same maintainer (legacy name) |
+
+These names are leftovers from earlier projects; they'll be consolidated under the OpenTrust name over time. Until then, **[@Costder](https://github.com/Costder) is the canonical identity** for OpenTrust. Anything that can't be traced back to this GitHub account is not official — see the anti-token notice above.
+
 ## Demo
 
 
@@ -436,4 +450,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). The short version: open an RFC for schem
 
 ## License
 
-MIT — [SoulForge](https://github.com/Costder) 2026
+MIT — [Joshua Herron](https://github.com/Costder) 2026

@@ -9,7 +9,7 @@ description = "Abstract payment contracts for OpenTrust payment providers"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-authors = [{ name = "Novel Hut Studios", email = "founder@novelhut.net" }]
+authors = [{ name = "Joshua Herron", email = "founder@novelhut.net" }]
 keywords = ["opentrust", "payments", "escrow", "ai-agents", "tool-marketplace"]
 dependencies = ["pydantic>=2.7", "cryptography>=42"]
 

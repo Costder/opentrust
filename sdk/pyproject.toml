@@ -9,7 +9,7 @@ description = "Python SDK and MCP bridge for the OpenTrust tool trust registry"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-authors = [{ name = "Novel Hut Studios", email = "founder@novelhut.net" }]
+authors = [{ name = "Joshua Herron", email = "founder@novelhut.net" }]
 keywords = ["opentrust", "ai-agents", "mcp", "trust-registry", "tool-passports"]
 dependencies = ["httpx>=0.28", "cryptography>=42"]
 
