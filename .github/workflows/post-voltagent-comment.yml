@@ -29,11 +29,11 @@ jobs:
 
           BODY=$(python3 -c "
 import json
-comment = 'Hey @uchibeke -- saw you are building Open Agent Passport at Aporth. OpenTrust is an open-source MCP passport standard that implements the same pre-call tool verification this issue describes.
+comment = '''Hey @uchibeke -- saw you are building Open Agent Passport at Aporth. OpenTrust is an open-source MCP passport standard that implements the same pre-call tool verification this issue describes.
 
 We already wrote a VoltAgent integration spec: https://costder.github.io/opentrust/voltagent.html
 
-Not competing -- OAP and OpenTrust could be complementary. Happy to compare notes or help wire the passport format into VoltAgent before_tool_call hook.'
+Not competing -- OAP and OpenTrust could be complementary. Happy to compare notes or help wire the passport format into VoltAgent before_tool_call hook.'''
 print(json.dumps({'body': comment}))
 ")
 
