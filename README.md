@@ -35,7 +35,8 @@ Thank you for the support &mdash; stay safe out there.
 
 ## Demo
 
-[![Watch the OpenTrust demo](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo-thumb.jpg)](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4)
+
+https://github.com/user-attachments/assets/31afd91c-9bbc-4bd8-95fd-0ca88bd02361
 
 > **Live:** [opentrust.sh](https://opentrust.sh) · [API](https://opentrust.sh/api/v1/health)
 
