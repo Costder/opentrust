@@ -52,7 +52,8 @@ For full transparency, the packages ship under a couple of names that don't obvi
 ## Demo
 
 
-https://github.com/user-attachments/assets/31afd91c-9bbc-4bd8-95fd-0ca88bd02361
+https://github.com/user-attachments/assets/c0b347c5-4835-4f47-9e2a-e6f982d54f1b
+
 
 > **Live:** [opentrust.sh](https://opentrust.sh) · [API](https://opentrust.sh/api/v1/health)
 
