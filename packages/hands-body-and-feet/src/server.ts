@@ -45,6 +45,7 @@ import { BUS_TOOLS } from './capabilities/bus/index.js';
 import { CODEX_TOOLS } from './capabilities/codex/index.js';
 import { CLAUDE_TOOLS } from './capabilities/claude/index.js';
 import { HELP_TOOLS } from './capabilities/help/index.js';
+import { HERMES_TOOLS } from './capabilities/hermes/index.js';
 import type { PassportClaims } from './types.js';
 import { dispatchTool } from './dispatch.js';
 import { registerControlPanelRoutes } from './control-panel/routes.js';
@@ -1124,6 +1125,24 @@ export function createMcpServer(claims: PassportClaims): Server {
             prompt: { type: 'string', description: 'Optional prompt to show/forward after desktop opens' },
           },
         },
+      },
+      // Hermes adapter
+      {
+        name: HERMES_TOOLS.hermes_setup.name,
+        description: 'One-shot installer: detects the local Hermes agent install (Windows, WSL, or macOS), writes the HBF bus platform adapter, patches gateway/config.py and gateway/run.py, and restarts the gateway. Run once per machine. Idempotent. Requires L2 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            api_server_key: { type: 'string', description: 'API key for the Hermes HTTP server (default: hbf-hermes-bridge-key)' },
+            api_server_port: { type: 'number', description: 'Port for the Hermes HTTP server (default: 8642)' },
+            restart: { type: 'boolean', description: 'Restart the gateway after patching (default: true)' },
+          },
+        },
+      },
+      {
+        name: HERMES_TOOLS.hermes_status.name,
+        description: 'Reports whether the HBF bus adapter is installed in the local Hermes agent and whether the gateway is running. Requires L1 trust.',
+        inputSchema: { type: 'object' as const, properties: {} },
       },
       // Help / catalog
       {
