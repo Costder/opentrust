@@ -28,6 +28,7 @@ import { codexExec, codexOpenDesktop } from './capabilities/codex/index.js';
 import { claudeExec, claudeOpenDesktop } from './capabilities/claude/index.js';
 import { hbfHelp } from './capabilities/help/index.js';
 import { hermesSetup, hermesStatus } from './capabilities/hermes/index.js';
+import { cloudRelayRegister, cloudRelayList, cloudRelayRemove } from './capabilities/cloud-relay/index.js';
 import { openControlPanel } from './capabilities/control-panel/index.js';
 import type { PassportClaims } from './types.js';
 
@@ -164,6 +165,9 @@ export async function dispatchTool(
 
     if (name === 'hermes_setup')  return ok(await hermesSetup(args as { api_server_key?: string; api_server_port?: number; restart?: boolean }, claims));
     if (name === 'hermes_status') return ok(await hermesStatus(args as Record<string, never>, claims));
+    if (name === 'cloud_relay_register') return ok(await cloudRelayRegister(args as { agent_id: string; webhook_url: string; poll_ms?: number }, claims));
+    if (name === 'cloud_relay_list')     return ok(await cloudRelayList(args as Record<string, never>, claims));
+    if (name === 'cloud_relay_remove')   return ok(await cloudRelayRemove(args as { agent_id: string }, claims));
     if (name === 'hbf_help')  return ok(await hbfHelp(args as { domain?: string }, claims));
     if (name === 'open_control_panel') return ok(await openControlPanel(args as { open_browser?: boolean; registry_url?: string; port?: number }));
 

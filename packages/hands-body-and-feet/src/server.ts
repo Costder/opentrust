@@ -46,6 +46,7 @@ import { CODEX_TOOLS } from './capabilities/codex/index.js';
 import { CLAUDE_TOOLS } from './capabilities/claude/index.js';
 import { HELP_TOOLS } from './capabilities/help/index.js';
 import { HERMES_TOOLS } from './capabilities/hermes/index.js';
+import { CLOUD_RELAY_TOOLS, loadActiveRelays } from './capabilities/cloud-relay/index.js';
 import type { PassportClaims } from './types.js';
 import { dispatchTool } from './dispatch.js';
 import { registerControlPanelRoutes } from './control-panel/routes.js';
@@ -1144,6 +1145,36 @@ export function createMcpServer(claims: PassportClaims): Server {
         description: 'Reports whether the HBF bus adapter is installed in the local Hermes agent and whether the gateway is running. Requires L1 trust.',
         inputSchema: { type: 'object' as const, properties: {} },
       },
+      // Cloud relay — forward bus messages to cloud agents via webhook
+      {
+        name: CLOUD_RELAY_TOOLS.cloud_relay_register.name,
+        description: 'Registers a cloud-hosted agent to receive HBF bus messages via HTTP webhook. The HBF server will poll the bus every poll_ms milliseconds and POST any queued messages to webhook_url. Replies returned in the HTTP response body are written back to the bus. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            agent_id:    { type: 'string', description: 'Agent ID whose bus queue to watch (e.g. "hyperagent")' },
+            webhook_url: { type: 'string', description: 'HTTPS endpoint that receives message POSTs' },
+            poll_ms:     { type: 'number', description: 'Polling interval in ms (default: 3000)' },
+          },
+          required: ['agent_id', 'webhook_url'],
+        },
+      },
+      {
+        name: CLOUD_RELAY_TOOLS.cloud_relay_list.name,
+        description: 'Lists all registered cloud agent relays with their webhook URLs, poll interval, last poll time, and last error. Requires L2 trust.',
+        inputSchema: { type: 'object' as const, properties: {} },
+      },
+      {
+        name: CLOUD_RELAY_TOOLS.cloud_relay_remove.name,
+        description: 'Stops and removes a cloud agent relay. The bus poller for that agent_id is cancelled immediately. Requires L3 trust.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            agent_id: { type: 'string', description: 'Agent ID of the relay to remove' },
+          },
+          required: ['agent_id'],
+        },
+      },
       // Help / catalog
       {
         name: HELP_TOOLS.hbf_help.name,
@@ -1263,6 +1294,7 @@ export function startServer(options: ServerOptions): Promise<import('http').Serv
       try {
         loadActiveTasks();
         loadActiveTriggers();
+        loadActiveRelays();
       } catch (err: unknown) {
         console.error('Failed to load active tasks/triggers:', err instanceof Error ? err.message : String(err));
       }
