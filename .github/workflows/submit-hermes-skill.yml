@@ -1,0 +1,59 @@
+name: Submit OpenTrust Skill to Hermes Agent
+on:
+  workflow_dispatch:
+
+jobs:
+  submit-skill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Git identity
+        run: |
+          git config --global user.email "noreply@github.com"
+          git config --global user.name "OpenTrust"
+
+      - name: Fork hermes-agent and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$GH_TOKEN" ]; then
+            echo "GH_TOKEN not set — see Job Summary for setup steps"
+            cat >> $GITHUB_STEP_SUMMARY << 'SUMMARY'
+            ## GH_TOKEN Required
+
+            1. Create a PAT: https://github.com/settings/tokens/new?scopes=repo,workflow&description=opentrust-hermes
+            2. Add secret at: https://github.com/Costder/opentrust/settings/secrets/actions/new
+               Name: GH_TOKEN
+               Value: (paste your PAT)
+            3. Re-run this workflow
+            SUMMARY
+            exit 1
+          fi
+
+          gh repo fork NousResearch/hermes-agent --clone
+          cd hermes-agent
+          git config user.email "noreply@github.com"
+          git config user.name "OpenTrust"
+          BRANCH=add-opentrust-security-skill
+          git checkout -b $BRANCH
+          mkdir -p optional-skills/security/opentrust
+          cp "$GITHUB_WORKSPACE/scripts/hermes-skill/opentrust/SKILL.md" optional-skills/security/opentrust/SKILL.md
+          git add optional-skills/security/opentrust/
+          git commit -m "feat(optional-skills/security): add opentrust MCP tool trust verification"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/Costder/hermes-agent.git"
+          git push origin $BRANCH
+
+          PR_BODY="OpenTrust is an open standard for AI agent tool trust. This skill lets Hermes verify the trust level of any MCP server before calling it.
+
+          Trust levels 1-7 (seller_confirmed=3 minimum for safe agent use). Pre-call authorization pattern. 16 real MCP server passports already indexed.
+
+          Registry: https://github.com/Costder/opentrust
+          Service: https://costder.github.io/opentrust/passport-service.html
+
+          Built for the Hermes Agent Accelerated Business Hackathon (NVIDIA x Stripe x Nous Research)."
+
+          gh pr create             --repo NousResearch/hermes-agent             --title "feat(optional-skills/security): add opentrust - MCP tool trust verification"             --body "$PR_BODY"             --head "Costder:$BRANCH"
+
+          echo "PR submitted to NousResearch/hermes-agent"
