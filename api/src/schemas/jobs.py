@@ -46,6 +46,7 @@ class JobPosting(BaseModel):
     engaged_provider_passport_id: str | None = None
     escrow_id: str | None = None
     created_at: str
+    listing_fee_usdc: Decimal = Decimal("0.00")
 
 
 class JobEngageRequest(BaseModel):

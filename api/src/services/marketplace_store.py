@@ -44,6 +44,7 @@ from ..schemas.reputation import (
     SubjectKind,
 )
 from .escrow_provider import MockEscrowProvider, get_escrow_provider
+from .fee_calculator import job_listing_fee, job_settlement_fee, marketplace_settlement_fee
 
 
 PRODUCT_PRICES = {
@@ -352,6 +353,7 @@ class MarketplaceStore:
         # that transfer hasn't already been consumed by another order/escrow.
         if request.transaction_hash:
             self._consume_tx_hash(request.transaction_hash)
+        fee, waived = marketplace_settlement_fee(listing.price_usdc)
         order = MarketplaceOrder(
             order_id=f"order_{uuid4().hex}",
             listing_id=listing.listing_id,
@@ -361,6 +363,9 @@ class MarketplaceStore:
             transaction_hash=request.transaction_hash,
             escrow_id=request.escrow_id,
             custody="escrow" if request.escrow_id else "none",
+            platform_fee_usdc=fee,
+            seller_receives_usdc=listing.price_usdc - fee,
+            fee_waived=waived,
         )
         self.orders[order.order_id] = order
         return order
@@ -468,14 +473,27 @@ class MarketplaceStore:
         seller_wallet = self.wallets.get(escrow.seller_wallet_id)
         if seller_wallet is None:
             raise KeyError("seller wallet not found — cannot send settlement transfer")
+        # Determine fee: job escrows use 4%, marketplace escrows use 5%.
+        is_job_escrow = (
+            escrow.client_reference_id is not None
+            and escrow.client_reference_id in self.jobs
+        )
+        if is_job_escrow:
+            fee, waived = job_settlement_fee(escrow.amount_usdc)
+        else:
+            fee, waived = marketplace_settlement_fee(escrow.amount_usdc)
+        seller_receives = escrow.amount_usdc - fee
         escrow.status = EscrowStatus.release_pending
         result = (provider or get_escrow_provider()).release_funds(
             escrow_id,
             recipient_address=seller_wallet.address,
-            amount_usdc=escrow.amount_usdc,
+            amount_usdc=seller_receives,
         )
         escrow.status = EscrowStatus.released
         escrow.settlement_tx_hash = result.transaction_hash
+        escrow.platform_fee_usdc = fee
+        escrow.seller_receives_usdc = seller_receives
+        escrow.fee_waived = waived
         self._accrue_outcome(escrow, "released")
         self._complete_linked_job(escrow)
         return escrow
@@ -611,6 +629,7 @@ class MarketplaceStore:
             delivery_proof=request.delivery_proof,
             min_provider_trust_score=request.min_provider_trust_score,
             created_at=datetime.now(timezone.utc).isoformat(),
+            listing_fee_usdc=job_listing_fee(),
         )
         self.jobs[job.job_id] = job
         return job

@@ -64,6 +64,15 @@ class Settings(BaseSettings):
     opentrust_marketplace_fee_enabled: bool = False
     opentrust_reputation_gate_enabled: bool = True
 
+    # Fee schedule
+    opentrust_marketplace_fee_pct: str = "5.00"      # 5% seller-side fee on orders/escrow settlements
+    opentrust_job_listing_fee_usdc: str = "2.00"     # $2 flat fee per job posting
+    opentrust_job_settlement_fee_pct: str = "4.00"   # 4% fee on job escrow settlement
+    # 90-day launch waiver: settlement fees are 0 until this date (ISO 8601, UTC).
+    # Leave OPENTRUST_FEE_WAIVER_END_DATE empty to disable the waiver.
+    opentrust_fee_waiver_enabled: bool = True
+    opentrust_fee_waiver_end_date: str = ""           # e.g. "2026-09-20"
+
     # Verification
     opentrust_registry_treasury_address: str = ""  # USDC recipient for $10 verification fees
     opentrust_verification_fee_usdc: str = "10.00"

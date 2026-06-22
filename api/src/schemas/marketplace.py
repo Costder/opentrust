@@ -257,6 +257,9 @@ class MarketplaceOrder(BaseModel):
     transaction_hash: str | None = None
     escrow_id: str | None = None
     custody: str = "none"
+    platform_fee_usdc: Decimal = Decimal("0.00")
+    seller_receives_usdc: Decimal = Decimal("0.00")
+    fee_waived: bool = False
 
 
 class EscrowCreateRequest(BaseModel):
@@ -297,6 +300,9 @@ class EscrowRecord(BaseModel):
     client_reference_id: str | None = None
     agent_passport_id: str | None = None
     reputation_accrued: bool = False
+    platform_fee_usdc: Decimal = Decimal("0.00")
+    seller_receives_usdc: Decimal | None = None
+    fee_waived: bool = False
 
 
 class EscrowDepositVerificationRequest(BaseModel):
