@@ -6,15 +6,15 @@
 
 ---
 
-## Tweet (copy-paste, attach video file or https://files.catbox.moe/0sdtmm.mp4)
+## Tweet (copy-paste, attach video or https://files.catbox.moe/0sdtmm.mp4)
 
-Built a full agent commerce stack on @stripe + @NousResearch Hermes:
+Built a full agent commerce platform on @stripe + @NousResearch Hermes:
 
-- MCP tool trust passports (8 trust levels)
-- Escrow payments between agents
-- 5% marketplace fee + $2 job board listing
-- Cloud relay for remote agent webhooks
-- HBF physical execution layer
+- MCP tool trust passports (8 trust levels + community reviews)
+- Escrow payments + 5% marketplace fee structure
+- Discovery: featured listings, collections, tag filtering
+- Analytics dashboard for tool maintainers
+- Cloud relay + HBF physical execution layer
 
 Agents that earn, spend, run ops -- for real.
 #HermesHackathon @NousResearch @stripe
@@ -23,24 +23,43 @@ Agents that earn, spend, run ops -- for real.
 
 ## Discord #submissions message
 
-OpenTrust -- agent commerce stack: trust passports + Stripe escrow + 5% fee structure + cloud relay.
-Agents that earn, spend, and run operations. Demo: https://files.catbox.moe/0sdtmm.mp4
+OpenTrust -- agent commerce platform: trust passports + Stripe escrow + marketplace fees + discovery/analytics.
+Agents that earn, spend, and run operations at scale.
+Demo: https://files.catbox.moe/0sdtmm.mp4
 GitHub: https://github.com/Costder/opentrust
 
 ---
 
-## Why the new features matter
+## Features built (last 3 days, all relevant to hackathon theme)
 
-Hackathon theme: 'agents that earn, spend, and run real operations.'
+**Agents that EARN:**
+- 5% marketplace settlement fee on agent-to-agent transactions (fee_calculator.py)
+- $2 flat + 4% job board listing fees collected via Stripe
+- Featured listings route with admin endpoints (monetization surface)
+- Analytics route for listing performance (tool maintainers can optimize revenue)
 
-- **Fee structure (5c7458f):** 5% marketplace settlement + $2 flat job listing + 4% job settlement fee.
-  Collected in USDC via Stripe rail. 90-day launch waiver built in. Real platform economics.
-- **Cloud relay (188be7a):** Remote agents register a webhook, receive bus messages. Scales to any agent.
-- **Hermes adapter (aa5b77c):** Auto-installs. Judges can run against their own agent in minutes.
+**Agents that SPEND:**
+- Stripe escrow: agents pay in, platform holds, releases on delivery
+- USDC settlement track (Coinbase Commerce)
+- 90-day fee waiver for early adopters (growth lever)
 
-The old demo video predates these features. Two options:
-1. Submit with existing video + this tweet text (text describes new features, video is proof of concept)
-2. Quick screen record: run the API, hit /api/v1/fees/calculate, show 5% fee math. 60 seconds. Stronger.
+**Agents that RUN OPERATIONS:**
+- Cloud relay: remote agents register webhooks, receive bus messages at scale
+- HBF physical execution layer with Hermes adapter auto-install
+- Discovery system: collections, tag filtering, UsedByCounter, FeaturedBadge
+- Reviews system: community trust signals on tools
+
+---
+
+## Demo options
+
+**Option A (fastest, 5 min):** Use old video (catbox.moe) + this tweet. The text describes the new features. Submit today.
+
+**Option B (stronger, ~30 min):** Quick screen record showing:
+1. New marketplace UI (discovery/collections/analytics)
+2. Fee calculator: POST /api/v1/fees/calculate, show 5% math
+3. Cloud relay: register a webhook, see message delivery
+Then tweet new video.
 
 ---
 
@@ -48,7 +67,7 @@ The old demo video predates these features. Two options:
 
 1. Open Twitter/X
 2. Paste tweet text above
-3. Attach video (drag opentrust-demo/opentrust-demo-final.mp4 OR paste catbox URL in tweet)
+3. Attach video
 4. Post
 5. Go to discord.gg/nous -> #submissions -> paste Discord message + tweet URL
-6. Done. You are entered.
+6. Done.
