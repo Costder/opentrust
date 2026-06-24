@@ -80,7 +80,7 @@ class PassportRow:
                 try:
                     val = json.loads(val)
                 except (json.JSONDecodeError, TypeError):
-                    pass
+                    pass  # Non-critical: leave raw string value
             setattr(self, col, val)
 
 

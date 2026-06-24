@@ -4,18 +4,21 @@ These are served **outside** the ``/api/v1`` prefix on the root path so they
 are discoverable at ``/.well-known/opentrust-keys.json`` etc.
 
 Production hardening:
-- POST /api/v1/registry/revoke is protected by Bearer admin token when
-  ``REGISTRY_ADMIN_TOKEN`` is configured.  In dev mode (empty token) the
-  endpoint remains unauthenticated for backward compatibility.
-
-No secrets are leaked through public GET endpoints.
+- POST /api/v1/registry/revoke is protected by Bearer admin token.
+- In dev mode, a random admin token is auto-generated and printed on startup.
 """
+
+import hmac
+import logging
+import secrets
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from ..config import settings
 from ..well_known import WELL_KNOWN_STORE
+
+logger = logging.getLogger("opentrust.security")
 
 # Router mounted directly on the root in main.py (no prefix).
 well_known_router = APIRouter(tags=["well-known"])
@@ -28,35 +31,52 @@ registry_router = APIRouter(prefix="/api/v1/registry", tags=["registry"])
 # Admin auth dependency
 # ──────────────────────────────────────────────
 
+# Auto-generate a dev-mode admin token so admin endpoints are never left open.
+_DEV_ADMIN_TOKEN: str | None = None
 
-async def _require_admin(authorization: str | None = Header(None)) -> str | None:
-    """Return actor identifier or None.
 
-    When ``registry_admin_token`` is set (production mode), the caller MUST
-    supply an ``Authorization: Bearer <token>`` header matching the configured
-    value.  A mismatch raises 403; a missing header raises 401.
-
-    When the token is empty (development / test mode), any request is allowed
-    and the actor is recorded as ``"anonymous"``.
-    """
+def _get_admin_token() -> str:
+    """Return the configured admin token, auto-generating one for dev mode."""
+    global _DEV_ADMIN_TOKEN
     token = settings.registry_admin_token
-    if not token:
-        # Fail closed in production: an unset admin token must never silently
-        # leave admin endpoints open to everyone.
-        if settings.environment == "production":
-            raise HTTPException(status_code=503, detail="admin access is not configured")
-        return None  # Dev mode — allow all, record as anonymous
+    if token:
+        return token
+    # Dev mode: auto-generate a random token on first access.
+    if settings.environment != "production" and _DEV_ADMIN_TOKEN is None:
+        _DEV_ADMIN_TOKEN = secrets.token_hex(32)
+        logger.info(
+            f"DEV MODE: Auto-generated admin token (set REGISTRY_ADMIN_TOKEN to override): "
+            f"{_DEV_ADMIN_TOKEN}"
+        )
+    if _DEV_ADMIN_TOKEN:
+        return _DEV_ADMIN_TOKEN
+    # Production with no token — should never reach here (config validation catches it).
+    raise HTTPException(status_code=503, detail="admin access is not configured")
+
+
+async def _require_admin(authorization: str | None = Header(None)) -> str:
+    """Return actor identifier. Requires a valid Bearer token in all environments.
+
+    In production, REGISTRY_ADMIN_TOKEN must be set (startup fails otherwise).
+    In dev mode, a random token is auto-generated and logged on first use.
+    """
+    token = _get_admin_token()
 
     if not authorization:
+        logger.warning("ADMIN_AUTH_FAILED reason=missing_header")
         raise HTTPException(status_code=401, detail="Missing Authorization header")
 
     parts = authorization.split(None, 1)
     if len(parts) != 2 or parts[0].lower() != "bearer":
+        logger.warning("ADMIN_AUTH_FAILED reason=invalid_scheme")
         raise HTTPException(status_code=401, detail="Authorization must be Bearer token")
 
-    if parts[1] != token:
+    # Constant-time comparison to prevent timing attacks.
+    if not hmac.compare_digest(parts[1], token):
+        logger.warning("ADMIN_AUTH_FAILED reason=invalid_token")
         raise HTTPException(status_code=403, detail="Invalid admin token")
 
+    logger.info("ADMIN_AUTH_SUCCESS actor=admin")
     return "admin"
 
 

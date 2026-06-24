@@ -2,12 +2,17 @@
 
 Supports per-IP sliding window rate limiting with env-driven configuration.
 When RATE_LIMIT is not set or set to "0/0", rate limiting is disabled (dev mode).
+In production, a misconfigured RATE_LIMIT causes startup to fail rather than
+silently disabling protection.
 """
 
+import logging
 import os
 import time
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
+
+logger = logging.getLogger("opentrust.security")
 
 
 class RateLimitMiddleware:
@@ -37,6 +42,13 @@ class RateLimitMiddleware:
                 self.window_seconds = int(parts[1])
                 self.enabled = self.max_requests > 0 and self.window_seconds > 0
             except (ValueError, IndexError):
+                # In production, a misconfigured rate limit must abort startup
+                # rather than silently disabling all brute-force protection.
+                if os.environ.get("ENVIRONMENT") == "production":
+                    raise RuntimeError(
+                        f"Invalid RATE_LIMIT='{raw}'. Use format <max>/<window_seconds>."
+                    )
+                logger.warning(f"Invalid RATE_LIMIT='{raw}' — rate limiting disabled in dev mode")
                 self.max_requests = 0
                 self.window_seconds = 0
                 self.enabled = False
@@ -81,6 +93,8 @@ class RateLimitMiddleware:
 
     async def rate_limit_exceeded(self, scope, receive, send):
         """Send a 429 Too Many Requests response."""
+        ip = self._client_ip(scope)
+        logger.warning(f"RATE_LIMIT_HIT ip={ip} path={scope.get('path', '?')}")
         await send({
             "type": "http.response.start",
             "status": 429,

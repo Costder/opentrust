@@ -9,6 +9,7 @@ import os
 import sys
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import SecretStr
 
 logger = logging.getLogger("opentrust.config")
 
@@ -79,7 +80,7 @@ class Settings(BaseSettings):
 
     # Escrow treasury wallet — operator secret, never commit to repo
     # Set OPENTRUST_ESCROW_ENABLED=true only when both are provided.
-    escrow_wallet_private_key: str = ""
+    escrow_wallet_private_key: SecretStr = SecretStr("")
     escrow_wallet_address: str = ""
 
     # Coinbase Commerce
@@ -95,8 +96,15 @@ class Settings(BaseSettings):
     base_usdc_contract: str = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"  # USDC on Base
     wallet_encryption_secret: str = ""  # Set in .env — AES key derivation for embedded wallets
 
-    # Rate limiting
-    rate_limit: str = "100/60"
+    # Rate limiting — 30 req/60s is a human-reasonable interactive limit.
+    # Bots/scripts will hit this fast; legitimate browser users won't.
+    rate_limit: str = "30/60"
+
+    # Per-endpoint rate limits for sensitive operations (human-reasonable).
+    rate_limit_auth: str = "5/60"       # OAuth callback attempts
+    rate_limit_payment: str = "10/60"   # Payment checkout/verify
+    rate_limit_passport_submit: str = "5/60"  # GitHub repo submission
+    rate_limit_wallet_connect: str = "5/60"  # Wallet ownership verification
 
     # Security headers
     security_hsts_enabled: bool = False
@@ -179,17 +187,22 @@ def _check_rate_limit() -> None:
     if settings.environment == "production":
         raw = settings.rate_limit.strip()
         if raw == "0/0" or not raw:
-            _WARNINGS.append(
+            _ERRORS.append(
                 "Rate limiting is disabled (RATE_LIMIT=0/0). "
-                "Set a sensible limit like 200/60 for production."
+                "Set a sensible limit like 30/60 for production."
             )
         try:
             parts = raw.split("/")
             max_req = int(parts[0])
             if max_req == 0:
-                _WARNINGS.append("Rate limiting max_requests is 0 — effectively disabled.")
+                _ERRORS.append("Rate limiting max_requests is 0 — effectively disabled.")
+            elif max_req > 100:
+                _WARNINGS.append(
+                    f"RATE_LIMIT allows {max_req} requests per window — "
+                    "consider a tighter limit like 30/60 for production."
+                )
         except (ValueError, IndexError):
-            _WARNINGS.append(f"Could not parse RATE_LIMIT='{raw}'. Use format <max>/<window_seconds>.")
+            _ERRORS.append(f"Could not parse RATE_LIMIT='{raw}'. Use format <max>/<window_seconds>.")
 
 
 def _check_hsts() -> None:
@@ -247,7 +260,8 @@ def _check_escrow_wallet_config() -> None:
     """In production with escrow enabled, both wallet key and address are required."""
     if not settings.opentrust_escrow_enabled:
         return
-    if not settings.escrow_wallet_private_key.strip():
+    escrow_key = settings.escrow_wallet_private_key.get_secret_value().strip() if settings.escrow_wallet_private_key else ""
+    if not escrow_key:
         _ERRORS.append(
             "OPENTRUST_ESCROW_ENABLED=true but ESCROW_WALLET_PRIVATE_KEY is empty. "
             "Set the treasury wallet private key in .env (never commit it)."

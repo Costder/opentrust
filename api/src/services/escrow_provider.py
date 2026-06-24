@@ -113,9 +113,10 @@ def get_escrow_provider() -> MockEscrowProvider | CustodialEscrowProvider:
     Returns CustodialEscrowProvider when both key and address are set.
     """
     from ..config import settings
-    if settings.escrow_wallet_private_key.strip() and settings.escrow_wallet_address.strip():
+    escrow_key = settings.escrow_wallet_private_key.get_secret_value().strip() if settings.escrow_wallet_private_key else ""
+    if escrow_key and settings.escrow_wallet_address.strip():
         return CustodialEscrowProvider(
-            private_key=settings.escrow_wallet_private_key,
+            private_key=escrow_key,
             address=settings.escrow_wallet_address,
             rpc_url=settings.base_rpc_url,
             usdc_contract=settings.base_usdc_contract,

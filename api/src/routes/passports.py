@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from ..database import Database, get_db
 from ..schemas.passport import PassportCreate, PassportRead, SecurityEvidenceBlock  # noqa: F401 — type reference
 from ..services.passport_generator import draft_passport_from_metadata
@@ -54,7 +54,7 @@ def fetch_github_repo(full_name: str) -> dict | None:
 
 
 class SubmitGithubRequest(BaseModel):
-    github_url: str
+    github_url: str = Field(..., max_length=500)
 
 
 @router.post("/submit", response_model=PassportRead, status_code=201)

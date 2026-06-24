@@ -6,11 +6,13 @@ listing's unit price. Insufficient balance returns 402. Accounts + events persis
 via the marketplace_objects table so they survive serverless cold starts.
 """
 import json
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..config import settings
 from ..database import Database, get_db
+from ..middleware.auth import current_wallet
 from ..schemas.marketplace import (
     FundUsageRequest,
     MeterUsageRequest,
@@ -20,6 +22,8 @@ from ..schemas.marketplace import (
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
 from ._durable import claim_tx_hash, tx_hash_consumed
+
+logger = logging.getLogger("opentrust.security")
 
 router = APIRouter(prefix="/usage", tags=["usage"])
 
@@ -56,8 +60,14 @@ async def _hydrate_all_accounts(db: Database) -> None:
 
 
 @router.post("/fund", response_model=UsageAccount)
-async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
+async def fund_usage(
+    request: FundUsageRequest,
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
     """Fund (or top up) a prepaid balance with an on-chain-verified USDC transfer."""
+    if request.buyer_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="buyer_wallet_id does not match authenticated wallet")
     listing = store.listings.get(request.listing_id)
     if listing is None:
         # cold start: the listing may only be in the DB
@@ -117,11 +127,17 @@ async def fund_usage(request: FundUsageRequest, db: Database = Depends(get_db)):
 
 
 @router.post("/meter")
-async def meter_usage(request: MeterUsageRequest, db: Database = Depends(get_db)):
+async def meter_usage(
+    request: MeterUsageRequest,
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
     """Draw down a prepaid balance. 402 when the balance can't cover the call."""
     account = await _hydrate_account(db, request.account_id)
     if account is None:
         raise HTTPException(status_code=404, detail="usage account not found")
+    if account.buyer_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="not your usage account")
     try:
         result = store.meter_usage(
             request.account_id,
@@ -153,10 +169,16 @@ async def meter_usage(request: MeterUsageRequest, db: Database = Depends(get_db)
 
 
 @router.get("/accounts/{account_id}", response_model=UsageAccount)
-async def get_account(account_id: str, db: Database = Depends(get_db)):
+async def get_account(
+    account_id: str,
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
     acct = await _hydrate_account(db, account_id)
     if acct is None:
         raise HTTPException(status_code=404, detail="usage account not found")
+    if acct.buyer_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="not your usage account")
     return acct
 
 
@@ -164,8 +186,11 @@ async def get_account(account_id: str, db: Database = Depends(get_db)):
 async def find_account(
     listing_id: str = Query(...),
     buyer_wallet_id: str = Query(...),
+    wallet_id: str = Depends(current_wallet),
     db: Database = Depends(get_db),
 ):
+    if buyer_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="buyer_wallet_id does not match authenticated wallet")
     await _hydrate_all_accounts(db)
     acct = store.find_usage_account(listing_id, buyer_wallet_id)
     if acct is None:
@@ -174,9 +199,17 @@ async def find_account(
 
 
 @router.get("/accounts/{account_id}/events", response_model=list[UsageEvent])
-async def get_events(account_id: str, db: Database = Depends(get_db)):
+async def get_events(
+    account_id: str,
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
     # ensure account exists (hydrate), events live alongside it in memory once metered
-    await _hydrate_account(db, account_id)
+    account = await _hydrate_account(db, account_id)
+    if account is None:
+        raise HTTPException(status_code=404, detail="usage account not found")
+    if account.buyer_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="not your usage account")
     in_mem = store.list_usage_events(account_id)
     if in_mem:
         return in_mem
@@ -192,7 +225,13 @@ async def get_events(account_id: str, db: Database = Depends(get_db)):
 
 
 @router.get("/earnings")
-async def earnings(seller_wallet_id: str = Query(...), db: Database = Depends(get_db)):
+async def earnings(
+    seller_wallet_id: str = Query(...),
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
+    if seller_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="seller_wallet_id does not match authenticated wallet")
     await _hydrate_all_accounts(db)
     result = store.seller_earnings(seller_wallet_id)
     # Decimals -> strings for JSON safety
