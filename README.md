@@ -38,13 +38,7 @@ For full transparency, the packages ship under a couple of names that don't obvi
 
 ## Repository Ecosystem
 
-This repo contains **the protocol and standard** — schemas, SDKs, CLI, and the MCP bridge. The marketplace/registry and the capability server live in separate repos:
-
-| Repository | What it is |
-|---|---|
-| **[Costder/opentrust](https://github.com/Costder/opentrust)** (this repo) | Protocol standard: passport schema, Python SDK, TypeScript SDK, CLI, MCP bridge, gateway, RFCs |
-| **[Costder/OpenTrustWeb](https://github.com/Costder/OpenTrustWeb)** | Marketplace & registry: FastAPI backend, Next.js frontend, payment contracts |
-| **[Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet)** | MCP capability server: email, phone, wallet, payments, cards, tunnel, Docker, GitHub, IPFS |
+This repo contains **the protocol and standard** — schemas, SDKs, CLI, and the MCP bridge. The marketplace/registry and the capability server are maintained separately.
 
 ---
 
@@ -124,7 +118,7 @@ Crypto shines for high-frequency micropayments and trustless escrow; Stripe shin
 **Two independent version tracks — don't conflate them:**
 
 - **OpenTrust protocol — `v1.0.x`, stable.** Passport spec frozen at `spec_version 1.0.0` (no breaking changes without a 90-day migration window). Reference registry, API, and frontend are live; all four agent verification tiers (L1–L4) are operational. Tagged `v1.0.0`–`v1.0.2`, with a written governance model and a CHANGELOG.
-- **Hands and Feet — `v2.3.1`.** The capability server is well past its `v2.0.0` "Persistence Epic" bump. It versions independently of the protocol — that's why a v2 package sits alongside a v1 spec. Lives at [Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet).
+- **Hands and Feet — `v2.3.1`.** The capability server is well past its `v2.0.0` "Persistence Epic" bump. It versions independently of the protocol — that's why a v2 package sits alongside a v1 spec.
 
 | | |
 |---|---|
@@ -203,7 +197,7 @@ cd sdk-ts && npm ci && npm run build
 
 ### Hands and Feet (MCP capability server)
 
-The capability server now lives at [Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet).
+The capability server is maintained as a separate package: `@infinitestudios/hands-body-and-feet`.
 
 ```bash
 npm install -g @infinitestudios/hands-body-and-feet
@@ -213,7 +207,7 @@ npx @infinitestudios/hands-body-and-feet serve
 
 ### Marketplace & Registry
 
-The marketplace and registry now lives at [Costder/OpenTrustWeb](https://github.com/Costder/OpenTrustWeb).
+The marketplace and registry are maintained separately.
 
 ## Example Passports
 
