@@ -1,9 +1,6 @@
 """Rate limiting middleware for OpenTrust API.
 
-Supports per-IP sliding window rate limiting with env-driven configuration.
-When RATE_LIMIT is not set or set to "0/0", rate limiting is disabled (dev mode).
-In production, a misconfigured RATE_LIMIT causes startup to fail rather than
-silently disabling protection.
+Per-IP sliding window rate limiting with env-driven configuration.
 """
 
 import logging
@@ -12,7 +9,7 @@ import time
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
 
-logger = logging.getLogger("opentrust.security")
+logger = logging.getLogger("opentrust")
 
 
 class RateLimitMiddleware:
@@ -26,11 +23,7 @@ class RateLimitMiddleware:
     def __init__(self, app):
         self.app = app
         self._windows: dict[str, list[float]] = defaultdict(list)
-        # Peer IPs that are trusted to set X-Forwarded-For (comma-separated).
-        # When the direct connection comes from one of these, the rightmost
-        # X-Forwarded-For entry (appended by that proxy) is used as the client
-        # IP. Otherwise the header is ignored so clients cannot spoof their IP
-        # to bypass per-IP rate limiting. Leave unset in local dev.
+        # Peer IPs trusted to set X-Forwarded-For (comma-separated).
         trusted_raw = os.environ.get("TRUSTED_PROXIES", "").strip()
         self.trusted_proxies = {ip.strip() for ip in trusted_raw.split(",") if ip.strip()}
         # Parse RATE_LIMIT from env
@@ -42,13 +35,9 @@ class RateLimitMiddleware:
                 self.window_seconds = int(parts[1])
                 self.enabled = self.max_requests > 0 and self.window_seconds > 0
             except (ValueError, IndexError):
-                # In production, a misconfigured rate limit must abort startup
-                # rather than silently disabling all brute-force protection.
                 if os.environ.get("ENVIRONMENT") == "production":
-                    raise RuntimeError(
-                        f"Invalid RATE_LIMIT='{raw}'. Use format <max>/<window_seconds>."
-                    )
-                logger.warning(f"Invalid RATE_LIMIT='{raw}' — rate limiting disabled in dev mode")
+                    raise RuntimeError(f"Invalid RATE_LIMIT config")
+                logger.warning("Rate limit config invalid — disabled in dev mode")
                 self.max_requests = 0
                 self.window_seconds = 0
                 self.enabled = False
@@ -94,7 +83,7 @@ class RateLimitMiddleware:
     async def rate_limit_exceeded(self, scope, receive, send):
         """Send a 429 Too Many Requests response."""
         ip = self._client_ip(scope)
-        logger.warning(f"RATE_LIMIT_HIT ip={ip} path={scope.get('path', '?')}")
+        logger.warning(f"Request threshold exceeded: {scope.get('path', '?')}")
         await send({
             "type": "http.response.start",
             "status": 429,

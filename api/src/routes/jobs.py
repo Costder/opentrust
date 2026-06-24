@@ -36,11 +36,17 @@ def _map_job_error(exc: Exception) -> HTTPException:
 
 
 @router.post("", response_model=JobPosting)
-async def create_job(request: JobPostingRequest, db: Database = Depends(get_db)):
+async def create_job(
+    request: JobPostingRequest,
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
     if not settings.opentrust_marketplace_enabled:
-        raise HTTPException(status_code=403, detail="marketplace is disabled")
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if request.client_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     from ..routes.marketplace import _hydrate_wallets
-    await _hydrate_wallets(db)  # client wallet may live only in the DB
+    await _hydrate_wallets(db)
     try:
         job = store.create_job(request)
     except (KeyError, PermissionError, ValueError) as exc:
@@ -69,12 +75,17 @@ async def get_job(job_id: str, db: Database = Depends(get_db)):
 
 
 @router.post("/{job_id}/engage", response_model=JobEngagement)
-async def engage_job(job_id: str, request: JobEngageRequest, db: Database = Depends(get_db)):
+async def engage_job(
+    job_id: str,
+    request: JobEngageRequest,
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
     if not settings.opentrust_escrow_enabled:
-        raise HTTPException(status_code=403, detail="escrow is disabled")
+        raise HTTPException(status_code=403, detail="Forbidden")
     from ..routes.marketplace import _hydrate_wallets
-    await hydrate_jobs(db)      # the job may live only in the DB
-    await _hydrate_wallets(db)  # provider wallet too
+    await hydrate_jobs(db)
+    await _hydrate_wallets(db)
     try:
         engagement = store.engage_job(job_id, request)
     except (KeyError, PermissionError, ValueError) as exc:

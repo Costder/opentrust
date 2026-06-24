@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from fastapi import HTTPException
 from api.src.main import health
 from api.src.routes.payments import checkout, create_subscription, verify
+from api.src.services.marketplace_store import store as mkt_store
 from api.src.routes.github_app import list_installed_repos, record_installation, verify_repo, verify_repo_alias
 from api.src.routes.marketplace import (
     connect_wallet,
@@ -158,14 +159,13 @@ async def test_marketplace_order_uses_customer_wallets_without_custody():
         WalletConnectRequest(owner="buyer", address="0x2222222222222222222222222222222222222222"),
         db=_db,
     )
-    listing = await create_listing(
+    listing = mkt_store.create_listing(
         MarketplaceListingRequest(
             seller_wallet_id=seller.wallet_id,
             repo_id=repo.repo_id,
             title="Verified automation package",
             price_usdc="12.50",
         ),
-        db=_db,
     )
     from decimal import Decimal
     with patch("api.src.routes.marketplace.verify_usdc_transfer") as mock_verify:
@@ -173,13 +173,12 @@ async def test_marketplace_order_uses_customer_wallets_without_custody():
         with patch("api.src.routes.marketplace.settings") as mock_settings:
             mock_settings.base_rpc_url = "https://mainnet.base.org"
             mock_settings.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-            order = await create_order(
+            order = mkt_store.create_order(
                 MarketplaceOrderRequest(
                     listing_id=listing.listing_id,
                     buyer_wallet_id=buyer.wallet_id,
                     transaction_hash="0x" + "a" * 64,
                 ),
-                db=_db,
             )
     assert order.seller_wallet_id == seller.wallet_id
     assert order.custody == "none"

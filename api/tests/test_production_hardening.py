@@ -160,13 +160,13 @@ class TestConfigValidation:
 
     def test_jwt_secret_empty_fails(self):
         """Empty JWT_SECRET should produce an error."""
-        from api.src.config import _ERRORS, _check_jwt_secret
+        from api.src.config import _ERRORS, _verify_config
         _ERRORS.clear()
         settings = __import__("api.src.config", fromlist=["settings"]).settings
         original = settings.jwt_secret
         try:
             settings.jwt_secret = ""
-            _check_jwt_secret()
+            _verify_config()
             assert len(_ERRORS) > 0
             assert any("empty" in e.lower() for e in _ERRORS)
         finally:
@@ -174,7 +174,7 @@ class TestConfigValidation:
 
     def test_jwt_secret_change_me_fails_in_production(self):
         """JWT_SECRET=change_me should produce an error in production."""
-        from api.src.config import _ERRORS, _check_jwt_secret
+        from api.src.config import _ERRORS, _verify_config
         _ERRORS.clear()
         settings = __import__("api.src.config", fromlist=["settings"]).settings
         original_sec = settings.jwt_secret
@@ -182,7 +182,7 @@ class TestConfigValidation:
         try:
             settings.jwt_secret = "change_me"
             settings.environment = "production"
-            _check_jwt_secret()
+            _verify_config()
             assert len(_ERRORS) > 0
             assert any("insecure" in e.lower() for e in _ERRORS)
         finally:
@@ -245,13 +245,13 @@ class TestProductionFailClosed:
     """Production config must fail closed on missing security-critical settings."""
 
     def test_admin_token_required_in_production(self):
-        from api.src.config import _ERRORS, _check_admin_token, settings
+        from api.src.config import _ERRORS, _verify_access_config, settings
         _ERRORS.clear()
         orig_tok, orig_env = settings.registry_admin_token, settings.environment
         try:
             settings.registry_admin_token = ""
             settings.environment = "production"
-            _check_admin_token()
+            _verify_access_config()
             assert any("REGISTRY_ADMIN_TOKEN" in e for e in _ERRORS)
         finally:
             settings.registry_admin_token, settings.environment = orig_tok, orig_env
@@ -283,24 +283,24 @@ class TestProductionFailClosed:
             settings.environment, settings.rate_limit = orig_env, orig_rl
 
     @pytest.mark.asyncio
-    async def test_require_admin_fails_closed_in_production(self):
+    async def test_resolve_actor_fails_closed_in_production(self):
         from fastapi import HTTPException
 
         from api.src.config import settings
         import api.src.routes.well_known as wk
-        from api.src.routes.well_known import _require_admin
+        from api.src.routes.well_known import _resolve_actor
         orig_tok, orig_env = settings.registry_admin_token, settings.environment
-        orig_dev_token = wk._DEV_ADMIN_TOKEN
+        orig_dev_token = wk._DEV_CREDENTIAL
         try:
             settings.registry_admin_token = ""
             settings.environment = "production"
-            wk._DEV_ADMIN_TOKEN = None  # reset cached dev token
+            wk._DEV_CREDENTIAL = None  # reset cached dev token
             with pytest.raises(HTTPException) as exc:
-                await _require_admin(authorization=None)
+                await _resolve_actor(authorization=None)
             assert exc.value.status_code == 503
         finally:
             settings.registry_admin_token, settings.environment = orig_tok, orig_env
-            wk._DEV_ADMIN_TOKEN = orig_dev_token
+            wk._DEV_CREDENTIAL = orig_dev_token
 
 
 class TestMiddlewareIntegration:

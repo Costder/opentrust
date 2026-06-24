@@ -170,7 +170,7 @@ def _job_payload(client):
 
 def test_api_post_and_list_jobs():
     client, _ = _connect()
-    resp = api.post("/api/v1/jobs", json=_job_payload(client))
+    resp = api.post("/api/v1/jobs", json=_job_payload(client), headers=_auth(client.wallet_id))
     assert resp.status_code == 200
     job_id = resp.json()["job_id"]
     listing = api.get("/api/v1/jobs")
@@ -180,7 +180,7 @@ def test_api_post_and_list_jobs():
 
 def test_api_filter_jobs_by_provider_kind():
     client, _ = _connect()
-    api.post("/api/v1/jobs", json=_job_payload(client))
+    api.post("/api/v1/jobs", json=_job_payload(client), headers=_auth(client.wallet_id))
     resp = api.get("/api/v1/jobs?provider_kind=agent_service")
     assert resp.status_code == 200
     assert resp.json() == []
@@ -195,7 +195,7 @@ def _auth(wallet_id: str) -> dict:
 
 def test_api_cancel_requires_job_owner():
     client, other = _connect()
-    job_id = api.post("/api/v1/jobs", json=_job_payload(client)).json()["job_id"]
+    job_id = api.post("/api/v1/jobs", json=_job_payload(client), headers=_auth(client.wallet_id)).json()["job_id"]
 
     # Unauthenticated callers are rejected.
     assert api.post(f"/api/v1/jobs/{job_id}/cancel").status_code == 401
@@ -213,7 +213,7 @@ def test_api_engage_returns_job_and_escrow(monkeypatch):
 
     monkeypatch.setattr(settings, "opentrust_escrow_enabled", True)
     client, provider = _connect()
-    job_id = api.post("/api/v1/jobs", json=_job_payload(client)).json()["job_id"]
+    job_id = api.post("/api/v1/jobs", json=_job_payload(client), headers=_auth(client.wallet_id)).json()["job_id"]
     resp = api.post(
         f"/api/v1/jobs/{job_id}/engage",
         json={
@@ -221,6 +221,7 @@ def test_api_engage_returns_job_and_escrow(monkeypatch):
             "provider_trust_level": 5,
             "provider_trust_status": "seller_confirmed",
         },
+        headers=_auth(provider.wallet_id),
     )
     assert resp.status_code == 200
     body = resp.json()

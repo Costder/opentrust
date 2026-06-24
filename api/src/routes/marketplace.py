@@ -25,7 +25,7 @@ from ..schemas.marketplace import (
     WalletConnectResponse,
     WalletKind,
 )
-from ..middleware.auth import mint_wallet_token, verify_wallet_ownership
+from ..middleware.auth import mint_wallet_token, verify_wallet_ownership, current_wallet
 from ..services.coinbase import CoinbaseError
 from ..services.marketplace_store import store
 from ..services.onchain import OnchainVerificationError, verify_usdc_transfer
@@ -242,10 +242,16 @@ async def list_orders(db: Database = Depends(get_db)):
 
 
 @router.post("/listings", response_model=MarketplaceListing)
-async def create_listing(request: MarketplaceListingRequest, db: Database = Depends(get_db)):
+async def create_listing(
+    request: MarketplaceListingRequest,
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
     if not settings.opentrust_marketplace_enabled:
-        raise HTTPException(status_code=403, detail="marketplace is disabled")
-    await _hydrate_wallets(db)  # seller wallet may live only in the DB after a cold start
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if request.seller_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    await _hydrate_wallets(db)
     try:
         listing = store.create_listing(request)
     except KeyError as exc:
@@ -259,12 +265,18 @@ class _DeleteListingRequest(BaseModel):
 
 
 @router.delete("/listings/{listing_id}")
-async def delete_listing(listing_id: str, request: _DeleteListingRequest, db: Database = Depends(get_db)):
-    """Remove a listing. Only the seller who owns it may delete it."""
+async def delete_listing(
+    listing_id: str,
+    request: _DeleteListingRequest,
+    wallet_id: str = Depends(current_wallet),
+    db: Database = Depends(get_db),
+):
+    if request.seller_wallet_id != wallet_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     await _hydrate_listings(db)
     listing = store.listings.get(listing_id)
     if listing is None:
-        raise HTTPException(status_code=404, detail="listing not found")
+        raise HTTPException(status_code=404, detail="Not found")
     if listing.seller_wallet_id != request.seller_wallet_id:
         raise HTTPException(status_code=403, detail="only the seller can delete this listing")
     store.listings.pop(listing_id, None)

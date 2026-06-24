@@ -13,17 +13,13 @@ from ..config import settings
 from ..database import Database, get_db
 from ..services.github_verifier import build_github_oauth_url
 
-logger = logging.getLogger("opentrust.security")
+logger = logging.getLogger("opentrust")
 
 router = APIRouter(prefix="/claim", tags=["claim"])
 
-# In-process set of revoked JWT IDs. Persisted to DB for serverless cold starts.
-_revoked_jtis: set[str] = set()
+_invalidated: set[str] = set()
 signup_router = APIRouter(prefix="/signup", tags=["signup"])
 
-# OAuth state nonces prevent login-CSRF / unsolicited callbacks. Persisted in the
-# shared object store so a callback can validate a nonce minted by a different
-# worker / serverless instance (in-memory alone breaks on serverless).
 _STATE_TTL_SECONDS = 600
 
 
@@ -121,19 +117,13 @@ async def claim_callback(
     state: str | None = None,
     db: Database = Depends(get_db),
 ):
-    """Exchange a GitHub OAuth ``code`` for a registry JWT bound to the real user.
-
-    Previously this minted a valid signed JWT (subject ``github-user``) for *any*
-    caller, with or without a code — an authentication bypass. We now require a
-    valid state nonce (CSRF), a code, GitHub OAuth to be configured, exchange the
-    code server-side, and mint a token whose subject is the authenticated user.
-    """
+    """Exchange a GitHub OAuth code for a registry token."""
     await _consume_state(db, state)
     if not code:
-        logger.warning(f"OAUTH_CALLBACK_FAILED reason=missing_code state={state}")
-        raise HTTPException(status_code=400, detail="Missing OAuth code")
+        logger.warning("Callback failed: missing code")
+        raise HTTPException(status_code=400, detail="Bad request")
     if not settings.github_client_id or not settings.github_client_secret:
-        raise HTTPException(status_code=503, detail="GitHub OAuth is not configured on this registry")
+        raise HTTPException(status_code=503, detail="Service unavailable")
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         token_resp = await client.post(
@@ -147,18 +137,17 @@ async def claim_callback(
         )
         access_token = token_resp.json().get("access_token") if token_resp.status_code == 200 else None
         if not access_token:
-            logger.warning(f"OAUTH_CALLBACK_FAILED reason=code_exchange_failed")
-            raise HTTPException(status_code=400, detail="GitHub code exchange failed")
+            logger.warning("Callback failed: code exchange")
+            raise HTTPException(status_code=400, detail="Bad request")
         user_resp = await client.get(
             "https://api.github.com/user",
             headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github+json"},
         )
     if user_resp.status_code != 200:
-        logger.warning(f"OAUTH_CALLBACK_FAILED reason=user_fetch_failed status={user_resp.status_code}")
-        raise HTTPException(status_code=400, detail="Failed to fetch GitHub user")
+        logger.warning(f"Callback failed: user fetch status={user_resp.status_code}")
+        raise HTTPException(status_code=400, detail="Bad request")
     user = user_resp.json()
 
-    # Include jti (JWT ID) for token revocation support.
     jti = secrets.token_urlsafe(16)
     token = jwt.encode(
         {
@@ -171,7 +160,7 @@ async def claim_callback(
         settings.jwt_secret,
         algorithm="HS256",
     )
-    logger.info(f"OAUTH_LOGIN_SUCCESS user_id={user['id']} login={user.get('login')} jti={jti}")
+    logger.info(f"Session issued: sub={user['id']}")
     return {"access_token": token, "token_type": "bearer"}
 
 
@@ -180,17 +169,16 @@ async def revoke_token(
     token: str = "",
     db: Database = Depends(get_db),
 ):
-    """Revoke a JWT by adding its jti to the revocation list."""
+    """Invalidate a token."""
     if not token:
-        raise HTTPException(status_code=400, detail="Missing token to revoke")
+        raise HTTPException(status_code=400, detail="Bad request")
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
     except Exception:
-        # Already expired or invalid — nothing to revoke.
         return {"status": "already_invalid"}
     jti = payload.get("jti")
     if jti:
-        _revoked_jtis.add(jti)
+        _invalidated.add(jti)
         await db.save_object("revoked_jti", jti, {"revoked_at": time.time()})
-        logger.info(f"TOKEN_REVOKED jti={jti} sub={payload.get('sub')}")
+        logger.info(f"Token invalidated: sub={payload.get('sub')}")
     return {"status": "revoked"}

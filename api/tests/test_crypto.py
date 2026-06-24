@@ -205,10 +205,10 @@ class TestRevokeEndpoint:
         import api.src.routes.well_known as wk
         orig = settings.registry_admin_token
         settings.registry_admin_token = "test-admin-token"
-        wk._DEV_ADMIN_TOKEN = None  # reset cached dev token
+        wk._DEV_CREDENTIAL = None  # reset cached dev token
         yield
         settings.registry_admin_token = orig
-        wk._DEV_ADMIN_TOKEN = None
+        wk._DEV_CREDENTIAL = None
 
     ADMIN_HEADERS = {"Authorization": "Bearer test-admin-token"}
 

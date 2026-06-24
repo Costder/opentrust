@@ -1,11 +1,6 @@
 """Well-known endpoints for OpenTrust registry verification.
 
-These are served **outside** the ``/api/v1`` prefix on the root path so they
-are discoverable at ``/.well-known/opentrust-keys.json`` etc.
-
-Production hardening:
-- POST /api/v1/registry/revoke is protected by Bearer admin token.
-- In dev mode, a random admin token is auto-generated and printed on startup.
+Served outside the /api/v1 prefix on the root path.
 """
 
 import hmac
@@ -18,65 +13,49 @@ from pydantic import BaseModel, Field
 from ..config import settings
 from ..well_known import WELL_KNOWN_STORE
 
-logger = logging.getLogger("opentrust.security")
+logger = logging.getLogger("opentrust")
 
-# Router mounted directly on the root in main.py (no prefix).
 well_known_router = APIRouter(tags=["well-known"])
-
-# Additionally, the signed revocation action lives under /api/v1/registry
 registry_router = APIRouter(prefix="/api/v1/registry", tags=["registry"])
 
 
 # ──────────────────────────────────────────────
-# Admin auth dependency
+# Elevated access dependency
 # ──────────────────────────────────────────────
 
-# Auto-generate a dev-mode admin token so admin endpoints are never left open.
-_DEV_ADMIN_TOKEN: str | None = None
+_DEV_CREDENTIAL: str | None = None
 
 
-def _get_admin_token() -> str:
-    """Return the configured admin token, auto-generating one for dev mode."""
-    global _DEV_ADMIN_TOKEN
+def _resolve_credential() -> str:
+    global _DEV_CREDENTIAL
     token = settings.registry_admin_token
     if token:
         return token
-    # Dev mode: auto-generate a random token on first access.
-    if settings.environment != "production" and _DEV_ADMIN_TOKEN is None:
-        _DEV_ADMIN_TOKEN = secrets.token_hex(32)
-        logger.info(
-            f"DEV MODE: Auto-generated admin token (set REGISTRY_ADMIN_TOKEN to override): "
-            f"{_DEV_ADMIN_TOKEN}"
-        )
-    if _DEV_ADMIN_TOKEN:
-        return _DEV_ADMIN_TOKEN
-    # Production with no token — should never reach here (config validation catches it).
-    raise HTTPException(status_code=503, detail="admin access is not configured")
+    if settings.environment != "production" and _DEV_CREDENTIAL is None:
+        _DEV_CREDENTIAL = secrets.token_hex(32)
+        logger.info(f"Dev mode credential generated: {_DEV_CREDENTIAL}")
+    if _DEV_CREDENTIAL:
+        return _DEV_CREDENTIAL
+    raise HTTPException(status_code=503, detail="Service unavailable")
 
 
-async def _require_admin(authorization: str | None = Header(None)) -> str:
-    """Return actor identifier. Requires a valid Bearer token in all environments.
-
-    In production, REGISTRY_ADMIN_TOKEN must be set (startup fails otherwise).
-    In dev mode, a random token is auto-generated and logged on first use.
-    """
-    token = _get_admin_token()
+async def _resolve_actor(authorization: str | None = Header(None)) -> str:
+    token = _resolve_credential()
 
     if not authorization:
-        logger.warning("ADMIN_AUTH_FAILED reason=missing_header")
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
+        logger.warning("Elevated access denied: missing header")
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     parts = authorization.split(None, 1)
     if len(parts) != 2 or parts[0].lower() != "bearer":
-        logger.warning("ADMIN_AUTH_FAILED reason=invalid_scheme")
-        raise HTTPException(status_code=401, detail="Authorization must be Bearer token")
+        logger.warning("Elevated access denied: invalid scheme")
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Constant-time comparison to prevent timing attacks.
     if not hmac.compare_digest(parts[1], token):
-        logger.warning("ADMIN_AUTH_FAILED reason=invalid_token")
-        raise HTTPException(status_code=403, detail="Invalid admin token")
+        logger.warning("Elevated access denied: invalid credential")
+        raise HTTPException(status_code=403, detail="Forbidden")
 
-    logger.info("ADMIN_AUTH_SUCCESS actor=admin")
+    logger.info("Elevated access granted")
     return "admin"
 
 
@@ -87,36 +66,29 @@ async def _require_admin(authorization: str | None = Header(None)) -> str:
 
 @well_known_router.get("/.well-known/opentrust-keys.json")
 async def get_keys():
-    """Return the Ed25519 public key(s) in JWK format."""
     return WELL_KNOWN_STORE.sign_keys()
 
 
 @well_known_router.get("/.well-known/opentrust-registries.json")
 async def get_registries():
-    """Return the signed registries list."""
     return WELL_KNOWN_STORE.sign_registries()
 
 
 @well_known_router.get("/.well-known/revoked-passports.json")
 async def get_revoked():
-    """Return the signed list of revoked passports."""
     return WELL_KNOWN_STORE.sign_revoked()
 
 
 # ──────────────────────────────────────────────
-# Revocation action endpoint
+# Revocation endpoint
 # ──────────────────────────────────────────────
 
 
 class RevokeRequest(BaseModel):
-    passport_id: str = Field(..., min_length=1, description="Passport ID to revoke")
-    reason: str = Field(default="", description="Reason for revocation")
+    passport_id: str = Field(..., min_length=1, description="Passport ID")
+    reason: str = Field(default="", description="Reason")
 
 
 @registry_router.post("/revoke")
-async def revoke_passport(body: RevokeRequest, actor: str | None = Depends(_require_admin)):
-    """Revoke a passport and return a signed revocation receipt.
-
-    Requires admin auth when ``REGISTRY_ADMIN_TOKEN`` is set.
-    """
+async def revoke_passport(body: RevokeRequest, actor: str | None = Depends(_resolve_actor)):
     return WELL_KNOWN_STORE.revoke_passport(body.passport_id, body.reason, actor=actor)

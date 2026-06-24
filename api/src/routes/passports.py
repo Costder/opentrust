@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from ..database import Database, get_db
 from ..schemas.passport import PassportCreate, PassportRead, SecurityEvidenceBlock  # noqa: F401 — type reference
 from ..services.passport_generator import draft_passport_from_metadata
-from .well_known import _require_admin
+from .well_known import _resolve_actor
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 admin_router = APIRouter(prefix="/admin/tools", tags=["admin"])
@@ -302,7 +302,7 @@ async def update_tool(
     slug: str,
     payload: PassportCreate,
     db: Database = Depends(get_db),
-    actor: str | None = Depends(_require_admin),
+    actor: str | None = Depends(_resolve_actor),
 ):
     _check_permission_scope(payload)
     _check_evidence_block(payload)
@@ -344,7 +344,7 @@ class AdminPatchTool(BaseModel):
 async def admin_create_tool(
     payload: AdminCreateTool,
     db: Database = Depends(get_db),
-    actor: str | None = Depends(_require_admin),
+    actor: str | None = Depends(_resolve_actor),
 ):
     """Operator-vouched passport creation. Sets trust_status directly and may
     flag the entry as demo. Requires admin auth when REGISTRY_ADMIN_TOKEN is set."""
@@ -383,7 +383,7 @@ async def admin_create_tool(
 async def admin_delete_tool(
     slug: str,
     db: Database = Depends(get_db),
-    actor: str | None = Depends(_require_admin),
+    actor: str | None = Depends(_resolve_actor),
 ):
     """Soft-delete: hide the passport from all listings (recoverable via PATCH)."""
     existing = await db.get_by_slug(slug)
@@ -398,7 +398,7 @@ async def admin_patch_tool(
     slug: str,
     payload: AdminPatchTool,
     db: Database = Depends(get_db),
-    actor: str | None = Depends(_require_admin),
+    actor: str | None = Depends(_resolve_actor),
 ):
     """Edit trust_status, demo flag, or restore a soft-deleted passport."""
     existing = await db.get_by_slug(slug)

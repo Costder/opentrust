@@ -46,6 +46,8 @@ async def client(tmp_path):
 async def _setup(c):
     buyer = (await c.post("/api/v1/wallets/connect", json={"owner": "b", "address": BUYER, "kind": "byo"})).json()
     seller = (await c.post("/api/v1/wallets/connect", json={"owner": "s", "address": SELLER, "kind": "byo"})).json()
+    # Set wallet override for seller (who creates the listing)
+    app.dependency_overrides[current_wallet] = _override_wallet(seller["wallet_id"])
     listing = (await c.post("/api/v1/marketplace/listings", json={
         "seller_wallet_id": seller["wallet_id"], "title": "Metered", "price_usdc": "1.00",
         "provider_kind": "tool", "pricing_model": "per_call", "unit_price_usdc": "0.01", "unit_label": "call",
@@ -188,4 +190,4 @@ async def test_fund_tx_replay_blocked_across_cold_start(client):
     app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     replay = await _fund(c, listing, buyer, "1.00")  # same TX hash
     assert replay.status_code == 409
-    assert "already been used" in replay.json()["detail"]
+    assert replay.status_code == 409

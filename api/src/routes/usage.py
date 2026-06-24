@@ -67,7 +67,7 @@ async def fund_usage(
 ):
     """Fund (or top up) a prepaid balance with an on-chain-verified USDC transfer."""
     if request.buyer_wallet_id != wallet_id:
-        raise HTTPException(status_code=403, detail="buyer_wallet_id does not match authenticated wallet")
+        raise HTTPException(status_code=403, detail="Forbidden")
     listing = store.listings.get(request.listing_id)
     if listing is None:
         # cold start: the listing may only be in the DB
@@ -75,7 +75,7 @@ async def fund_usage(
         await _hydrate_listings(db)
         listing = store.listings.get(request.listing_id)
     if listing is None:
-        raise HTTPException(status_code=404, detail="listing not found")
+        raise HTTPException(status_code=404, detail="Not found")
 
     buyer = store.wallets.get(request.buyer_wallet_id)
     seller = store.wallets.get(listing.seller_wallet_id)
@@ -86,10 +86,10 @@ async def fund_usage(
         buyer = store.wallets.get(request.buyer_wallet_id)
         seller = store.wallets.get(listing.seller_wallet_id)
     if buyer is None or seller is None:
-        raise HTTPException(status_code=404, detail="wallet not found")
+        raise HTTPException(status_code=404, detail="Not found")
 
     if await tx_hash_consumed(db, request.transaction_hash):
-        raise HTTPException(status_code=409, detail="transaction has already been used")
+        raise HTTPException(status_code=409, detail="Conflict")
 
     # Verify the funding transfer landed in the seller's wallet on-chain.
     try:
@@ -107,7 +107,7 @@ async def fund_usage(
     # Atomically claim the funding tx hash before crediting so a single transfer
     # can't be replayed (incl. concurrently across instances) to top up twice.
     if not await claim_tx_hash(db, request.transaction_hash, {"listing_id": request.listing_id}):
-        raise HTTPException(status_code=409, detail="transaction has already been used")
+        raise HTTPException(status_code=409, detail="Conflict")
 
     # Credit exactly what the chain confirms, not the client-asserted amount.
     credited = getattr(transfer, "amount_usdc", None) or request.amount_usdc
@@ -135,9 +135,9 @@ async def meter_usage(
     """Draw down a prepaid balance. 402 when the balance can't cover the call."""
     account = await _hydrate_account(db, request.account_id)
     if account is None:
-        raise HTTPException(status_code=404, detail="usage account not found")
+        raise HTTPException(status_code=404, detail="Not found")
     if account.buyer_wallet_id != wallet_id:
-        raise HTTPException(status_code=403, detail="not your usage account")
+        raise HTTPException(status_code=403, detail="Forbidden")
     try:
         result = store.meter_usage(
             request.account_id,
@@ -176,9 +176,9 @@ async def get_account(
 ):
     acct = await _hydrate_account(db, account_id)
     if acct is None:
-        raise HTTPException(status_code=404, detail="usage account not found")
+        raise HTTPException(status_code=404, detail="Not found")
     if acct.buyer_wallet_id != wallet_id:
-        raise HTTPException(status_code=403, detail="not your usage account")
+        raise HTTPException(status_code=403, detail="Forbidden")
     return acct
 
 
@@ -190,11 +190,11 @@ async def find_account(
     db: Database = Depends(get_db),
 ):
     if buyer_wallet_id != wallet_id:
-        raise HTTPException(status_code=403, detail="buyer_wallet_id does not match authenticated wallet")
+        raise HTTPException(status_code=403, detail="Forbidden")
     await _hydrate_all_accounts(db)
     acct = store.find_usage_account(listing_id, buyer_wallet_id)
     if acct is None:
-        raise HTTPException(status_code=404, detail="no usage account for this listing + buyer")
+        raise HTTPException(status_code=404, detail="Not found")
     return acct
 
 
@@ -207,9 +207,9 @@ async def get_events(
     # ensure account exists (hydrate), events live alongside it in memory once metered
     account = await _hydrate_account(db, account_id)
     if account is None:
-        raise HTTPException(status_code=404, detail="usage account not found")
+        raise HTTPException(status_code=404, detail="Not found")
     if account.buyer_wallet_id != wallet_id:
-        raise HTTPException(status_code=403, detail="not your usage account")
+        raise HTTPException(status_code=403, detail="Forbidden")
     in_mem = store.list_usage_events(account_id)
     if in_mem:
         return in_mem
@@ -231,7 +231,7 @@ async def earnings(
     db: Database = Depends(get_db),
 ):
     if seller_wallet_id != wallet_id:
-        raise HTTPException(status_code=403, detail="seller_wallet_id does not match authenticated wallet")
+        raise HTTPException(status_code=403, detail="Forbidden")
     await _hydrate_all_accounts(db)
     result = store.seller_earnings(seller_wallet_id)
     # Decimals -> strings for JSON safety

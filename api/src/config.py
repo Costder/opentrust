@@ -11,7 +11,7 @@ import sys
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
 
-logger = logging.getLogger("opentrust.config")
+logger = logging.getLogger("opentrust")
 
 
 class Settings(BaseSettings):
@@ -96,15 +96,14 @@ class Settings(BaseSettings):
     base_usdc_contract: str = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"  # USDC on Base
     wallet_encryption_secret: str = ""  # Set in .env — AES key derivation for embedded wallets
 
-    # Rate limiting — 30 req/60s is a human-reasonable interactive limit.
-    # Bots/scripts will hit this fast; legitimate browser users won't.
+    # Rate limiting
     rate_limit: str = "30/60"
 
-    # Per-endpoint rate limits for sensitive operations (human-reasonable).
-    rate_limit_auth: str = "5/60"       # OAuth callback attempts
-    rate_limit_payment: str = "10/60"   # Payment checkout/verify
-    rate_limit_passport_submit: str = "5/60"  # GitHub repo submission
-    rate_limit_wallet_connect: str = "5/60"  # Wallet ownership verification
+    # Per-endpoint limits
+    rate_limit_auth: str = "5/60"
+    rate_limit_payment: str = "10/60"
+    rate_limit_passport_submit: str = "5/60"
+    rate_limit_wallet_connect: str = "5/60"
 
     # Security headers
     security_hsts_enabled: bool = False
@@ -140,7 +139,7 @@ _WARNINGS = []
 _ERRORS = []
 
 
-def _check_jwt_secret() -> None:
+def _verify_config() -> None:
     """Fail if JWT_SECRET is empty or the known-insecure placeholder."""
     raw = settings.jwt_secret.strip()
     if not raw:
@@ -230,7 +229,7 @@ def _check_wallet_encryption_secret() -> None:
             )
 
 
-def _check_admin_token() -> None:
+def _verify_access_config() -> None:
     """In production the admin token MUST be set, else admin-gated endpoints
     (passport overwrite, revocation) fall open to anyone."""
     if settings.environment == "production" and not settings.registry_admin_token.strip():
@@ -298,8 +297,8 @@ def run_config_validation() -> None:
     _ERRORS.clear()
 
     _check_environment()
-    _check_jwt_secret()
-    _check_admin_token()
+    _verify_config()
+    _verify_access_config()
     _check_payment_config()
     _check_escrow_wallet_config()
     _check_trusted_proxies()

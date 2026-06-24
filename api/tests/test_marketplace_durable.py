@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 
 from api.src.database import Database, get_db
 from api.src.main import app
-from api.src.middleware.auth import mint_wallet_token
+from api.src.middleware.auth import current_wallet, mint_wallet_token
 from api.src.services.marketplace_store import store
 
 
@@ -44,7 +44,11 @@ async def client(tmp_path):
 
 async def _connect_seller(c):
     resp = await c.post("/api/v1/wallets/connect", json={"owner": "seller", "address": "0x" + "c" * 40, "kind": "byo"})
-    return resp.json()["wallet_id"]
+    wallet_id = resp.json()["wallet_id"]
+    async def _wallet_override():
+        return wallet_id
+    app.dependency_overrides[current_wallet] = _wallet_override
+    return wallet_id
 
 
 async def test_create_listing_without_repo(client):
@@ -148,7 +152,11 @@ async def test_listings_served_from_db_after_store_reset(client):
 async def _connect_wallet(c, owner: str, addr: str) -> str:
     resp = await c.post("/api/v1/wallets/connect", json={"owner": owner, "address": addr, "kind": "byo"})
     assert resp.status_code == 200, resp.text
-    return resp.json()["wallet_id"]
+    wallet_id = resp.json()["wallet_id"]
+    async def _wallet_override():
+        return wallet_id
+    app.dependency_overrides[current_wallet] = _wallet_override
+    return wallet_id
 
 
 async def test_wallet_persists_to_db(client):
@@ -191,6 +199,9 @@ async def test_escrow_creatable_on_seeded_listing_after_cold_start(client):
     c, _ = client
     seller = await _connect_wallet(c, "seller", "0x" + "c" * 40)
     buyer = await _connect_wallet(c, "buyer", "0x" + "b" * 40)
+    async def _seller_override():
+        return seller
+    app.dependency_overrides[current_wallet] = _seller_override
     created = await c.post("/api/v1/marketplace/listings", json={
         "seller_wallet_id": seller,
         "title": "Agent work package",
@@ -232,6 +243,9 @@ async def test_escrow_lifecycle_survives_cold_start(client):
     c, _ = client
     seller = await _connect_wallet(c, "seller", "0x" + "c" * 40)
     buyer = await _connect_wallet(c, "buyer", "0x" + "b" * 40)
+    async def _seller_override():
+        return seller
+    app.dependency_overrides[current_wallet] = _seller_override
     created = await c.post("/api/v1/marketplace/listings", json={
         "seller_wallet_id": seller,
         "title": "Agent work package",
@@ -265,25 +279,32 @@ async def test_escrow_lifecycle_survives_cold_start(client):
         ms.base_rpc_url = "https://mainnet.base.org"
         ms.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
         mock_verify.return_value = MagicMock(verified=True)
+        async def _buyer_override():
+            return buyer
+        app.dependency_overrides[current_wallet] = _buyer_override
         resp = await c.post(
             f"/api/v1/escrow/{escrow_id}/verify-deposit",
             json={"tx_hash": "0x" + "a" * 64},
-            headers=_auth(buyer),
         )
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "funded"
 
     store.reset()  # cold start before deliver
+    async def _seller_override2():
+        return seller
+    app.dependency_overrides[current_wallet] = _seller_override2
     resp = await c.post(
         f"/api/v1/escrow/{escrow_id}/deliver",
         json={"result_hash": "sha256:abc"},
-        headers=_auth(seller),
     )
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "delivered"
 
     store.reset()  # cold start before release (mutates escrow + reputation)
-    resp = await c.post(f"/api/v1/escrow/{escrow_id}/release", headers=_auth(buyer))
+    async def _buyer_override2():
+        return buyer
+    app.dependency_overrides[current_wallet] = _buyer_override2
+    resp = await c.post(f"/api/v1/escrow/{escrow_id}/release")
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "released"
 
