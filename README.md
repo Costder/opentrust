@@ -6,20 +6,7 @@ OpenTrust is an open standard and reference implementation for establishing veri
 
 A tool that exists as an MCP server, an OpenAI function, a LangChain tool, or an OpenAPI endpoint gets one passport. One trust status. One badge. Readable by any agent, any platform, any runtime.
 
-> **Project status — read this before you rely on it.** OpenTrust is **solo-built and AI-assisted** (openly disclosed). The passport **spec, registry API, and SDK are stable at `v1.0.x`** — schema frozen (no breaking changes without a 90-day migration window), governed, and tagged `v1.0.0`–`v1.0.2`. The [`hands-body-and-feet`](#hands-and-feet--agent-real-world-capabilities) capability server is on its own track at **`v2.3.1`**. What it is *not* yet: independently audited, or widely adopted. The design is security-minded (Ed25519-signed passports, revocation, spend caps, kill switch), but treat it as **stable-but-unaudited** — don't connect live funds or production credentials without your own review. — [@Costder](https://github.com/Costder)
-
-## Get a Passport for Your MCP Server
-
-**$20 USDC** delivered within 24 hours. Includes: full passport JSON + SVG trust badge + public registry listing.
-
-- **Wallet (Base):** `0x0FDD9B72Be53D9b9b70C45B45cDADad679362342`
-- **To order:** Open a GitHub issue titled "Passport Request: [your tool name]" with your tool's URL.
-
-[See example passports](passport-schema/examples/) &mdash; Stripe, GitHub, Discord, and more.
-
----
-
-
+> **Project status — read this before you rely on it.** OpenTrust is **solo-built and AI-assisted** (openly disclosed). The passport **spec, SDK, and CLI are stable at `v1.0.x`** — schema frozen (no breaking changes without a 90-day migration window), governed, and tagged `v1.0.0`–`v1.0.2`. What it is *not* yet: independently audited, or widely adopted. The design is security-minded (Ed25519-signed passports, revocation, spend caps, kill switch), but treat it as **stable-but-unaudited** — don't connect live funds or production credentials without your own review. — [@Costder](https://github.com/Costder)
 
 ## Important Clarification
 
@@ -49,107 +36,15 @@ For full transparency, the packages ship under a couple of names that don't obvi
 
 **[@Costder](https://github.com/Costder) is the canonical identity** for OpenTrust — every official package and release traces back to this GitHub account. Anything that doesn't is not official (see the anti-token notice above).
 
-## Demo
+## Repository Ecosystem
 
+This repo contains **the protocol and standard** — schemas, SDKs, CLI, and the MCP bridge. The marketplace/registry and the capability server live in separate repos:
 
-https://github.com/user-attachments/assets/c0b347c5-4835-4f47-9e2a-e6f982d54f1b
-
-
-> **Live:** [opentrust.sh](https://opentrust.sh) · [API](https://opentrust.sh/api/v1/health)
-
----
-
-## Hands and Feet — Agent Real-World Capabilities
-
-[`packages/hands-body-and-feet`](packages/hands-body-and-feet/) is a local MCP server that gives AI agents real-world hands. Any MCP-compatible agent (Claude, Codex, Hermes, hyperagent, etc.) connects via Bearer token and gains the ability to send and receive email, provision phone numbers, manage crypto wallets, make USDC payments, issue virtual Visa cards, browse the web, manage infrastructure, and more — with no human-in-the-loop required after initial setup.
-
-> **HBF `v2.x` — the "Persistence Epic."** v2 turned Hands and Feet from a request-time tool bridge into a **persistent autonomous body**: it can be woken by external events, remember across sessions, hold its own stable identity, delegate bounded authority for unattended runs, and is driven from a local control panel. *(Heads up: the `V1` / `V2` / `V3` headers below are **capability generations** — a different axis from this package version.)*
-
-| Pillar | What it does | Status |
-|---|---|---|
-| **Being woken** | External events (cron, webhook, email, SMS, RSS) trigger real tool execution | Done |
-| **Persistence** | Durable KV memory that survives across runs | Done |
-| **Identity** | The agent's own stable wallet / email / phone bindings | Done |
-| **Bounded delegation** | Narrow, capped, time-bounded authority for unattended runs | Done |
-| **Agent OS Control Panel** | Local UI for missions, decisions, agents, spend caps, kill switch | Done (2.3.x) |
-
-**OpenTrust is the trust and identity layer underneath.** Every tool call is gated by the agent's OpenTrust passport trust level (L1–L7). Spend caps, a kill switch, and fail-closed secret loading are enforced throughout.
-
-**Easiest — stdio (one line, any harness, zero config):**
-
-Add it like any other MCP server. Claude Code:
-
-```bash
-claude mcp add hands-body-and-feet -- npx -y @infinitestudios/hands-body-and-feet stdio
-```
-
-Claude Desktop / Cursor / any MCP client (`claude_desktop_config.json` etc.):
-
-```jsonc
-{ "mcpServers": { "hands-body-and-feet": {
-  "command": "npx", "args": ["-y", "@infinitestudios/hands-body-and-feet", "stdio"]
-}}}
-```
-
-No `init`, no daemon, no token header. Identity defaults to a local L3 agent;
-set `OPENTRUST_PASSPORT_TOKEN` (real passport) or `OPENTRUST_AGENT_ID` /
-`OPENTRUST_TRUST_STATUS` to customize. Trust levels, spend caps, and the kill
-switch are still enforced per tool call.
-
-**Advanced — HTTP (multi-tenant, per-request passport auth):**
-
-```bash
-npx @infinitestudios/hands-body-and-feet init    # interactive config
-npx @infinitestudios/hands-body-and-feet serve   # http://localhost:3847/mcp
-# Then POST /mcp with: Authorization: Bearer <agent passport token>
-```
-
-### V1 — Foundation & Core Capabilities
-
-| Capability | Tools | Min trust |
-|---|---|---|
-| **Notify** | `notify_human` — push notification via ntfy.sh | L2 |
-| **Wallet** | `create_wallet`, `get_address`, `get_balance`, `send_usdc`, `sign_message`, `sign_typed_data` | L3–L4 |
-| **Bridge** | `bridge_to_polygon`, `bridge_to_base`, `get_bridge_status` (Across Protocol) | L4 |
-| **Payments** | `pay_with_usdc`, `get_payment_status` — USDC on Base, thin wrapper over OpenTrust's payment schema | L4 |
-| **Cards** | `create_virtual_card`, `get_card_details`, `add_funds_to_card`, `top_up_moon_credit`, `freeze_card`, `delete_card`, `get_card_transactions` — Pay with Moon virtual Visa | L4 |
-| **Phone** | `provision_phone_number`, `send_sms`, `read_sms`, `release_phone_number` — Twilio or SignalWire | L3 |
-| **Email** | `create_mailbox`, `send_email`, `read_inbox`, `wait_for_email`, `delete_mailbox` — local SMTP or Postmark/Resend | L2 |
-
-### V2 — Reach & Autonomy
-
-| Capability | Tools | Min trust |
-|---|---|---|
-| **Tunnel** | `create_tunnel`, `get_tunnel_url`, `close_tunnel` — cloudflared or ngrok | L3 |
-| **Webhook** | `create_webhook`, `get_webhook_url`, `read_webhook_events`, `wait_for_webhook`, `delete_webhook` | L3 |
-| **Scheduled Tasks** | `create_task`, `list_tasks`, `delete_task`, `pause_task` — node-cron with passport credential lifecycle | L3 |
-| **Docker** | `run_container`, `stop_container`, `remove_container`, `list_containers`, `container_logs`, `exec_in_container` | L4 |
-| **Phone (JMP)** | `provision_phone_number_jmp`, `send_sms_jmp`, `read_sms_jmp`, `release_phone_number_jmp` — no-KYC XMPP/JMP | L3 |
-
-### V3 — Full Power
-
-| Capability | Tools | Min trust |
-|---|---|---|
-| **GitHub** | `create_repo`, `create_file`, `create_pull_request`, `list_repos` — `@octokit/rest` | L3 |
-| **IPFS** | `publish_content`, `get_ipfs_content`, `pin_content` — kubo-rpc-client + web3.storage fallback | L3 |
-| **RSS Feed** | `create_feed`, `add_feed_item`, `serve_feed` — served at `/feeds/:label` | L3 |
-| **PostScan Mail** | `list_mail`, `forward_mail`, `shred_mail`, `scan_mail` — physical mailbox API, requires USPS Form 1583 | L3 |
-
-### Safety features
-
-- **Trust enforcement matrix** — every tool enforces a minimum passport trust level before executing. L4 tools (wallets, cards, Docker) require elevated trust.
-- **Spend caps** — per-wallet `max_per_call`, `daily_cap`, and `gas_reserve_amount`. Transactions rejected pre-broadcast; never silently downgraded.
-- **Kill switch** — `hands-body-and-feet pause / resume`, passphrase-protected, CLI only. Propagates across all instances via registry flag.
-- **EIP-712 guard** — first use of any new `(domain, primaryType)` pair is rejected with `notify_human` fired. Human adds to allowlist via `hands-body-and-feet allowlist-add-typed-data`.
-- **Fail-closed secrets** — if the OpenTrust registry is unreachable, the server refuses to start. `--allow-local-fallback` opts in with a prominent warning.
-- **Scheduled task credential lifecycle** — task stores passport ID + version + permission snapshot at schedule time. On fire: narrower-of-(old, new) scope wins; widened permissions require task re-creation. Never silently elevated.
-- **`unwind-impossible` flagging** — `send_usdc`, `bridge_to_polygon`, `top_up_moon_credit` flag mid-op if pause fires after broadcast.
-
-```bash
-hands-body-and-feet status   # kill switch state, wallets, spend policy, active bridges, outsourced deps
-hands-body-and-feet pause    # passphrase required — halts all tool calls (503 PAUSED)
-hands-body-and-feet resume   # re-validates all passports against revocation list before resuming
-```
+| Repository | What it is |
+|---|---|
+| **[Costder/opentrust](https://github.com/Costder/opentrust)** (this repo) | Protocol standard: passport schema, Python SDK, TypeScript SDK, CLI, MCP bridge, gateway, RFCs |
+| **[Costder/OpenTrustWeb](https://github.com/Costder/OpenTrustWeb)** | Marketplace & registry: FastAPI backend, Next.js frontend, payment contracts |
+| **[Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet)** | MCP capability server: email, phone, wallet, payments, cards, tunnel, Docker, GitHub, IPFS |
 
 ---
 
@@ -229,7 +124,7 @@ Crypto shines for high-frequency micropayments and trustless escrow; Stripe shin
 **Two independent version tracks — don't conflate them:**
 
 - **OpenTrust protocol — `v1.0.x`, stable.** Passport spec frozen at `spec_version 1.0.0` (no breaking changes without a 90-day migration window). Reference registry, API, and frontend are live; all four agent verification tiers (L1–L4) are operational. Tagged `v1.0.0`–`v1.0.2`, with a written governance model and a CHANGELOG.
-- **Hands and Feet — `v2.3.1`.** The capability server is well past its `v2.0.0` "Persistence Epic" bump (see the Hands and Feet section). It versions independently of the protocol — that's why a v2 package sits alongside a v1 spec.
+- **Hands and Feet — `v2.3.1`.** The capability server is well past its `v2.0.0` "Persistence Epic" bump. It versions independently of the protocol — that's why a v2 package sits alongside a v1 spec. Lives at [Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet).
 
 | | |
 |---|---|
@@ -237,11 +132,8 @@ Crypto shines for high-frequency micropayments and trustless escrow; Stripe shin
 | **Web frontend** | https://opentrust.sh |
 | **Verification tiers** | L1 (register) · L2 (wallet sig) · L3 (GitHub OAuth) · L4 (USDC fee) — operational |
 | **Treasury** | `0xCB3E…700b` (Base L2) |
-| **Database** | Turso (SQLite-compatible cloud) |
-| **Tests** | 694 passing (210 core + 377 HBF + 107 Python) |
-| **CI** | GitHub Actions — Python tests, npm audit, Next.js build |
-| **npm packages** | `@infinitestudios/hands-body-and-feet` v2.3.1 · `@infinitestudios/opentrust-client` v1.0.2 |
-| **PyPI packages** | `opentrust-sdk` 1.0.1 · `opentrust-cli` 1.0.1 · `opentrust-payment-contracts` 1.0.1 |
+| **npm packages** | `@infinitestudios/opentrust-client` v1.0.2 · `@infinitestudios/opentrust-gateway` v0.1.0 |
+| **PyPI packages** | `opentrust-sdk` 1.0.1 · `opentrust-cli` 1.0.1 |
 | **Maturity** | Solo-built, AI-assisted, **not yet independently audited**, early adoption — see the status note at the top |
 
 ## Roadmap
@@ -251,13 +143,9 @@ Crypto shines for high-frequency micropayments and trustless escrow; Stripe shin
 - ✅ **v0.1 — Reference registry.** Passport schema, FastAPI CRUD, CLI, Next.js frontend, badge generator, Docker Compose, CI.
 - ✅ **v0.4 — Signed registry + revocation.** Ed25519 signing on all passports, pinned public keys at `/.well-known/opentrust-keys.json`, signed revocation list with monotonic versioning and rollback rejection, offline CLI verification. Permanent registry key deployed to production.
 - ✅ **v0.5 — Spend policy + signed payment quotes.** Deny-first local spend policy, signed and expiring payment quotes, nonce protection against replay, wallet-bound quotes, escrow threshold enforcement. 30+ tests across all quote safety properties.
-- ✅ **Production hardening.** HSTS, security headers, rate limiting, bearer-token-protected admin plane with audit log, Turso cloud database, Vercel deployment, 155-test suite.
 - ✅ **v0.2 — Granular permission scopes.** Path-level and domain-level scoping — `file.read: ["./docs/**"]`, `network.allowed_domains: ["api.github.com"]`, `terminal.forbidden_commands: ["rm -rf", "curl | sh"]`. Machine-enforceable manifests, not just declarative. Enforced at `reviewer_signed+` in API and CLI.
 - ✅ **v0.3 — Evidence requirements per trust level.** Structured `SecurityEvidenceBlock` on passports: scanner output, reviewer identity, commit hash, dependency snapshot, signed attestation. Required at `security_checked`.
 - ✅ **v0.6 — Real marketplace flows.** On-chain USDC verification via web3.py on Base L2, embedded wallet custody (AES-256-GCM), escrow order flow with `verify_usdc_transfer` gating, `/payments/verify-onchain` endpoint.
-- ✅ **Hands Body and Feet v1.0.** Full V1–V3 MCP capability layer shipped as `@infinitestudios/hands-body-and-feet`. ~50 tools: notify, wallet (Base + Polygon), USDC payments, Across Protocol bridge, Moon virtual cards, phone (Twilio/SignalWire/JMP), email (local SMTP + Postmark/Resend), tunnel, webhooks, scheduled tasks, Docker, GitHub, IPFS, RSS, PostScan Mail. Trust enforcement matrix, spend caps, kill switch, EIP-712 guard, fail-closed secrets, scheduled task credential lifecycle. 333 tests.
-- ✅ **Hands Body and Feet v2.2.0 package release.** Published to npm as `@infinitestudios/hands-body-and-feet`; TypeScript client published as `@infinitestudios/opentrust-client`; Python packages published to PyPI as `opentrust-sdk`, `opentrust-cli`, and `opentrust-payment-contracts`.
-- ✅ **Hands Body and Feet v1.x — `prepare_payment` composite helper.** Detects chain balances, bridges Polygon→Base if needed, polls bridge status, then executes `pay_with_usdc` — internalizes the multi-step bridge-then-pay workflow into one tool call. Bridge fees surface in the receipt.
 - ✅ **v1.0 — Stable spec + governance transfer.** Passport schema frozen at `spec_version: 1.0.0`. All packages at 1.0.0. Governance transfer and RFC process documented in `docs/governance.md`.
 
 ### Up next
@@ -268,53 +156,17 @@ Crypto shines for high-frequency micropayments and trustless escrow; Stripe shin
 
 ## Quick Start
 
-### Live (no setup)
-
-```
-API:  https://opentrust.sh/api/v1/health
-Web:  https://opentrust.sh
-```
-
 ### Published packages
 
 ```bash
-# Python SDK, CLI, and payment contract interfaces
-pip install opentrust-sdk opentrust-cli opentrust-payment-contracts
+# Python SDK and CLI
+pip install opentrust-sdk opentrust-cli
 
 # Optional MCP bridge for the Python SDK
 pip install "opentrust-sdk[mcp]"
 
 # JavaScript/TypeScript client
 npm install @infinitestudios/opentrust-client
-
-# Hands Body and Feet MCP server
-npm install -g @infinitestudios/hands-body-and-feet
-```
-
-### Local dev
-
-```bash
-# Clone and install
-git clone https://github.com/Costder/opentrust
-cd opentrust
-python -m pip install -r api/requirements.txt
-python -m pip install -e cli -e payment-contracts
-
-# Run the API (from repo root)
-JWT_SECRET=dev uvicorn api.src.main:app --reload
-
-# Run the frontend (separate terminal)
-cd web && npm ci && npm run dev
-```
-
-API: `http://localhost:8000/api/v1/health`  
-Web: `http://localhost:3000`
-
-### Docker
-
-```bash
-cp .env.example .env
-make docker-up
 ```
 
 ### CLI
@@ -328,37 +180,40 @@ opentrust status my-tool --format json
 opentrust badge my-tool
 ```
 
-### Hands and Feet (MCP capability server)
+### MCP Server (Smithery / Claude / Cursor)
 
 ```bash
-# Install and run interactive setup
+# Via Smithery:
+npx @smithery/cli install opentrust-sdk
+
+# Or directly:
+pip install "opentrust-sdk[mcp]"
+opentrust-mcp
+```
+
+### Local dev
+
+```bash
+git clone https://github.com/Costder/opentrust
+cd opentrust
+python -m pip install -e cli
+python -m pip install -e "sdk[mcp]"
+cd sdk-ts && npm ci && npm run build
+```
+
+### Hands and Feet (MCP capability server)
+
+The capability server now lives at [Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet).
+
+```bash
+npm install -g @infinitestudios/hands-body-and-feet
 npx @infinitestudios/hands-body-and-feet init
-
-# Start the MCP server (localhost:3847 by default)
 npx @infinitestudios/hands-body-and-feet serve
-
-# Or with Docker Compose
-cd packages/hands-body-and-feet
-docker-compose up
 ```
 
-Configure your MCP-compatible agent to connect:
-```
-POST http://localhost:3847/mcp
-Authorization: Bearer <OpenTrust-signed agent passport token>
-```
+### Marketplace & Registry
 
-See [`packages/hands-body-and-feet/`](packages/hands-body-and-feet/) for the full setup guide, capability docs, and CLI reference.
-
-## Demo Payments
-
-OpenTrust is 100% open source. The reference API includes a mock payment provider for demos:
-
-- `POST /api/v1/payments/checkout` creates a paid demo checkout.
-- `POST /api/v1/payments/verify` verifies a checkout by id.
-- `POST /api/v1/payments/coinbase/checkouts` exposes the Coinbase-shaped checkout path for local demos.
-
-Set `PAYMENT_PROVIDER=mock` for no-secret demo payments. Production operators can replace the provider while keeping the public payment contract schema.
+The marketplace and registry now lives at [Costder/OpenTrustWeb](https://github.com/Costder/OpenTrustWeb).
 
 ## Example Passports
 
@@ -381,21 +236,18 @@ OpenTrust passports understand every major AI tool format. A single passport can
 
 ```
 passport-schema/         JSON Schema — the canonical spec (single source of truth)
-api/                     FastAPI registry — CRUD, search, GitHub OAuth, badges
-web/                     Next.js frontend — directory, passport pages, claim flow
-packages/
-  hands-body-and-feet/   @infinitestudios/hands-body-and-feet — MCP server giving agents
-                         real-world capabilities (email, phone, wallet, cards,
-                         tunnel, docker, GitHub, IPFS, and more)
-sdk-ts/                  @infinitestudios/opentrust-client — TypeScript SDK
 sdk/                     opentrust-sdk — Python SDK + optional MCP bridge
+sdk-ts/                  @infinitestudios/opentrust-client — TypeScript SDK
 cli/                     opentrust-cli — inspect, validate, search, claim, badge
-payment-contracts/       opentrust-payment-contracts — payment interfaces
+packages/
+  opentrust-gateway/     @infinitestudios/opentrust-gateway — MCP/API gateway runtime
 badge-generator/         SVG badge generator for all 8 trust levels
 manifest-validator/      Permission manifest validator with risk flagging
 passport-generator/      Auto-draft passports from GitHub metadata
 rfcs/                    Spec proposals — how the standard evolves
 docs/                    Architecture, spec docs, governance
+demos/                   Example tool with generated passport artifacts
+tests/                   Cross-cutting test vectors
 ```
 
 ## Spec Governance
@@ -406,13 +258,11 @@ OpenTrust is not controlled by any single company or model provider. The spec is
 
 ## See It in Action
 
-[![Watch the OpenTrust demo](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo-thumb.jpg)](https://github.com/Costder/opentrust/raw/main/docs/opentrust-demo.mp4)
-
 **Try it now:**
 
 ```bash
 pip install opentrust-sdk
-python -c "import asyncio, opentrust; print(asyncio.run(opentrust.verify('github-file-search')))"
+python -c "import asyncio, opentrust; print(asyncio.run(opentrust.verify('github-file-search')))"`
 ```
 
 Or install the MCP server and ask Claude *"Is this tool safe to use?"* — it answers with a trust level, permissions breakdown, and a plain-English recommendation.

@@ -29,7 +29,7 @@ from pathlib import Path
 # ── Setup ──────────────────────────────────────────────────────────────────
 HERE = Path(__file__).resolve().parent
 OPENTRUST_REPO = HERE.parent.parent  # /home/joshua/opentrust
-VENV_PYTHON = OPENTRUST_REPO / ".venv" / "bin" / "python"
+VENV_PYTHON = HERE.parent.parent / ".venv-demo" / "bin" / "python"
 OPENTRUST_CLI = [str(VENV_PYTHON), "-m", "opentrust_cli.main"]
 
 # Paths to artifacts

@@ -13,27 +13,16 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
           node-version: "20"
-      - run: python -m pip install -r api/requirements.txt
-      - run: python -m pip install -e cli -e payment-contracts
-      - run: pytest api/tests payment-contracts/tests cli/tests
+      - run: python -m pip install -e cli
       - run: python -m pip install -e "sdk[mcp]"
-      - run: pytest sdk/tests -v
+      - run: pytest cli/tests sdk/tests -v
       # Verify every entry in package-lock.json resolves from registry.npmjs.org only.
-      # Blocks dependency confusion attacks where a transitive dep is pulled from a
-      # different registry silently.
-      - name: Lockfile registry check
-        run: npx lockfile-lint --path web/package-lock.json --type npm --allowed-hosts npm --validate-https
-      - run: cd web && npm ci --ignore-scripts
-      # Verify that every installed package has a valid Sigstore or registry signature.
-      # Catches tampered packages that don't match what npm published. Run after npm ci
-      # because npm audit signatures checks the installed dependency tree.
-      - name: Verify package signatures
-        run: cd web && npm audit signatures
-      - run: cd web && npm run lint && npm run build
-      - run: cd sdk-ts && npm ci && npm run typecheck && npm test
-      # hands-body-and-feet has native deps (better-sqlite3), so install WITH scripts.
-      # Tests are self-contained (no network/secrets) via msw/supertest mocks.
-      - run: cd packages/hands-body-and-feet && npm ci && npm run typecheck && npm test
-      - name: Gateway lockfile registry check
+      - name: Lockfile registry check (sdk-ts)
+        run: npx lockfile-lint --path sdk-ts/package-lock.json --type npm --allowed-hosts npm --validate-https
+      - run: cd sdk-ts && npm ci --ignore-scripts
+      - name: Verify package signatures (sdk-ts)
+        run: cd sdk-ts && npm audit signatures
+      - run: cd sdk-ts && npm run typecheck && npm test
+      - name: Lockfile registry check (gateway)
         run: npx lockfile-lint --path packages/opentrust-gateway/package-lock.json --type npm --allowed-hosts npm --validate-https
       - run: cd packages/opentrust-gateway && npm ci && npm run typecheck && npm test && npm run build

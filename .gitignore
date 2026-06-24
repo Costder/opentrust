@@ -7,25 +7,10 @@ __pycache__
 .venv
 dist
 build
-.next
 *.pyc
 *.egg-info
 .pytest_cache
 .mypy_cache
-
-# Internal planning, outreach, and analysis docs — not for public repo
-outreach/
-outreach-*.md
-outreach-*.html
-outreach-contact-ledger.json
-feasibility-analysis.md
-opentrust-segmentation-analysis.md
-codex_goal_opentrust.txt
-agent_tool_trust_protocol_v3_updated_plan.docx
-docs/marketplace-wallets-implementation-plan.md
-# Internal infra/ops notes — leak server paths + secret-store locations
-docs/no-domain-public-preview.md
-docs/public-launch-report.md
 
 # Claude Code session/memory data (settings.json is tracked for shared project config)
 .claude/*
@@ -33,11 +18,8 @@ docs/public-launch-report.md
 
 # Local dev artifacts
 *.db
-*.db-shm
-*.db-wal
-opentrust.db
 
 .vercel
-
-# Git worktrees
-.worktrees/
+.venv-demo
+web/
+.next/
