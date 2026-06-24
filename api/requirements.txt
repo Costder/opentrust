@@ -9,5 +9,5 @@ python-multipart==0.0.27
 pytest==9.0.3
 pytest-asyncio==1.4.0
 cryptography==46.0.6
-web3>=7.0,<8.0
+web3>=7.16.0,<8.0
 eth-account>=0.13,<0.14
