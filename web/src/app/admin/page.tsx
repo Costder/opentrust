@@ -36,7 +36,7 @@ const CATEGORIES = [
   "communication", "productivity", "infrastructure", "security", "custom",
 ];
 
-const TOKEN_KEY = "opentrust.adminToken";
+const TOKEN_KEY = "ot.rk";
 
 // ── Main ────────────────────────────────────────────────────────────────────────
 
@@ -58,8 +58,6 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      // include both demo and real so the admin sees everything; send the admin
-      // token so this privileged listing is authenticated, not anonymous.
       const res = await fetch("/api/v1/tools?include_demo=true&limit=100", {
         cache: "no-store",
         headers: auth(),
@@ -90,7 +88,7 @@ export default function AdminPage() {
   async function deleteTool(slug: string) {
     if (!confirm(`Hide "${slug}" from all listings? (soft delete — recoverable)`)) return;
     const res = await fetch(`/api/v1/admin/tools/${slug}`, { method: "DELETE", headers: auth() });
-    if (res.status === 401 || res.status === 403) { setError("Admin token rejected."); return; }
+    if (res.status === 401 || res.status === 403) { setError("Access denied."); return; }
     await load();
   }
 
@@ -107,23 +105,23 @@ export default function AdminPage() {
       <div className="mx-auto max-w-md space-y-6">
         <header>
           <h1 className="flex items-center gap-2 text-3xl font-bold text-stone-900">
-            <Lock className="h-7 w-7 text-moss" aria-hidden="true" /> Admin
+            <Lock className="h-7 w-7 text-moss" aria-hidden="true" /> Registry Panel
           </h1>
-          <p className="mt-2 text-stone-500">Elevated registry management. Paste your admin token to continue.</p>
+          <p className="mt-2 text-stone-500">Elevated access. Enter your key to continue.</p>
         </header>
         <div className="panel space-y-3 p-6">
-          <label htmlFor="tok" className="block text-sm font-medium text-stone-700">Admin token</label>
+          <label htmlFor="tok" className="block text-sm font-medium text-stone-700">Access key</label>
           <input
             id="tok" type="password" value={tokenInput}
             onChange={(e) => setTokenInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") saveToken(); }}
-            placeholder="REGISTRY_ADMIN_TOKEN"
+            placeholder="Enter key"
             className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 font-mono text-sm focus:border-moss focus:outline-none focus:ring-2 focus:ring-moss/30"
           />
           <button onClick={saveToken} disabled={!tokenInput.trim()} className="w-full rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-stone-700 transition disabled:opacity-50">
             Sign in
           </button>
-          <p className="text-xs text-stone-400">Stored only in this browser tab (sessionStorage). The token is checked by the API on every action.</p>
+          <p className="text-xs text-stone-400">Stored only in this browser tab. Verified on every action.</p>
         </div>
       </div>
     );
@@ -137,9 +135,9 @@ export default function AdminPage() {
       <header className="flex items-start justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-bold text-stone-900">
-            <ShieldCheck className="h-7 w-7 text-moss" aria-hidden="true" /> Admin
+            <ShieldCheck className="h-7 w-7 text-moss" aria-hidden="true" /> Registry
           </h1>
-          <p className="mt-2 text-stone-500">Add, hide, or flag tools in the registry.</p>
+          <p className="mt-2 text-stone-500">Manage tools in the registry.</p>
         </div>
         <button onClick={logout} className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-50">
           <LogOut className="h-4 w-4" aria-hidden="true" /> Sign out
@@ -224,7 +222,7 @@ function AddToolForm({ auth, onAdded }: { auth: () => Record<string, string>; on
         is_demo: form.is_demo,
       };
       const res = await fetch("/api/v1/admin/tools", { method: "POST", headers: auth(), body: JSON.stringify(body) });
-      if (res.status === 401 || res.status === 403) throw new Error("Admin token rejected.");
+      if (res.status === 401 || res.status === 403) throw new Error("Access denied.");
       if (res.status === 409) throw new Error(`Slug "${slug}" already exists.`);
       if (!res.ok) throw new Error((await res.text()) || "Failed to add");
       setOk(`Added ${slug}`);
