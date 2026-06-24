@@ -199,11 +199,25 @@ class TestWellKnownEndpointRevoked:
 class TestRevokeEndpoint:
     """Tests for POST /api/v1/registry/revoke"""
 
+    @pytest.fixture(autouse=True)
+    def _set_admin_token(self):
+        from api.src.config import settings
+        import api.src.routes.well_known as wk
+        orig = settings.registry_admin_token
+        settings.registry_admin_token = "test-admin-token"
+        wk._DEV_ADMIN_TOKEN = None  # reset cached dev token
+        yield
+        settings.registry_admin_token = orig
+        wk._DEV_ADMIN_TOKEN = None
+
+    ADMIN_HEADERS = {"Authorization": "Bearer test-admin-token"}
+
     @pytest.mark.asyncio
     async def test_revoke_endpoint_accepts_passport_id(self, async_client):
         resp = await async_client.post(
             "/api/v1/registry/revoke",
             json={"passport_id": "test-tool-1", "reason": "Vulnerability found"},
+            headers=self.ADMIN_HEADERS,
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -219,6 +233,7 @@ class TestRevokeEndpoint:
         await async_client.post(
             "/api/v1/registry/revoke",
             json={"passport_id": "tool-abc", "reason": "Malicious behavior"},
+            headers=self.ADMIN_HEADERS,
         )
         # Check revoked list includes it
         resp = await async_client.get("/.well-known/revoked-passports.json")
@@ -234,6 +249,7 @@ class TestRevokeEndpoint:
         resp = await async_client.post(
             "/api/v1/registry/revoke",
             json={"passport_id": "signed-tool", "reason": "Integrity issue"},
+            headers=self.ADMIN_HEADERS,
         )
         body = resp.json()
         pub = public_key_from_b64(WELL_KNOWN_STORE.public_key_b64)
@@ -241,7 +257,7 @@ class TestRevokeEndpoint:
 
     @pytest.mark.asyncio
     async def test_revoke_endpoint_rejects_missing_passport_id(self, async_client):
-        resp = await async_client.post("/api/v1/registry/revoke", json={})
+        resp = await async_client.post("/api/v1/registry/revoke", json={}, headers=self.ADMIN_HEADERS)
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
@@ -249,5 +265,6 @@ class TestRevokeEndpoint:
         resp = await async_client.post(
             "/api/v1/registry/revoke",
             json={"passport_id": "", "reason": "test"},
+            headers=self.ADMIN_HEADERS,
         )
         assert resp.status_code == 422

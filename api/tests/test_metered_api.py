@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 
 from api.src.database import Database, get_db
 from api.src.main import app
+from api.src.middleware.auth import current_wallet
 from api.src.services.marketplace_store import store
 
 TX = "0x" + "a" * 64
@@ -26,6 +27,7 @@ async def client(tmp_path):
     settings.turso_url = ""
     settings.turso_auth_token = ""
     settings.sqlite_path = str(tmp_path / "u.db")
+    settings.jwt_secret = "test-secret-for-testing-only-32chars!"
     test_db = Database()
     await test_db.init()
 
@@ -51,7 +53,22 @@ async def _setup(c):
     return buyer, seller, listing
 
 
+def _auth_headers(wallet_id: str) -> dict:
+    """Mint a wallet session token for testing and return auth headers."""
+    from api.src.middleware.auth import mint_wallet_token
+    token = mint_wallet_token(wallet_id)
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _override_wallet(wallet_id: str):
+    """Create a dependency override that returns the given wallet_id."""
+    async def _wallet():
+        return wallet_id
+    return _wallet
+
+
 async def _fund(c, listing, buyer, amount="1.00"):
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     with patch("api.src.routes.usage.settings") as ms, patch("api.src.routes.usage.verify_usdc_transfer") as mv:
         ms.base_rpc_url = "https://mainnet.base.org"
         ms.base_usdc_contract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -75,6 +92,7 @@ async def test_fund_verifies_onchain_and_credits(client):
 async def test_fund_bad_onchain_returns_402(client):
     c, _ = client
     buyer, seller, listing = await _setup(c)
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     from api.src.services.onchain import OnchainVerificationError
     with patch("api.src.routes.usage.settings") as ms, patch("api.src.routes.usage.verify_usdc_transfer") as mv:
         ms.base_rpc_url = "x"; ms.base_usdc_contract = "y"
@@ -90,6 +108,7 @@ async def test_meter_drawdown_via_http(client):
     c, _ = client
     buyer, seller, listing = await _setup(c)
     acct = (await _fund(c, listing, buyer, "0.05")).json()
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     resp = await c.post("/api/v1/usage/meter", json={
         "account_id": acct["account_id"], "quantity": 1, "idempotency_key": "k1",
     })
@@ -102,6 +121,7 @@ async def test_meter_insufficient_returns_402(client):
     c, _ = client
     buyer, seller, listing = await _setup(c)
     acct = (await _fund(c, listing, buyer, "0.005")).json()  # less than one 0.01 call
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     resp = await c.post("/api/v1/usage/meter", json={
         "account_id": acct["account_id"], "quantity": 1, "idempotency_key": "k1",
     })
@@ -113,6 +133,7 @@ async def test_get_account_and_events(client):
     c, _ = client
     buyer, seller, listing = await _setup(c)
     acct = (await _fund(c, listing, buyer, "1.00")).json()
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     await c.post("/api/v1/usage/meter", json={"account_id": acct["account_id"], "quantity": 3, "idempotency_key": "e1"})
     got = await c.get(f"/api/v1/usage/accounts/{acct['account_id']}")
     assert got.status_code == 200
@@ -125,6 +146,7 @@ async def test_find_account_by_listing_and_buyer(client):
     c, _ = client
     buyer, seller, listing = await _setup(c)
     await _fund(c, listing, buyer, "1.00")
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     resp = await c.get(f"/api/v1/usage/accounts?listing_id={listing['listing_id']}&buyer_wallet_id={buyer['wallet_id']}")
     assert resp.status_code == 200
     assert resp.json()["listing_id"] == listing["listing_id"]
@@ -134,7 +156,9 @@ async def test_seller_earnings(client):
     c, _ = client
     buyer, seller, listing = await _setup(c)
     acct = (await _fund(c, listing, buyer, "1.00")).json()
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     await c.post("/api/v1/usage/meter", json={"account_id": acct["account_id"], "quantity": 10, "idempotency_key": "x"})
+    app.dependency_overrides[current_wallet] = _override_wallet(seller["wallet_id"])
     resp = await c.get(f"/api/v1/usage/earnings?seller_wallet_id={seller['wallet_id']}")
     assert resp.status_code == 200
     assert resp.json()["consumed_usdc"] == "0.10"
@@ -146,6 +170,7 @@ async def test_account_persists_across_cold_start(client):
     acct = (await _fund(c, listing, buyer, "1.00")).json()
     # cold start: clear the in-memory working set
     store.usage_accounts.clear()
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     got = await c.get(f"/api/v1/usage/accounts/{acct['account_id']}")
     assert got.status_code == 200
     assert got.json()["balance_usdc"] == "1.00"
@@ -160,6 +185,7 @@ async def test_fund_tx_replay_blocked_across_cold_start(client):
     assert first.status_code == 200
 
     store.reset()  # simulate a fresh serverless instance: in-memory state gone
+    app.dependency_overrides[current_wallet] = _override_wallet(buyer["wallet_id"])
     replay = await _fund(c, listing, buyer, "1.00")  # same TX hash
     assert replay.status_code == 409
     assert "already been used" in replay.json()["detail"]

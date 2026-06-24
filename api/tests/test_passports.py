@@ -44,11 +44,13 @@ async def client(tmp_path):
     orig_url = settings.turso_url
     orig_token = settings.turso_auth_token
     orig_path = settings.sqlite_path
+    orig_admin = settings.registry_admin_token
 
     # Point the Database class at a temp file and clear Turso creds.
     settings.turso_url = ""
     settings.turso_auth_token = ""
     settings.sqlite_path = str(tmp_path / "test.db")
+    settings.registry_admin_token = "test-admin-token"
 
     test_db = Database()
     await test_db.init()
@@ -66,6 +68,7 @@ async def client(tmp_path):
     settings.turso_url = orig_url
     settings.turso_auth_token = orig_token
     settings.sqlite_path = orig_path
+    settings.registry_admin_token = orig_admin
 
 
 # ── Tests ────────────────────────────────────────────────────────────────────
@@ -172,21 +175,23 @@ class TestCreatePassport:
 
 
 class TestUpdatePassport:
+    ADMIN_HEADERS = {"Authorization": "Bearer test-admin-token"}
+
     async def test_update_nonexistent_returns_404(self, client):
-        resp = await client.put("/api/v1/tools/no-such-tool", json=_PASSPORT)
+        resp = await client.put("/api/v1/tools/no-such-tool", json=_PASSPORT, headers=self.ADMIN_HEADERS)
         assert resp.status_code == 404
 
     async def test_update_changes_description(self, client):
         await client.post("/api/v1/tools", json=_PASSPORT)
         updated = {**_PASSPORT, "description": "Updated description."}
-        resp = await client.put("/api/v1/tools/test-tool", json=updated)
+        resp = await client.put("/api/v1/tools/test-tool", json=updated, headers=self.ADMIN_HEADERS)
         assert resp.status_code == 200
         assert resp.json()["description"] == "Updated description."
 
     async def test_update_changes_trust_status(self, client):
         await client.post("/api/v1/tools", json=_PASSPORT)
         updated = {**_PASSPORT, "trust_status": "creator_claimed"}
-        resp = await client.put("/api/v1/tools/test-tool", json=updated)
+        resp = await client.put("/api/v1/tools/test-tool", json=updated, headers=self.ADMIN_HEADERS)
         assert resp.status_code == 200
         assert resp.json()["trust_status"] == "creator_claimed"
 
@@ -194,7 +199,7 @@ class TestUpdatePassport:
         create_resp = await client.post("/api/v1/tools", json=_PASSPORT)
         original_id = create_resp.json()["id"]
         updated = {**_PASSPORT, "description": "Changed."}
-        update_resp = await client.put("/api/v1/tools/test-tool", json=updated)
+        update_resp = await client.put("/api/v1/tools/test-tool", json=updated, headers=self.ADMIN_HEADERS)
         assert update_resp.json()["id"] == original_id
 
 
@@ -288,7 +293,7 @@ class TestPermissionScopeEnforcement:
         await client.post("/api/v1/tools", json=create_payload)
         # Now try to update to reviewer_signed with boolean network
         update_payload = {**_REVIEWER_SIGNED_BASE}
-        response = await client.put("/api/v1/tools/reviewer-signed-boolean", json=update_payload)
+        response = await client.put("/api/v1/tools/reviewer-signed-boolean", json=update_payload, headers={"Authorization": "Bearer test-admin-token"})
         assert response.status_code == 422, response.text
         detail = response.json()["detail"]
         assert "granular" in detail.lower() or "boolean" in detail.lower()

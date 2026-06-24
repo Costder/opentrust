@@ -1,5 +1,6 @@
 import secrets
 import time
+import logging
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
@@ -12,7 +13,12 @@ from ..config import settings
 from ..database import Database, get_db
 from ..services.github_verifier import build_github_oauth_url
 
+logger = logging.getLogger("opentrust.security")
+
 router = APIRouter(prefix="/claim", tags=["claim"])
+
+# In-process set of revoked JWT IDs. Persisted to DB for serverless cold starts.
+_revoked_jtis: set[str] = set()
 signup_router = APIRouter(prefix="/signup", tags=["signup"])
 
 # OAuth state nonces prevent login-CSRF / unsolicited callbacks. Persisted in the
@@ -124,6 +130,7 @@ async def claim_callback(
     """
     await _consume_state(db, state)
     if not code:
+        logger.warning(f"OAUTH_CALLBACK_FAILED reason=missing_code state={state}")
         raise HTTPException(status_code=400, detail="Missing OAuth code")
     if not settings.github_client_id or not settings.github_client_secret:
         raise HTTPException(status_code=503, detail="GitHub OAuth is not configured on this registry")
@@ -140,23 +147,50 @@ async def claim_callback(
         )
         access_token = token_resp.json().get("access_token") if token_resp.status_code == 200 else None
         if not access_token:
+            logger.warning(f"OAUTH_CALLBACK_FAILED reason=code_exchange_failed")
             raise HTTPException(status_code=400, detail="GitHub code exchange failed")
         user_resp = await client.get(
             "https://api.github.com/user",
             headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github+json"},
         )
     if user_resp.status_code != 200:
+        logger.warning(f"OAUTH_CALLBACK_FAILED reason=user_fetch_failed status={user_resp.status_code}")
         raise HTTPException(status_code=400, detail="Failed to fetch GitHub user")
     user = user_resp.json()
 
+    # Include jti (JWT ID) for token revocation support.
+    jti = secrets.token_urlsafe(16)
     token = jwt.encode(
         {
             "sub": str(user["id"]),
             "login": user.get("login"),
+            "jti": jti,
             "iat": datetime.now(timezone.utc),
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
         },
         settings.jwt_secret,
         algorithm="HS256",
     )
+    logger.info(f"OAUTH_LOGIN_SUCCESS user_id={user['id']} login={user.get('login')} jti={jti}")
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.post("/revoke")
+async def revoke_token(
+    token: str = "",
+    db: Database = Depends(get_db),
+):
+    """Revoke a JWT by adding its jti to the revocation list."""
+    if not token:
+        raise HTTPException(status_code=400, detail="Missing token to revoke")
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+    except Exception:
+        # Already expired or invalid — nothing to revoke.
+        return {"status": "already_invalid"}
+    jti = payload.get("jti")
+    if jti:
+        _revoked_jtis.add(jti)
+        await db.save_object("revoked_jti", jti, {"revoked_at": time.time()})
+        logger.info(f"TOKEN_REVOKED jti={jti} sub={payload.get('sub')}")
+    return {"status": "revoked"}

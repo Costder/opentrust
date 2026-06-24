@@ -410,7 +410,7 @@
   // missions awaiting approval — see refreshOverview().
 
   // ── Missions / Decisions / Agents (live, with offline seed fallback) ──
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   const STATUS_LABEL = { running: 'running', waiting_approval: 'waiting', blocked: 'blocked', done: 'done', failed: 'failed', stopped: 'stopped', draft: 'draft', idle: 'idle' };
 
   const MISSIONS = [

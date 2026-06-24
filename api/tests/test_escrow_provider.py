@@ -94,9 +94,10 @@ class TestGetEscrowProviderFactory:
     def test_returns_mock_when_no_wallet_key_configured(self):
         from api.src.services.escrow_provider import get_escrow_provider, MockEscrowProvider
         import api.src.config as cfg
+        from pydantic import SecretStr
         orig_key  = cfg.settings.escrow_wallet_private_key
         orig_addr = cfg.settings.escrow_wallet_address
-        cfg.settings.escrow_wallet_private_key = ""
+        cfg.settings.escrow_wallet_private_key = SecretStr("")
         cfg.settings.escrow_wallet_address = ""
         try:
             provider = get_escrow_provider()
@@ -108,9 +109,10 @@ class TestGetEscrowProviderFactory:
     def test_returns_custodial_when_wallet_key_and_address_configured(self):
         from api.src.services.escrow_provider import get_escrow_provider, CustodialEscrowProvider
         import api.src.config as cfg
+        from pydantic import SecretStr
         orig_key  = cfg.settings.escrow_wallet_private_key
         orig_addr = cfg.settings.escrow_wallet_address
-        cfg.settings.escrow_wallet_private_key = "0x" + "1" * 64
+        cfg.settings.escrow_wallet_private_key = SecretStr("0x" + "1" * 64)
         cfg.settings.escrow_wallet_address = "0x" + "a" * 40
         try:
             provider = get_escrow_provider()

@@ -7,6 +7,7 @@ The in-memory store stays the working set; the DB is the source of truth across
 serverless cold starts.
 """
 import json
+import logging
 
 from ..database import Database
 from ..schemas.jobs import JobPosting
@@ -21,6 +22,8 @@ from ..schemas.marketplace import (
 )
 from ..schemas.reputation import CounterpartyRating, ReputationRecord
 from ..services.marketplace_store import store
+
+logger = logging.getLogger("opentrust.security")
 
 
 def _jsonable(model) -> dict:
@@ -41,7 +44,8 @@ async def hydrate_installations(db: Database) -> None:
     for data in await db.load_objects("installation"):
         try:
             inst = GitHubInstallationRequest(**data)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to hydrate installation: {e}")
             continue
         store.installations.setdefault(inst.installation_id, inst)
 
@@ -54,7 +58,8 @@ async def hydrate_repos(db: Database) -> None:
     for data in await db.load_objects("repo"):
         try:
             repo = VerifiedRepo(**data)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to hydrate object: {e}")
             continue
         store.repos.setdefault(repo.repo_id, repo)
 
@@ -71,8 +76,8 @@ async def hydrate_checkout(db: Database, checkout_id: str) -> None:
         return
     try:
         store.checkouts[checkout_id] = CheckoutResponse(**data)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to hydrate checkout {checkout_id}: {e}")
 
 
 async def persist_evidence(db: Database, evidence: EvidenceRun) -> None:
@@ -83,7 +88,8 @@ async def hydrate_evidence(db: Database) -> None:
     for data in await db.load_objects("evidence"):
         try:
             ev = EvidenceRun(**data)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to hydrate object: {e}")
             continue
         store.evidence_runs.setdefault(ev.evidence_id, ev)
 
@@ -100,8 +106,8 @@ async def hydrate_report(db: Database, report_id: str) -> None:
         return
     try:
         store.reports[report_id] = TrustReport(**data)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to hydrate report {report_id}: {e}")
 
 
 async def persist_badge(db: Database, badge: VerifiedBadge) -> None:
@@ -116,8 +122,8 @@ async def hydrate_badge(db: Database, badge_id: str) -> None:
         return
     try:
         store.badges[badge_id] = VerifiedBadge(**data)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to hydrate badge {badge_id}: {e}")
 
 
 async def claim_checkout(db: Database, checkout_id: str) -> bool:
@@ -164,7 +170,8 @@ async def hydrate_escrow(db: Database, escrow_id: str) -> EscrowRecord | None:
         return None
     try:
         escrow = EscrowRecord(**data)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to hydrate: {e}")
         return None
     store.escrows[escrow.escrow_id] = escrow
     return escrow
@@ -184,7 +191,8 @@ async def hydrate_job(db: Database, job_id: str) -> JobPosting | None:
         return None
     try:
         job = JobPosting(**data)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to hydrate: {e}")
         return None
     store.jobs[job.job_id] = job
     return job
@@ -210,7 +218,8 @@ async def hydrate_reputation(db: Database) -> None:
     for data in await db.load_objects("reputation"):
         try:
             record = ReputationRecord(**data)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to hydrate object: {e}")
             continue
         key = (record.subject_id, record.subject_kind)
         if key not in store.reputation:
