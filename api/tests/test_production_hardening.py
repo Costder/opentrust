@@ -207,9 +207,9 @@ class TestConfigValidation:
             settings.environment = original_env
 
     def test_rate_limit_disabled_warns_in_production(self):
-        """RATE_LIMIT=0/0 should warn in production."""
-        from api.src.config import _WARNINGS, _check_rate_limit
-        _WARNINGS.clear()
+        """RATE_LIMIT=0/0 should error in production (upgraded from warning)."""
+        from api.src.config import _ERRORS, _check_rate_limit
+        _ERRORS.clear()
         settings = __import__("api.src.config", fromlist=["settings"]).settings
         original_rl = settings.rate_limit
         original_env = settings.environment
@@ -217,8 +217,8 @@ class TestConfigValidation:
             settings.rate_limit = "0/0"
             settings.environment = "production"
             _check_rate_limit()
-            assert len(_WARNINGS) > 0
-            assert any("disabled" in w.lower() for w in _WARNINGS)
+            assert len(_ERRORS) > 0
+            assert any("disabled" in e.lower() for e in _ERRORS)
         finally:
             settings.rate_limit = original_rl
             settings.environment = original_env
@@ -287,16 +287,20 @@ class TestProductionFailClosed:
         from fastapi import HTTPException
 
         from api.src.config import settings
+        import api.src.routes.well_known as wk
         from api.src.routes.well_known import _require_admin
         orig_tok, orig_env = settings.registry_admin_token, settings.environment
+        orig_dev_token = wk._DEV_ADMIN_TOKEN
         try:
             settings.registry_admin_token = ""
             settings.environment = "production"
+            wk._DEV_ADMIN_TOKEN = None  # reset cached dev token
             with pytest.raises(HTTPException) as exc:
                 await _require_admin(authorization=None)
             assert exc.value.status_code == 503
         finally:
             settings.registry_admin_token, settings.environment = orig_tok, orig_env
+            wk._DEV_ADMIN_TOKEN = orig_dev_token
 
 
 class TestMiddlewareIntegration:

@@ -158,17 +158,18 @@ class TestAdminAuth:
 
     @pytest.mark.asyncio
     async def test_revoke_without_auth_when_token_empty(self, async_client):
-        """Dev mode: no admin token configured → endpoint works without auth."""
+        """Dev mode: no admin token configured → auto-generated token required (401 without header)."""
         from api.src.config import settings
         orig_token = settings.registry_admin_token
 
         try:
             settings.registry_admin_token = ""
+            # In dev mode, a token is auto-generated. Without the header, 401 is expected.
             resp = await async_client.post(
                 "/api/v1/registry/revoke",
                 json={"passport_id": "dev-tool", "reason": "dev test"},
             )
-            assert resp.status_code == 200
+            assert resp.status_code == 401
         finally:
             settings.registry_admin_token = orig_token
 
