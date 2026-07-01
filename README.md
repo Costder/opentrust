@@ -38,7 +38,19 @@ For full transparency, the packages ship under a couple of names that don't obvi
 
 ## Repository Ecosystem
 
-This repo contains **the protocol and standard** — schemas, SDKs, CLI, and the MCP bridge. The marketplace/registry and the capability server are maintained separately.
+This repo contains **the protocol and standard** — schemas, SDKs, CLI, and two narrow MCP components (below). The marketplace/registry and the capability server are maintained separately.
+
+### What's an MCP server here, and what isn't
+
+Three different things in the OpenTrust ecosystem speak MCP. They are not the same tool and don't share code:
+
+| Thing | Lives in | What it does |
+|---|---|---|
+| `opentrust-mcp` (the `sdk[mcp]` bridge) | **this repo**, `sdk/src/opentrust/mcp.py` | Read-only lookup tools (`verify_tool`, `search_tools`, `list_tools`) so an agent can ask "is this tool trustworthy?" against the OpenTrust registry. It does nothing else — no file/network/wallet access. |
+| `@infinitestudios/opentrust-gateway` | **this repo**, `packages/opentrust-gateway/` | A generic MCP/API gateway runtime for routing calls to hosted, remote, and local connector tools under trust-level + spend-cap enforcement. Infrastructure, not a set of end-user capabilities. |
+| **Hands and Feet (HBF)** — `@infinitestudios/hands-body-and-feet` | **a separate repo**, [Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet) | The actual capability server — email, phone, wallet, payments, virtual cards, containers, etc. It was originally built inside this repo, then split out (see `refactor: split repos` in git history) so the protocol and the capability implementation can version independently. **That repo is currently private** while it stabilizes; it will be made public. Until then the link above will 404 for non-collaborators — that's expected, not a broken link. |
+
+If you're looking for "the MCP server that does things" (send email, hold a wallet, run containers), that's HBF, and it isn't part of this repo. What *is* part of this repo only lets an agent check trust metadata or route already-authorized calls.
 
 ---
 
@@ -147,6 +159,7 @@ Crypto shines for high-frequency micropayments and trustless escrow; Stripe shin
 - **v1.1 — RFC process opens.** Community contributions to the schema via the 14-day RFC process. Multi-operator registry support (`registry-operators.json`). See `docs/governance.md`.
 - **v1.2 — Agent identity passports.** Passports for agents themselves (not just tools), enabling the trust-flow model when an agent spawns sub-agents.
 - **v1.3 — Neutral foundation.** Governance moves to a foundation once adoption warrants it.
+- **Smithery registry listing.** `smithery.yaml` is already configured for a stdio deploy of the `opentrust-mcp` bridge; submitting it to smithery.ai's registry is planned but not done yet — don't expect `npx @smithery/cli install` to work until this ships.
 
 ## Quick Start
 
@@ -174,13 +187,9 @@ opentrust status my-tool --format json
 opentrust badge my-tool
 ```
 
-### MCP Server (Smithery / Claude / Cursor)
+### MCP Server (Claude / Cursor)
 
 ```bash
-# Via Smithery:
-npx @smithery/cli install opentrust-sdk
-
-# Or directly:
 pip install "opentrust-sdk[mcp]"
 opentrust-mcp
 ```
@@ -197,7 +206,7 @@ cd sdk-ts && npm ci && npm run build
 
 ### Hands and Feet (MCP capability server)
 
-The capability server is maintained as a separate package: `@infinitestudios/hands-body-and-feet`.
+The capability server is maintained as a separate package and repo: [Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet). The npm package below is public and installable today; the GitHub source repo itself is **currently private** (a public release is planned) — expect the link above to 404 for non-collaborators until then.
 
 ```bash
 npm install -g @infinitestudios/hands-body-and-feet

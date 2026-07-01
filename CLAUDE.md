@@ -2,10 +2,10 @@
 
 OpenTrust is the protocol standard for AI agent tool trust. It answers: "Can I trust this tool?", "What permissions does it claim?", and "How does trust flow when my agent spawns sub-agents?"
 
-**This repo is the protocol layer only.** The marketplace/registry and the MCP capability server live in separate repos:
+**This repo is the protocol layer only.** The marketplace/registry and the MCP capability server live in separate repos. Both are **currently private** (public release planned) — links below 404 for non-collaborators until then:
 
-- **[Costder/OpenTrustWeb](https://github.com/Costder/OpenTrustWeb)** — FastAPI backend + Next.js frontend + payment contracts
-- **[Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet)** — MCP capability server (email, phone, wallet, payments, cards, etc.)
+- **[Costder/OpenTrustWeb](https://github.com/Costder/OpenTrustWeb)** — FastAPI backend + Next.js frontend + payment contracts *(private)*
+- **[Costder/hands-body-and-feet](https://github.com/Costder/hands-body-and-feet)** — MCP capability server (email, phone, wallet, payments, cards, etc.) *(private)*
 
 ---
 
