@@ -6,7 +6,7 @@ console = Console()
 STATUS_COLORS = {
     "auto_generated_draft": "yellow",
     "creator_claimed": "cyan",
-    "seller_confirmed": "blue",
+    "owner_confirmed": "blue",
     "community_reviewed": "green",
     "reviewer_signed": "green",
     "security_checked": "bold green",

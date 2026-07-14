@@ -1,7 +1,7 @@
 COLORS = {
     "auto_generated_draft": "#64748b",
     "creator_claimed": "#0ea5e9",
-    "seller_confirmed": "#14b8a6",
+    "owner_confirmed": "#14b8a6",
     "community_reviewed": "#22c55e",
     "reviewer_signed": "#84cc16",
     "security_checked": "#16a34a",

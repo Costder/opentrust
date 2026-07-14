@@ -1,12 +1,17 @@
-export type TrustStatus =
-  | "auto_generated_draft"
-  | "creator_claimed"
-  | "seller_confirmed"
-  | "community_reviewed"
-  | "reviewer_signed"
-  | "security_checked"
-  | "continuously_monitored"
-  | "disputed";
+// Keep this list in lockstep with passport-schema/passport.schema.json.
+// The cross-language contract tests fail if either declaration changes alone.
+export const TRUST_STATUSES = [
+  "auto_generated_draft",
+  "creator_claimed",
+  "owner_confirmed",
+  "community_reviewed",
+  "reviewer_signed",
+  "security_checked",
+  "continuously_monitored",
+  "disputed",
+] as const;
+
+export type TrustStatus = (typeof TRUST_STATUSES)[number];
 
 export type Passport = {
   id: string;

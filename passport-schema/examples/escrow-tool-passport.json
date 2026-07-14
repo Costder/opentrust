@@ -91,32 +91,39 @@
       "supported": true,
       "type": "optimistic",
       "proof_of_delivery": {
-        "type": "webhook_callback",
+        "type": "api_responds",
+        "standard": "The verification endpoint confirms that the escrow callback accepted the delivered report hash.",
         "timeout_seconds": 900,
-        "callback_endpoint": "https://api.example.dev/v1/escrow/callback",
+        "verification_endpoint": "https://api.example.dev/v1/escrow/callback",
         "result_hash_required": true
       },
       "dispute": {
         "window_seconds": 3600,
-        "bond_amount_usdc": 2.00,
+        "bonds": {
+          "under_25_usdc": 2,
+          "25_to_100_usdc": 5,
+          "100_to_500_usdc": 15,
+          "500_to_2500_usdc": 35,
+          "over_2500_usdc": "custom_or_percentage"
+        },
         "tiers": [
           {
             "tier": 1,
-            "type": "auto_non_delivery",
-            "description": "No response received within 15 minutes. Full refund issued automatically.",
+            "outcome": "auto_buyer_refund",
+            "triggers": ["deadline_missed", "api_down"],
             "resolution_sla_seconds": 60
           },
           {
             "tier": 2,
-            "type": "auto_proof_mismatch",
-            "description": "Report hash does not match declared result. Full refund issued automatically.",
+            "outcome": "auto_buyer_refund",
+            "triggers": ["hash_mismatch", "required_deliverable_missing"],
             "resolution_sla_seconds": 300
           },
           {
             "tier": 3,
-            "type": "arbitration",
-            "description": "Buyer disputes quality of findings. Submitted to OpenTrust arbitration queue.",
-            "resolution_endpoint": "https://registry.opentrust.dev/api/v1/disputes",
+            "outcome": "human_arbitration",
+            "triggers": ["research_quality_disputed", "expectation_mismatch"],
+            "arbitration_endpoint": "https://registry.opentrust.dev/api/v1/disputes",
             "resolution_sla_seconds": 172800
           }
         ]

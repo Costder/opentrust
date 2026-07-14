@@ -125,7 +125,12 @@
       "status": "security_checked",
       "timestamp": "2026-03-15T09:00:00Z",
       "reviewer": "auditor-handle",
-      "signature": "ed25519:base64signaturehere",
+      "attestation": {
+        "key_id": "auditor-handle-2026",
+        "algorithm": "ed25519",
+        "signature": "base64signaturehere",
+        "payload": "code-analysis-pro:0.1.0:security_checked:2026-03-15T09:00:00Z"
+      },
       "notes": "Passed dependency scan, permission audit, and manifest validation."
     }
   ],

@@ -3,7 +3,7 @@ import type { TrustStatus } from "@/types/passport";
 const colors: Record<TrustStatus, string> = {
   auto_generated_draft: "bg-yellow-100 text-yellow-900 border-yellow-300",
   creator_claimed: "bg-sky-100 text-sky-900 border-sky-300",
-  seller_confirmed: "bg-teal-100 text-teal-900 border-teal-300",
+  owner_confirmed: "bg-teal-100 text-teal-900 border-teal-300",
   community_reviewed: "bg-green-100 text-green-900 border-green-300",
   reviewer_signed: "bg-lime-100 text-lime-900 border-lime-300",
   security_checked: "bg-emerald-100 text-emerald-900 border-emerald-300",

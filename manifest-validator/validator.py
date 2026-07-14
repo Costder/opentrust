@@ -1,15 +1,30 @@
-import json
-from pathlib import Path
-from jsonschema import Draft202012Validator
+"""Compatibility import for the former standalone validator script.
 
-HIGH_RISK = {"terminal", "wallet", "private_data", "camera", "microphone"}
+Use ``manifest_validator.validator`` in new code.
+"""
 
+from manifest_validator.validator import (
+    HIGH_RISK,
+    RiskAssessment,
+    ValidationDiagnostic,
+    ValidationResult,
+    compute_risk_score,
+    validate,
+    validate_evidence,
+    validate_legacy_tuple,
+    validate_passport,
+    validate_passport_file,
+)
 
-def validate(path: str) -> tuple[list[str], list[str]]:
-    root = Path(__file__).resolve().parents[1]
-    schema = json.loads((root / "passport-schema" / "passport.schema.json").read_text())
-    data = json.loads(Path(path).read_text())
-    errors = [error.message for error in Draft202012Validator(schema).iter_errors(data)]
-    permissions = data.get("permission_manifest", {})
-    flags = sorted(name for name in HIGH_RISK if permissions.get(name))
-    return errors, flags
+__all__ = [
+    "HIGH_RISK",
+    "RiskAssessment",
+    "ValidationDiagnostic",
+    "ValidationResult",
+    "compute_risk_score",
+    "validate",
+    "validate_evidence",
+    "validate_legacy_tuple",
+    "validate_passport",
+    "validate_passport_file",
+]

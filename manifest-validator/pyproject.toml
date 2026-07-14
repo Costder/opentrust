@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "manifest-validator"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.11"
 dependencies = ["jsonschema>=4.26.0", "referencing>=0.35.0"]
 

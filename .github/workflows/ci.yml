@@ -14,8 +14,8 @@ jobs:
         with:
           node-version: "20"
       - run: python -m pip install -r api/requirements.txt
-      - run: python -m pip install -e cli -e payment-contracts
-      - run: pytest api/tests payment-contracts/tests cli/tests
+      - run: python -m pip install -e manifest-validator -e cli -e payment-contracts
+      - run: pytest manifest-validator/tests api/tests payment-contracts/tests cli/tests
       # Verify every entry in package-lock.json resolves from registry.npmjs.org only.
       # Blocks dependency confusion attacks where a transitive dep is pulled from a
       # different registry silently.
@@ -25,4 +25,50 @@ jobs:
       # Catches tampered packages that don't match what npm published.
       - name: Verify package signatures
         run: cd web && npm audit signatures
-      - run: cd web && npm ci --ignore-scripts && npm run lint && npm run build
+      - run: cd web && npm ci --ignore-scripts && npm run test && npx tsc --noEmit && npm run lint && npm run build
+
+  docker-validator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Build validator image
+        run: docker build --tag opentrust-validator:${{ github.sha }} .
+      - name: Validate a passport using only bundled schema resources
+        run: |
+          docker run --rm --entrypoint python opentrust-validator:${{ github.sha }} -c "$(cat <<'PY'
+          import json
+          import shutil
+          from importlib import resources
+          from pathlib import Path
+
+          passport = Path("/tmp/free-tool.json")
+          passport.write_text(
+              Path("/app/passport-schema/examples/free-tool.json").read_text(encoding="utf-8"),
+              encoding="utf-8",
+          )
+          shutil.rmtree("/app/passport-schema")
+
+          import manifest_validator
+          from manifest_validator import validate_passport_file
+
+          expected = {
+              "agent-identity.schema.json",
+              "commercial-status.schema.json",
+              "error-response.schema.json",
+              "escrow.schema.json",
+              "passport.schema.json",
+              "permissions.schema.json",
+              "registry-trust.schema.json",
+              "security.schema.json",
+              "signed-revocation-list.schema.json",
+              "spend-policy.schema.json",
+          }
+          schemas = resources.files("manifest_validator").joinpath("schemas")
+          missing = sorted(name for name in expected if not schemas.joinpath(name).is_file())
+          assert not missing, f"missing bundled schemas: {missing}"
+          assert "/site-packages/" in str(Path(manifest_validator.__file__).resolve())
+
+          result = validate_passport_file(passport)
+          assert result.valid, json.dumps(result.to_dict(), sort_keys=True)
+          PY
+          )"
