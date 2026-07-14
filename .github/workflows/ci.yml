@@ -26,8 +26,8 @@ jobs:
       # Verify that every installed package has a valid Sigstore or registry signature.
       # Catches tampered packages that don't match what npm published.
       - name: Verify package signatures
-        run: cd web && npm audit signatures
-      - run: cd web && npm ci --ignore-scripts && npm run test && npx tsc --noEmit && npm run lint && npm run build
+        run: cd web && npm ci --ignore-scripts && npm audit signatures
+      - run: cd web && npm run test && npx tsc --noEmit && npm run lint && npm run build
 
   docker-validator:
     runs-on: ubuntu-latest
