@@ -1,3 +1,5 @@
+
+
 # Open Trust Protocol
 
 The universal trust layer for AI agent tools.
@@ -265,7 +267,7 @@ OpenTrust is not controlled by any single company or model provider. The spec is
 
 ```bash
 pip install opentrust-sdk
-python -c "import asyncio, opentrust; print(asyncio.run(opentrust.verify('github-file-search')))"`
+python -c "import asyncio, opentrust; print(asyncio.run(opentrust.verify('github-file-search')))"
 ```
 
 Or install the MCP server and ask Claude *"Is this tool safe to use?"* — it answers with a trust level, permissions breakdown, and a plain-English recommendation.
