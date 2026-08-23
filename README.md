@@ -1,5 +1,3 @@
-
-
 # Open Trust Protocol
 
 The universal trust layer for AI agent tools.
